@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / React
+node_modules/
+dist/
+build/
+.vite/
+
+# Local config and secrets
+.env
+.env.*
+!.env.example
+
+# Data, cache, and runtime artifacts
+data/
+cache/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+*.parquet
+*.feather
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
