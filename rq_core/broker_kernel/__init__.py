@@ -1,0 +1,45 @@
+"""Unified broker trading gateway kernel."""
+
+from rq_core.broker_kernel.contracts import (
+    AccountRef,
+    BrokerCancelAck,
+    BrokerCancelRequest,
+    BrokerGatewayConfig,
+    BrokerHealth,
+    BrokerMode,
+    BrokerModifyAck,
+    BrokerModifyRequest,
+    BrokerName,
+    BrokerOrderAck,
+    BrokerOrderRequest,
+    BrokerSession,
+    BrokerTradingAdapter,
+    CapabilityConfig,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+    PriceType,
+)
+from rq_core.broker_kernel.gateway import TradingGateway
+
+__all__ = [
+    "AccountRef",
+    "BrokerCancelAck",
+    "BrokerCancelRequest",
+    "BrokerGatewayConfig",
+    "BrokerHealth",
+    "BrokerMode",
+    "BrokerModifyAck",
+    "BrokerModifyRequest",
+    "BrokerName",
+    "BrokerOrderAck",
+    "BrokerOrderRequest",
+    "BrokerSession",
+    "BrokerTradingAdapter",
+    "TradingGateway",
+    "CapabilityConfig",
+    "OrderSide",
+    "OrderStatus",
+    "OrderType",
+    "PriceType",
+]
