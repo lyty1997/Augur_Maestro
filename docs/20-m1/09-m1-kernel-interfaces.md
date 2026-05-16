@@ -6,7 +6,7 @@
 
 ## 1. 文档定位
 
-本文档定义 RobustQuant M1 的 Python 层接口类。它承接 [08-m1-data-model.md](./08-m1-data-model.md) 的数据库模型，但不等同于 SQLAlchemy ORM 模型。
+本文档定义 RobustQuant M1 的 Python 层接口类。它承接 [08-m1-data-model.md](08-m1-data-model.md) 的数据库模型，但不等同于 SQLAlchemy ORM 模型。
 
 目标：
 
@@ -824,7 +824,7 @@ class TradingClock(Protocol):
 规则：
 
 - 任何真实下单或向券商提交挂单请求前，都必须先通过 `TradingClock` 检查。
-- 非交易时间不能调用真实 `BrokerAdapter.place_order`。
+- 非交易时间不能调用真实 `TradingGateway.place_order`。
 - 到下一个有效交易窗口后，必须重新读取行情、重新做风控、重新检查 OMS 状态。
 
 ### 11.3 OMS 与券商适配器
@@ -885,7 +885,7 @@ class TradeSnapshot:
     traded_at: datetime
 
 
-class BrokerAdapter(Protocol):
+class BrokerTradingAdapter(Protocol):
     broker_name: str
     capability_mode: BrokerCapabilityMode
 
@@ -921,7 +921,7 @@ class OrderManagementService(Protocol):
 
 规则：
 
-- `BrokerAdapter` 是券商 SDK 边界，策略、回测、FastAPI Router 和 CLI 都不能直接调用。
+- `BrokerTradingAdapter` 是券商 SDK/API 适配器边界，策略、回测、FastAPI Router 和 CLI 都不能直接调用；上层只能通过 `TradingGateway` 进入交易链路。
 - miniQMT 和盈立 OpenAPI 的只读接入只能使用登录、权限检查、行情、账户、资金、持仓、订单和成交查询能力；这类测试不构成真实交易，但仍要保护账户隐私。
 - 任何会向券商提交委托、撤单、条件单、预埋单、止盈止损、触发单或其他可能改变券商侧订单状态的接口，都按真实交易接口处理。
 - `capability_mode` 默认为 `READ_ONLY`；只有显式切到 `LIVE_GUARDED` 且 `trading_enabled=true`、人工确认、交易时间、风控、OMS 和账户/标的白名单全部通过，才允许调用 `place_order` 或 `cancel_order`。
@@ -938,7 +938,7 @@ class OrderManagementService(Protocol):
 
 M1 暂不实现，但接口设计需要避免堵死：
 
-- `BrokerAdapter` 后续用于真实券商接口。
+- `BrokerTradingAdapter` 后续用于真实券商接口，并由 `TradingGateway` 统一执行能力模式和交易安全阻断。
 - `StrategyRuntime` 后续用于模拟盘和实盘策略运行。
 - `RiskEngine` 后续用于真实交易前风控。
 - `OrderManagementService` 后续用于真实订单生命周期。

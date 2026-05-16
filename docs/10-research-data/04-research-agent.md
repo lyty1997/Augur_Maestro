@@ -10,7 +10,7 @@
 
 它不是实盘交易 Agent。它不能直接下单，不能绕过人工审核，不能把候选策略直接推到实盘。
 
-M1 已确认先做 A 股研究回测闭环。券商交易 API 尚未齐备，因此研究回测 Agent 是当前最适合优先推进的主线。它可以先在历史数据和模拟环境中把研究闭环跑起来，等 miniQMT 等券商接口条件成熟后，再把通过审核的策略接入交易链路。盈立 OpenAPI 申请结果不确定，不作为 M1 依赖。M1 历史行情默认通过 AKShare 导入 PostgreSQL 标准表，项目总体路线见 [05-technical-roadmap.md](./05-technical-roadmap.md)，数据源专项路线见 [06-data-source-roadmap.md](./06-data-source-roadmap.md)。
+M1 已确认先做 A 股研究回测闭环。券商交易 API 尚未齐备，因此研究回测 Agent 是当前最适合优先推进的主线。它可以先在历史数据和模拟环境中把研究闭环跑起来，等 miniQMT 等券商接口条件成熟后，再把通过审核的策略接入交易链路。盈立 OpenAPI 申请结果不确定，不作为 M1 依赖。M1 历史行情默认通过 AKShare 导入 PostgreSQL 标准表，项目总体路线见 [05-technical-roadmap.md](../00-project/05-technical-roadmap.md)，数据源专项路线见 [06-data-source-roadmap.md](06-data-source-roadmap.md)。
 
 ## 2. Agent 的职责边界
 
@@ -99,7 +99,10 @@ market: "CN_A"
 universe:
   exclude_st: true
   min_listed_days: 250
-  min_avg_turnover: 50000000
+  min_avg_amount_20d: 50000000
+  min_avg_turnover_rate_20d: 0.005
+  max_suspended_days_250d: 20
+  min_market_cap: 5000000000
 data:
   years: 10
   frequency: "1d"
@@ -187,6 +190,7 @@ M1 建议先用保守规则：
 - 排除上市时间太短的股票。
 - 排除长期停牌或数据缺失严重的股票。
 - 排除成交额太低、流动性太差的股票。
+- 排除换手率过低、长期无量、疑似容易被大资金操纵的小票股。
 - 可选：限制市值范围、行业范围、指数成分范围。
 
 股票池规则必须记录到实验结果中，否则回测不可复现。
@@ -516,8 +520,8 @@ M1 先做最小研究闭环：
 ## 10. 待确认问题
 
 - 主题股票池第一版具体标的清单。
-- Qlib 和 VectorBT 验证后，M1 主回测执行器选一个，还是两者分工使用。
-- LLM 在 M1 候选股票池中使用到什么程度：只做解释和归类，还是也做候选扩展。
+- Qlib 和 VectorBT 并行最小验证后，根据同口径结果选择最适合的 M1 主回测执行器；必要时再明确两者分工。
+- AI 候选扩展的引用来源和置信度如何落库展示。
 - 报告是否需要 HTML/PDF，还是先 Markdown。
 - 模拟盘是否需要实时行情，还是先离线 replay。
 - 消息面数据源选哪个，是否能稳定提供事件预期值、公布值和准确发布时间。
