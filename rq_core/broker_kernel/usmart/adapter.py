@@ -18,22 +18,22 @@ from rq_core.broker_kernel.contracts import (
     OrderStatus,
 )
 from rq_core.broker_kernel.errors import BrokerContractError
-from rq_core.broker_kernel.yingli import endpoints
-from rq_core.broker_kernel.yingli.client import YingLiOpenApiClient
+from rq_core.broker_kernel.usmart import endpoints
+from rq_core.broker_kernel.usmart.client import uSmartOpenApiClient
 
 
-class YingLiOpenApiTradingAdapter(BrokerTradingAdapter):
-    broker = BrokerName.YINGLI
+class uSmartOpenApiTradingAdapter(BrokerTradingAdapter):
+    broker = BrokerName.USMART
 
-    def __init__(self, client: YingLiOpenApiClient | None = None) -> None:
-        self._client = client or YingLiOpenApiClient(dry_run=True)
+    def __init__(self, client: uSmartOpenApiClient | None = None) -> None:
+        self._client = client or uSmartOpenApiClient(dry_run=True)
 
     def health_check(self) -> BrokerHealth:
         return BrokerHealth(
             broker=self.broker,
             ok=True,
             mode=BrokerMode.READ_ONLY,
-            message="YingLi OpenAPI trading adapter loaded; real transport disabled by default",
+            message="uSmart OpenAPI trading adapter loaded; real transport disabled by default",
         )
 
     def connect(self, account_ref: AccountRef | None = None) -> BrokerSession:
@@ -62,7 +62,7 @@ class YingLiOpenApiTradingAdapter(BrokerTradingAdapter):
             status=OrderStatus.UNKNOWN,
             broker=self.broker,
             broker_status_raw="unknown_by_pdf",
-            broker_message="YingLi place order endpoint prepared; response mapping requires PDF confirmation",
+            broker_message="uSmart place order endpoint prepared; response mapping requires PDF confirmation",
             unknown_reason=f"dry_run={response.data.get('dry_run', False)}",
         )
 
@@ -78,7 +78,7 @@ class YingLiOpenApiTradingAdapter(BrokerTradingAdapter):
             status=OrderStatus.UNKNOWN,
             broker=self.broker,
             broker_order_id=request.broker_order_id,
-            broker_message="YingLi modify endpoint prepared; modify semantics require PDF confirmation",
+            broker_message="uSmart modify endpoint prepared; modify semantics require PDF confirmation",
             unknown_reason=f"dry_run={response.data.get('dry_run', False)}",
         )
 
@@ -94,7 +94,7 @@ class YingLiOpenApiTradingAdapter(BrokerTradingAdapter):
             status=OrderStatus.UNKNOWN,
             broker=self.broker,
             broker_order_id=request.broker_order_id,
-            broker_message="YingLi cancel uses modify endpoint; cancel parameters require PDF confirmation",
+            broker_message="uSmart cancel uses modify endpoint; cancel parameters require PDF confirmation",
             unknown_reason=f"dry_run={response.data.get('dry_run', False)}",
         )
 
@@ -118,7 +118,7 @@ class YingLiOpenApiTradingAdapter(BrokerTradingAdapter):
     def _build_modify_order_body(request: BrokerModifyRequest) -> dict[str, Any]:
         if request.new_quantity is None and request.new_limit_price is None:
             raise BrokerContractError(
-                "broker.yingli.modify_payload_empty",
+                "broker.usmart.modify_payload_empty",
                 "改单请求必须至少包含新数量或新价格",
             )
         return {

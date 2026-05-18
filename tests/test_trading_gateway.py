@@ -17,15 +17,15 @@ from rq_core.broker_kernel import (
     TradingGateway,
 )
 from rq_core.broker_kernel.errors import TradingBlockedError
-from rq_core.broker_kernel.yingli import YingLiOpenApiClient, YingLiOpenApiTradingAdapter
+from rq_core.broker_kernel.usmart import uSmartOpenApiClient, uSmartOpenApiTradingAdapter
 
 
 class TradingGatewaySafetyTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = YingLiOpenApiClient(dry_run=True)
-        self.adapter = YingLiOpenApiTradingAdapter(client=self.client)
+        self.client = uSmartOpenApiClient(dry_run=True)
+        self.adapter = uSmartOpenApiTradingAdapter(client=self.client)
         self.gateway = TradingGateway(
-            BrokerGatewayConfig(broker=BrokerName.YINGLI, mode=BrokerMode.READ_ONLY),
+            BrokerGatewayConfig(broker=BrokerName.USMART, mode=BrokerMode.READ_ONLY),
             self.adapter,
         )
         self.account = AccountRef("acct-demo")
@@ -69,7 +69,7 @@ class TradingGatewaySafetyTest(unittest.TestCase):
             order_id="order-1",
             intent_id="intent-1",
             account_ref=self.account,
-            broker=BrokerName.YINGLI,
+            broker=BrokerName.USMART,
             market="HK",
             symbol="00700",
             side=OrderSide.BUY,
@@ -87,7 +87,7 @@ class TradingGatewaySafetyTest(unittest.TestCase):
         return BrokerModifyRequest(
             order_id="order-1",
             account_ref=self.account,
-            broker=BrokerName.YINGLI,
+            broker=BrokerName.USMART,
             broker_order_id="broker-order-1",
             request_id="req-2",
             trace_id="trace-1",
@@ -99,7 +99,7 @@ class TradingGatewaySafetyTest(unittest.TestCase):
         return BrokerCancelRequest(
             order_id="order-1",
             account_ref=self.account,
-            broker=BrokerName.YINGLI,
+            broker=BrokerName.USMART,
             broker_order_id="broker-order-1",
             request_id="req-3",
             trace_id="trace-1",

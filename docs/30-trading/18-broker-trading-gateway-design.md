@@ -40,10 +40,10 @@ flowchart LR
     Risk --> OMS[OMS]
     OMS --> Gateway[TradingGateway]
     Gateway --> Adapter[BrokerTradingAdapter 基类]
-    Adapter --> YingLi[YingLiOpenApiTradingAdapter]
+    Adapter --> uSmart[uSmartOpenApiTradingAdapter]
     Adapter --> MiniQMT[MiniQMTTradingAdapter]
     Adapter --> Ptrade[PtradeTradingAdapter]
-    YingLi --> Broker1[盈立 OpenAPI]
+    uSmart --> Broker1[uSmart OpenAPI]
     MiniQMT --> Broker2[miniQMT SDK/客户端]
     Ptrade --> Broker3[Ptrade API/客户端]
 
@@ -77,13 +77,13 @@ rq_core/
     idempotency.py            请求幂等与 request_id 生成
     redaction.py              脱敏工具
     audit.py                  审计事件模型
-    yingli/
-      adapter.py              YingLiOpenApiTradingAdapter
-      client.py               盈立 HTTP/WebSocket 原始客户端
-      auth.py                 盈立认证、签名、token 生命周期
-      mapper.py               盈立字段与内部 DTO 映射
-      endpoints.py            盈立 endpoint 常量与能力声明
-      rate_limit.py           盈立限流策略
+    usmart/
+      adapter.py              uSmartOpenApiTradingAdapter
+      client.py               uSmart HTTP/WebSocket 原始客户端
+      auth.py                 uSmart 认证、签名、token 生命周期
+      mapper.py               uSmart 字段与内部 DTO 映射
+      endpoints.py            uSmart endpoint 常量与能力声明
+      rate_limit.py           uSmart 限流策略
     miniqmt/
       adapter.py              MiniQMTTradingAdapter，占位派生，当前不实现具体连接
     ptrade/
@@ -99,9 +99,9 @@ rq_core/
 |---|---|---|
 | `TradingGateway` | 对 OMS、风控、对账暴露统一交易方法；执行能力检查、审计和错误归一化 | 不拼接具体券商字段，不绑定具体券商协议 |
 | `BrokerTradingAdapter` | 统一交易适配器基类，定义登录、账户、持仓、订单、成交、下单、改单、撤单方法 | 不包含风控判断，不决定是否允许真实交易 |
-| `YingLiOpenApiTradingAdapter` | 从 `BrokerTradingAdapter` 派生，封装盈立 OpenAPI 交易接口 | 不绕过 `TradingGateway` |
-| `YingLiAuthSigner` | 生成请求头、签名、token 管理 | 不写日志输出密钥 |
-| `YingLiMapper` | 字段、状态、错误码映射 | 不吞掉未知状态 |
+| `uSmartOpenApiTradingAdapter` | 从 `BrokerTradingAdapter` 派生，封装 uSmart OpenAPI 交易接口 | 不绕过 `TradingGateway` |
+| `uSmartAuthSigner` | 生成请求头、签名、token 管理 | 不写日志输出密钥 |
+| `uSmartMapper` | 字段、状态、错误码映射 | 不吞掉未知状态 |
 | `MiniQMTTradingAdapter` | 从 `BrokerTradingAdapter` 派生，当前只保留抽象占位 | 不在本阶段实现具体连接 |
 | `PtradeTradingAdapter` | 后续从 `BrokerTradingAdapter` 派生 | 不需要修改 `TradingGateway` 上层代码 |
 | `RateLimiter` | 限制请求频率和并发 | 不为下单失败做自动补偿 |
@@ -109,8 +109,8 @@ rq_core/
 
 核心边界：
 
-- `TradingGateway` 是唯一交易上层入口，接口名和 DTO 不出现 `yingli`、`qmt`、`ptrade` 等券商细节。
-- `YingLiOpenApiTradingAdapter` 只负责盈立 OpenAPI 的 HTTP 协议和交易字段转换。
+- `TradingGateway` 是唯一交易上层入口，接口名和 DTO 不出现 `usmart`、`qmt`、`ptrade` 等券商细节。
+- `uSmartOpenApiTradingAdapter` 只负责 uSmart OpenAPI 的 HTTP 协议和交易字段转换。
 - `MiniQMTTradingAdapter` 只负责 miniQMT 的 SDK、客户端或桥接进程协议转换，本阶段只保留基类派生占位。
 - `PtradeTradingAdapter` 后续按同一基类派生，不要求修改 `TradingGateway`。
 - 所有适配器共享同一套能力模式、交易开关、审计、脱敏、错误分类和 OMS 调用约束。
@@ -205,7 +205,7 @@ class QuotationDataGateway:
 | `order_id` | 本地 OMS 订单 ID |
 | `intent_id` | 交易意图 ID |
 | `account_ref` | 脱敏账户引用 |
-| `broker` | 券商标识，例如 `yingli` |
+| `broker` | 券商标识，例如 `usmart` |
 | `market` | 市场，例如 `HK`、`US` |
 | `symbol` | 标的代码 |
 | `side` | `buy` / `sell` |
@@ -340,7 +340,7 @@ WebSocket 推送：
 设计规则：
 
 - 密钥只从环境变量、加密配置或后续密钥管理服务读取，不进入代码库。
-- `YingLiAuthSigner` 只返回请求头，不向日志暴露私钥、密码、token、明文手机号。
+- `uSmartAuthSigner` 只返回请求头，不向日志暴露私钥、密码、token、明文手机号。
 - token 存在内存会话中，默认不落库；如必须持久化，需要加密保存并记录过期时间。
 - 登录态过期时，只读查询可以重新登录；交易动作不能在下单过程中隐式刷新登录后继续提交，必须让 OMS 重新进入可审计状态。
 - 签名失败、验签失败、401、权限不足必须归一化为明确错误码。
@@ -410,7 +410,7 @@ unknown
 
 映射规则：
 
-- PDF 已明确状态码时，写入 `YingLiOrderStatusMapper`。
+- PDF 已明确状态码时，写入 `uSmartOrderStatusMapper`。
 - PDF 未明确的状态码不得猜测，只能映射为 `unknown_by_pdf`。
 - 无法判断是否已到达券商的请求，必须进入 `unknown`。
 - `unknown` 只能通过订单查询、成交查询、对账或人工确认转出。
@@ -481,19 +481,19 @@ unknown
 `.env`，不进入 Git：
 
 ```text
-YINGLI_API_BASE_URL=...
-YINGLI_QUOTE_BASE_URL=...
-YINGLI_WS_URL=...
-YINGLI_CHANNEL_ID=...
-YINGLI_PRIVATE_KEY_PATH=...
-YINGLI_PUBLIC_KEY_PATH=...
-YINGLI_ACCOUNT_REF=...
+USMART_API_BASE_URL=...
+USMART_QUOTE_BASE_URL=...
+USMART_WS_URL=...
+USMART_CHANNEL_ID=...
+USMART_PRIVATE_KEY_PATH=...
+USMART_PUBLIC_KEY_PATH=...
+USMART_ACCOUNT_REF=...
 ```
 
-`configs/broker/yingli.yaml`，可以进入 Git，但不得包含秘密：
+`configs/broker/usmart.yaml`，可以进入 Git，但不得包含秘密：
 
 ```yaml
-broker: yingli
+broker: usmart
 mode: read_only
 trading_enabled: false
 
@@ -571,7 +571,7 @@ safety:
 - 只在 `read_only` 模式下启用。
 - 允许登录、账户、持仓、订单、成交查询。
 - 行情联调通过 `QuotationDataGateway`，不通过 `TradingGateway`。
-- 盈立通过 `YingLiOpenApiTradingAdapter` 接入；miniQMT 通过 `MiniQMTTradingAdapter` 接入。
+- uSmart 通过 `uSmartOpenApiTradingAdapter` 接入；miniQMT 通过 `MiniQMTTradingAdapter` 接入。
 - 禁止 `trade-login`、下单、改单、撤单、IPO、碎股交易。
 - 所有输出脱敏。
 
@@ -632,7 +632,7 @@ safety:
 
 需要用户确认：
 
-- `TradingGateway` 第一版上层抽象同时预留盈立 OpenAPI、miniQMT 和 Ptrade；代码实现先落 `TradingGateway`、`BrokerTradingAdapter`、`YingLiOpenApiTradingAdapter`、`MiniQMTTradingAdapter` 的同层骨架，盈立申请所需方法外形放在盈立适配器内。
+- `TradingGateway` 第一版上层抽象同时预留 uSmart OpenAPI、miniQMT 和 Ptrade；代码实现先落 `TradingGateway`、`BrokerTradingAdapter`、`uSmartOpenApiTradingAdapter`、`MiniQMTTradingAdapter` 的同层骨架，uSmart 申请所需方法外形放在 uSmart 适配器内。
 - 只读联调阶段是否允许真实登录和账户/持仓查询。
 - 如果允许只读联调，脱敏输出和本地日志保存周期。
 - 第一版受控实盘是否强制只允许限价单。

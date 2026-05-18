@@ -120,7 +120,7 @@ flowchart TB
     DataJobs --> DataGateway[数据网关]
     DataGateway --> AkShareData[AKShare 研究数据源]
     DataGateway -.后续.-> MiniQMTData[miniQMT 行情]
-    DataGateway -.后续.-> YingLiData[盈立 OpenAPI 行情]
+    DataGateway -.后续.-> uSmartData[uSmart OpenAPI 行情]
     DataGateway -.后续.-> ExternalData[财务/公告/新闻等外部数据]
     DataGateway -.后续.-> MacroEvents[宏观事件日历/发布结果]
     DataGateway --> DataStore[(数据存储)]
@@ -144,7 +144,7 @@ flowchart TB
 
     OMS -.后续.-> BrokerGateway[统一券商交易网关]
     BrokerGateway -.后续.-> MiniQMTTrade[miniQMT/东北证券]
-    BrokerGateway -.后续.-> YingLiTrade[盈立 OpenAPI]
+    BrokerGateway -.后续.-> uSmartTrade[uSmart OpenAPI]
     BrokerGateway -.后续.-> OrderStore[(订单/成交/持仓)]
 
     Reconcile -.后续.-> BrokerGateway
@@ -436,12 +436,12 @@ class BrokerTradingAdapter:
 后续可以实现适配器：
 
 - `MiniQMTTradingAdapter`：对接 miniQMT，用于东北证券等 QMT 账户。
-- `YingLiOpenApiTradingAdapter`：对接盈立证券 OpenAPI，用于港股、美股账户。
+- `uSmartOpenApiTradingAdapter`：对接 uSmart OpenAPI，用于港股、美股账户。
 - `PtradeTradingAdapter`：后续如接入 Ptrade，只需按同一基类派生。
 
 这样策略和风控不需要关心底层是 miniQMT 还是盈立 OpenAPI。它们只和统一订单模型打交道。
 
-M1 不实现真实 `MiniQMTTradingAdapter` 或真实交易 transport。当前先保留 `BrokerTradingAdapter` 基类和 `TradingGateway` 安全门面；盈立适配器可以写出登录、下单、改单、撤单代码外形，但默认由 `TradingGateway` 的 `read_only` 安全模式阻断真实交易动作。具体券商 SDK 行为必须等权限、运行环境、官方文档和安全设计确认后再启用。
+M1 不实现真实 `MiniQMTTradingAdapter` 或真实交易 transport。当前先保留 `BrokerTradingAdapter` 基类和 `TradingGateway` 安全门面；uSmart 适配器可以写出登录、下单、改单、撤单代码外形，但默认由 `TradingGateway` 的 `read_only` 安全模式阻断真实交易动作。具体券商 SDK 行为必须等权限、运行环境、官方文档和安全设计确认后再启用。
 
 券商适配器硬约束：
 
@@ -673,7 +673,7 @@ flowchart LR
     Web -.后续.-> API
     FutureWorker[后续后台任务 Worker] -.后续引入.-> Services
     FutureWorker -.后续引入.-> QMT[miniQMT 客户端/服务]
-    FutureWorker -.后续引入.-> YingLi[盈立 OpenAPI]
+    FutureWorker -.后续引入.-> uSmart[uSmart OpenAPI]
 ```
 
 miniQMT 已确认支持无人值守运行，但仍需要确认具体运行环境要求：是否必须 Windows、是否需要 GUI 客户端保持登录、是否支持自动重连、异常断线后如何恢复。如果 miniQMT 必须运行在 Windows 桌面环境，系统可能需要把“交易执行节点”单独部署在 Windows 机器上，主服务可以仍然部署在云端或同一台机器。
@@ -703,7 +703,7 @@ RobustQuant/
     oms_kernel/
     broker_kernel/
       miniqmt/
-      yingli/
+      usmart/
       ptrade/
     quotation_kernel/
     common/

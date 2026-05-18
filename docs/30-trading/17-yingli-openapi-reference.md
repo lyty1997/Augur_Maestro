@@ -68,7 +68,7 @@
 
 - 为申请材料专门编写源码截图代码。
 - 为申请材料运行真实登录、下单、改单、撤单。
-- 在 M1 中实现真实 `YingLiOpenApiTradingAdapter` transport。
+- 在 M1 中实现真实 `uSmartOpenApiTradingAdapter` transport。
 - 在 M1 中接入盈立账户、持仓、订单、成交、行情或推送。
 
 ## 6. 待解析或标记为未知

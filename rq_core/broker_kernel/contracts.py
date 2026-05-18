@@ -16,7 +16,7 @@ class BrokerMode(StrEnum):
 
 
 class BrokerName(StrEnum):
-    YINGLI = "yingli"
+    USMART = "usmart"
     MINIQMT = "miniqmt"
     PTRADE = "ptrade"
 

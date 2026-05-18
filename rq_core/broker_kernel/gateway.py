@@ -20,7 +20,7 @@ from rq_core.broker_kernel.contracts import (
 class TradingGateway:
     """统一券商交易网关。
 
-    上层 OMS 只依赖这个门面；盈立 OpenAPI、miniQMT 等差异由适配器处理。
+    上层 OMS 只依赖这个门面；uSmart OpenAPI、miniQMT 等差异由适配器处理。
     真实交易动作先经过能力锁，默认 read_only 模式下不会触达适配器。
     """
 
