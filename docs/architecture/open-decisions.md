@@ -28,8 +28,8 @@
 
 - A 股研究闭环先只依赖数据网关和回测引擎，不依赖真实下单能力。
 - 券商 API 先保留适配器抽象，不急着实现具体交易接口。
-- 盈立官方 PDF 解析按 [17-yingli-openapi-reference.md](../30-trading/17-yingli-openapi-reference.md) 执行；源码截图材料不进入开发任务。
-- `TradingGateway` 统一券商交易网关设计见 [18-broker-trading-gateway-design.md](../30-trading/18-broker-trading-gateway-design.md)；正式实现前先确认能力模式、只读联调边界和盈立 `unknown_by_pdf` 项。
+- 盈立官方 PDF 解析按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 执行；源码截图材料不进入开发任务。
+- `TradingGateway` 统一券商交易网关设计见 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md)；正式实现前先确认能力模式、只读联调边界和盈立 `unknown_by_pdf` 项。
 - 等“查询账户、查询持仓、下单、撤单、查询成交、对账、日志、告警”跑通后，再扩展第二个券商。
 
 ## 2. miniQMT 运行环境
@@ -77,7 +77,7 @@
   2. 研究期接入 AKShare，优先保证可复现和可替换。
   3. miniQMT 或其他券商行情接口可用后，新增券商数据 Provider，并用同一套数据质量检查对比临时数据源和券商数据。
 - 不急着做复杂因子库，先确保交易日历、复权、停牌、手续费、滑点处理正确。
-- 具体数据源专项路线见 [06-data-source-roadmap.md](../10-research-data/06-data-source-roadmap.md)，项目总体路线见 [05-technical-roadmap.md](05-technical-roadmap.md)。
+- 具体数据源专项路线见 [data-source-roadmap.md](../backend/data/data-source-roadmap.md)，项目总体路线见 [technical-roadmap.md](../project-progress/technical-roadmap.md)。
 
 ## 4. 策略接口设计
 
@@ -138,8 +138,8 @@
 - 配置文件分为 `.env` 和 `configs/*.yaml`；`.env` 不进入 Git，`configs/*.yaml` 可以进入 Git。
 - 中间产物和输出目录不进入代码库。
 - 代码架构采用拆分 kernel 的方式，尽可能保证高内聚、低耦合。
-- M1 数据模型按 [08-m1-data-model.md](../20-m1/08-m1-data-model.md) 执行，真实交易相关模型暂不进入 M1。
-- M1 Kernel 接口类按 [09-m1-kernel-interfaces.md](../20-m1/09-m1-kernel-interfaces.md) 执行，核心 DTO 和 Protocol 放在 `rq_core`，不依赖 FastAPI、Typer、SQLAlchemy、AKShare、Qlib 或 VectorBT。
+- M1 数据模型按 [data-model.md](../backend/data/data-model.md) 执行，真实交易相关模型暂不进入 M1。
+- M1 Kernel 接口类按 [kernel-interfaces.md](../backend/kernel/kernel-interfaces.md) 执行，核心 DTO 和 Protocol 放在 `rq_core`，不依赖 FastAPI、Typer、SQLAlchemy、AKShare、Qlib 或 VectorBT。
 - M1 不引入 Redis、Celery、Dramatiq 等后台任务队列。
 
 待确认：
@@ -418,4 +418,4 @@
 
 - 只解析 PDF，为未来正式接入做设计依据。
 - PDF 中找不到的 sandbox 和改单语义，标记为 `unknown_by_pdf`；不把券商申请截图格式作为当前开发阻塞项。
-- 具体调用栈、字段映射、只读查询 DTO 和签名策略按 [19-usmart-openapi-call-design.md](../30-trading/19-usmart-openapi-call-design.md) 继续维护；统一网关能力模式和安全边界按 [18-broker-trading-gateway-design.md](../30-trading/18-broker-trading-gateway-design.md) 维护。
+- 具体调用栈、字段映射、只读查询 DTO 和签名策略按 [usmart-openapi-call-design.md](../backend/clients/usmart-openapi-call-design.md) 继续维护；统一网关能力模式和安全边界按 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md) 维护。

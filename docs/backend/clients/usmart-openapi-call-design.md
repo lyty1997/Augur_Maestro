@@ -15,7 +15,7 @@
 - 交易动作如何先经过 `TradingGateway` 安全门控。
 - 日志和错误处理如何避免泄露账号、密码、token、密钥和真实资金隐私。
 
-本文档是 [18-broker-trading-gateway-design.md](18-broker-trading-gateway-design.md) 的下层专项设计。`TradingGateway` 是统一交易安全门面；本文档描述从本地入口、应用服务、`TradingGateway`、`uSmartOpenApiTradingAdapter`、`uSmartOpenApiClient`、`uSmartAuthSigner`、HTTP transport 到 uSmart OpenAPI server 的完整调用栈。
+本文档是 [broker-trading-gateway.md](../trading/broker-trading-gateway.md) 的下层专项设计。`TradingGateway` 是统一交易安全门面；本文档描述从本地入口、应用服务、`TradingGateway`、`uSmartOpenApiTradingAdapter`、`uSmartOpenApiClient`、`uSmartAuthSigner`、HTTP transport 到 uSmart OpenAPI server 的完整调用栈。
 
 ## 1. 调用链路
 

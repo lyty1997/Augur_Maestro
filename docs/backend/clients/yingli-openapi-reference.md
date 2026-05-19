@@ -8,7 +8,7 @@
 
 本文档只记录盈立证券 OpenAPI 官方 PDF 的解析范围、已知能力和安全边界，用于后续正式券商适配器设计。
 
-`TradingGateway` 统一券商交易网关模块设计详见 [18-broker-trading-gateway-design.md](18-broker-trading-gateway-design.md)。本文档只做官方资料事实源，不承载统一网关分层、能力模式和错误处理设计。
+`TradingGateway` 统一券商交易网关模块设计详见 [broker-trading-gateway.md](../trading/broker-trading-gateway.md)。本文档只做官方资料事实源，不承载统一网关分层、能力模式和错误处理设计。
 
 盈立申请材料要求“源码截图”属于券商申请材料事项，不作为 RobustQuant 的开发交付，也不进入 M1 研究回测任务。Codex 不需要为了截图单独编写申请用源码。
 

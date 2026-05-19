@@ -10,10 +10,10 @@
 
 本文档和以下文档联动：
 
-- M1 范围：[10-m1-scope.md](10-m1-scope.md)。
-- M1 实施计划：[11-m1-implementation-plan.md](11-m1-implementation-plan.md)。
-- M1 Kernel 接口：[09-m1-kernel-interfaces.md](09-m1-kernel-interfaces.md)。
-- 审计与日志：[15-observability-audit-spec.md](../40-ops/15-observability-audit-spec.md)。
+- M1 范围：[m1-scope.md](../../project-progress/m1-scope.md)。
+- M1 实施计划：[implementation-plan.md](../../project-progress/implementation-plan.md)。
+- M1 Kernel 接口：[kernel-interfaces.md](../kernel/kernel-interfaces.md)。
+- 审计与日志：[observability-audit.md](../observability-audit.md)。
 
 ## 1. 通用约定
 
@@ -265,7 +265,7 @@ M1 API 禁止：
 
 ## 6. DTO 落点
 
-M1 的领域 DTO 以 [09-m1-kernel-interfaces.md](09-m1-kernel-interfaces.md) 为准。
+M1 的领域 DTO 以 [kernel-interfaces.md](../kernel/kernel-interfaces.md) 为准。
 
 API 层如果需要 Pydantic schema，只能作为边界对象：
 
@@ -311,4 +311,4 @@ backend/
 - 完整报告正文。
 - 真实资金隐私。
 
-详细规则见 [15-observability-audit-spec.md](../40-ops/15-observability-audit-spec.md)。
+详细规则见 [observability-audit.md](../observability-audit.md)。

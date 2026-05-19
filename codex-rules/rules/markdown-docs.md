@@ -5,7 +5,7 @@
 - `docs/` 文档使用简体中文，标准英文术语可保留原文。
 - 文档应说明目的、边界、数据模型、接口、状态机、风险和验收标准。
 - 对不确定事项使用“待确认”或 `unknown_by_pdf`，不要写成确定结论。
-- 修改设计时同步检查 `docs/00-project/03-open-decisions.md`。
+- 修改设计时同步检查 `docs/architecture/open-decisions.md`。
 
 ## 图表
 

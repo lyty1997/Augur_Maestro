@@ -6,7 +6,7 @@
 
 ## 0. 文档定位
 
-本文档把 [10-m1-scope.md](10-m1-scope.md) 的范围边界拆成可执行任务。范围争议回到 `10-m1-scope.md`，接口和字段争议回到对应专项文档。
+本文档把 [m1-scope.md](m1-scope.md) 的范围边界拆成可执行任务。范围争议回到 `m1-scope.md`，接口和字段争议回到对应专项文档。
 
 本文档用于：
 
@@ -71,7 +71,7 @@ flowchart TB
 
 ### M1.A.01 项目骨架
 
-- 状态：[ ]
+- 状态：[x]
 - 依赖：无。
 - 目标：建立 Python 工程基础目录和最小测试入口。
 - 交付：
@@ -82,10 +82,18 @@ flowchart TB
   - `tests/`。
   - `.env.example`。
   - `requirements.txt`。
+  - `requirements-dev.txt`。
+  - `pyproject.toml`。
+  - `.github/workflows/ci.yml`。
+  - `README.md`。
 - DoD：
   - 能创建 `venv` 并安装依赖。
   - `pytest` 能运行基础冒烟测试。
+  - CI 能运行 `ruff check`、`ruff format --check`、`mypy` 和 `pytest`。
   - `rq_core` 不依赖 FastAPI、Typer、SQLAlchemy、AKShare、Qlib 或 VectorBT。
+- 当前进展：
+  - 已落地最小工程骨架、开发依赖、CI 和本地质量检查命令。
+  - `cli/`、`backend/` 和 `configs/` 当前仅保留目录说明；具体实现按后续任务推进。
 
 ### M1.A.02 配置、错误和日志底座
 
@@ -130,7 +138,7 @@ flowchart TB
   - `backtest_kernel` DTO / Protocol。
   - `report_kernel` DTO / Protocol。
 - DoD：
-  - 与 [09-m1-kernel-interfaces.md](09-m1-kernel-interfaces.md) 对齐。
+  - 与 [kernel-interfaces.md](../backend/kernel/kernel-interfaces.md) 对齐。
   - 类型检查通过。
   - 无外部 SDK 依赖泄漏到 `rq_core`。
 
@@ -140,7 +148,7 @@ flowchart TB
 
 - 状态：[ ]
 - 依赖：M1.A.03。
-- 目标：按 [08-m1-data-model.md](08-m1-data-model.md) 创建 M1 表。
+- 目标：按 [data-model.md](../backend/data/data-model.md) 创建 M1 表。
 - 交付：
   - `market_symbols`。
   - `trade_calendars`。
@@ -371,7 +379,7 @@ flowchart TB
 
 ### M1.E.02 测试矩阵
 
-- 状态：[ ]
+- 状态：[→]
 - 依赖：各模块实现。
 - 最小测试：
   - Kernel DTO 和服务接口单测。
@@ -383,6 +391,9 @@ flowchart TB
 - DoD：
   - 核心业务规则有测试。
   - 外部 SDK 可通过 fake 或 fixture 隔离。
+- 当前进展：
+  - 已有 `TradingGateway` 交易能力锁的安全测试，覆盖 read-only 模式下下单、改单、撤单在触达适配器前被阻断。
+  - 已建立 CI 基线，后续每个模块落地时继续补对应测试。
 
 ### M1.E.03 文档收口
 
@@ -392,7 +403,36 @@ flowchart TB
 - DoD：
   - README 有完整运行步骤。
   - `docs/` 中实现偏差已更新。
-  - 未实现事项进入 [03-open-decisions.md](../00-project/03-open-decisions.md) 或后续任务。
+  - 未实现事项进入 [open-decisions.md](../architecture/open-decisions.md) 或后续任务。
+
+### M1.E.04 CI 和本地质量门禁
+
+- 状态：[x]
+- 依赖：M1.A.01 的当前工程骨架。
+- 目标：让每次 push 和 pull request 至少经过基础机器检查。
+- 交付：
+  - `.github/workflows/ci.yml`。
+  - `pyproject.toml` 中的 `pytest`、`pytest-cov`、`ruff`、`mypy` 配置。
+  - `requirements-dev.txt`。
+  - `requirements-dev.lock.txt`。
+  - `.pre-commit-config.yaml`。
+  - `.secrets.baseline`。
+  - `scripts/quality/trading_safety_static_check.py`。
+  - `scripts/quality/markdown_docs_check.py`。
+  - `.github/pull_request_template.md`。
+  - `.github/CODEOWNERS`。
+- DoD：
+  - CI 使用 Python 3.11。
+  - CI 运行 `python -m ruff check .`。
+  - CI 运行 `python -m ruff format --check .`。
+  - CI 运行 `python -m mypy rq_core`。
+  - CI 运行 `detect-secrets-hook --baseline .secrets.baseline $(git ls-files)`。
+  - CI 运行 `python -m pip_audit -r requirements-dev.lock.txt`。
+  - CI 运行 `python scripts/quality/trading_safety_static_check.py`。
+  - CI 运行 `python scripts/quality/markdown_docs_check.py`。
+  - CI 运行 `python -m pytest`。
+  - 测试覆盖率第一版阈值不低于 60%。
+  - 真实券商接口不会在 CI 中被调用。
 
 ## 8. 风险登记册
 
@@ -433,4 +473,4 @@ flowchart TB
   - 明确账号资金、持仓、订单状态、行情查询和实时变动推送的接口范围。
   - PDF 未说明的 sandbox、改单语义、订单状态或错误码，标记为 `unknown_by_pdf`。
   - 不输出申请截图源码，不运行真实交易接口。
-  - 文档摘录和待确认项同步更新到 [17-yingli-openapi-reference.md](../30-trading/17-yingli-openapi-reference.md)。
+  - 文档摘录和待确认项同步更新到 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md)。

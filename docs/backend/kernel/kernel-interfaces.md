@@ -6,7 +6,7 @@
 
 ## 1. 文档定位
 
-本文档定义 RobustQuant M1 的 Python 层接口类。它承接 [08-m1-data-model.md](08-m1-data-model.md) 的数据库模型，但不等同于 SQLAlchemy ORM 模型。
+本文档定义 RobustQuant M1 的 Python 层接口类。它承接 [data-model.md](../data/data-model.md) 的数据库模型，但不等同于 SQLAlchemy ORM 模型。
 
 目标：
 

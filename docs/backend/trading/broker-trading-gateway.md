@@ -10,7 +10,7 @@
 
 行情数据另设 `QuotationDataGateway`。`TradingGateway` 只处理账户、资金、持仓、订单、成交、下单、改单、撤单等交易相关能力；`QuotationDataGateway` 负责 K 线、快照、盘口、逐笔和 WebSocket 行情推送。两者可以共用券商底层连接配置，但对上层暴露独立接口，避免行情链路和交易链路混杂。
 
-uSmart OpenAPI 真实 HTTP 调用、签名认证、登录、下单、改单、撤单和只读查询的下层 API 设计见 [19-usmart-openapi-call-design.md](19-usmart-openapi-call-design.md)。
+uSmart OpenAPI 真实 HTTP 调用、签名认证、登录、下单、改单、撤单和只读查询的下层 API 设计见 [usmart-openapi-call-design.md](../clients/usmart-openapi-call-design.md)。
 
 本设计只进入文档阶段，不代表可以开始真实下单、改单、撤单或连接真实账户。任何会改变券商侧订单状态的接口，都必须等 OMS、风控、交易时间检查、账户/标的白名单、人工确认、对账和告警设计确认后才能实现和启用。
 
@@ -440,7 +440,7 @@ order_id -> broker_request_id -> X-Request-Id -> broker_order_id
 
 ### 9.2 订单状态映射
 
-内部订单状态以 [14-trading-safety-spec.md](14-trading-safety-spec.md) 为准：
+内部订单状态以 [trading-safety.md](../../architecture/trading-safety.md) 为准：
 
 ```text
 created

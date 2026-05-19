@@ -3,7 +3,7 @@
 ## 开始任务
 
 1. 读取 `AGENTS.md`、`docs/README.md`、`codex-rules/global-AGENTS.md` 和本次任务相关规则。
-2. 检查相关设计文档和 `docs/00-project/03-open-decisions.md`。
+2. 检查相关设计文档和 `docs/architecture/open-decisions.md`。
 3. 明确任务是否触及架构、交易链路、风控、账户、订单、数据模型、券商适配器或部署方式。
 4. 若触及上述范围，先更新 `docs/` 中的设计与待决策问题，并等待用户确认后再写代码。
 

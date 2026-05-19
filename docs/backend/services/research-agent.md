@@ -10,7 +10,7 @@
 
 它不是实盘交易 Agent。它不能直接下单，不能绕过人工审核，不能把候选策略直接推到实盘。
 
-M1 已确认先做 A 股研究回测闭环。券商交易 API 尚未齐备，因此研究回测 Agent 是当前最适合优先推进的主线。它可以先在历史数据和模拟环境中把研究闭环跑起来，等 miniQMT 等券商接口条件成熟后，再把通过审核的策略接入交易链路。盈立 OpenAPI 申请结果不确定，不作为 M1 依赖。M1 历史行情默认通过 AKShare 导入 PostgreSQL 标准表，项目总体路线见 [05-technical-roadmap.md](../00-project/05-technical-roadmap.md)，数据源专项路线见 [06-data-source-roadmap.md](06-data-source-roadmap.md)。
+M1 已确认先做 A 股研究回测闭环。券商交易 API 尚未齐备，因此研究回测 Agent 是当前最适合优先推进的主线。它可以先在历史数据和模拟环境中把研究闭环跑起来，等 miniQMT 等券商接口条件成熟后，再把通过审核的策略接入交易链路。盈立 OpenAPI 申请结果不确定，不作为 M1 依赖。M1 历史行情默认通过 AKShare 导入 PostgreSQL 标准表，项目总体路线见 [technical-roadmap.md](../../project-progress/technical-roadmap.md)，数据源专项路线见 [data-source-roadmap.md](../data/data-source-roadmap.md)。
 
 ## 2. Agent 的职责边界
 

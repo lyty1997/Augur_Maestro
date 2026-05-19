@@ -9,9 +9,9 @@
 设计盈立 OpenAPI 时，优先参考：
 
 - `券商API/盈立/API文档/交易開放API接口文檔V1.0-20201029(繁).pdf`
-- `docs/30-trading/18-broker-trading-gateway-design.md`
-- `docs/30-trading/19-usmart-openapi-call-design.md`
-- `docs/00-project/03-open-decisions.md`
+- `docs/backend/trading/broker-trading-gateway.md`
+- `docs/backend/clients/usmart-openapi-call-design.md`
+- `docs/architecture/open-decisions.md`
 
 无法从券商文档确认的行为必须标记为待确认，不得写成确定事实。
 

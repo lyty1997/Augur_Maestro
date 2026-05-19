@@ -326,7 +326,7 @@ M1 如果做前端，只能只读展示，不提供真实交易干预入口。
 
 ## 15. 盈立 OpenAPI 官方资料边界
 
-盈立 OpenAPI 官方 PDF 解析按 [17-yingli-openapi-reference.md](17-yingli-openapi-reference.md) 执行。`TradingGateway` 统一券商交易网关模块设计按 [18-broker-trading-gateway-design.md](18-broker-trading-gateway-design.md) 执行。源码截图材料与开发无关，不进入 M1 任务。
+盈立 OpenAPI 官方 PDF 解析按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 执行。`TradingGateway` 统一券商交易网关模块设计按 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md) 执行。源码截图材料与开发无关，不进入 M1 任务。
 
 边界：
 

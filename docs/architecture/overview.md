@@ -159,7 +159,7 @@ flowchart TB
 2. 研究线：用历史数据做因子、模型、回测和策略验证。
 3. 交易线：策略产生交易意图，经过风控、OMS 和统一券商网关后才可能下单。
 
-交易线是长期目标，不是 M1 实现范围。研究线由内嵌研究回测 Agent 负责编排；总体推进顺序见 [05-technical-roadmap.md](05-technical-roadmap.md)，研究 Agent 详见 [04-research-agent.md](../10-research-data/04-research-agent.md)。
+交易线是长期目标，不是 M1 实现范围。研究线由内嵌研究回测 Agent 负责编排；总体推进顺序见 [technical-roadmap.md](../project-progress/technical-roadmap.md)，研究 Agent 详见 [research-agent.md](../backend/services/research-agent.md)。
 
 ## 4. 核心模块
 
@@ -222,7 +222,7 @@ M1 数据源策略：
 - 策略、回测和研究 Agent 只读取内部标准化数据表，不能直接绑定外部数据源 SDK。这样后续从临时数据源切换到券商数据时，不需要重写策略和回测逻辑。
 - M1 最小数据集包括 A 股日线行情、交易日历、复权因子、停牌状态、基础股票列表。
 - M1 默认导入最近 10 年日线数据；最近 1 年作为模拟数据，此前数据按时间顺序 8:2 切分为建模数据和回测数据。
-- 具体数据路线详见 [06-data-source-roadmap.md](../10-research-data/06-data-source-roadmap.md)。
+- 具体数据路线详见 [data-source-roadmap.md](../backend/data/data-source-roadmap.md)。
 
 数据源分层：
 
@@ -246,9 +246,9 @@ M1 数据源策略：
 
 M1 数据质量检查至少包括字段完整性、交易日完整性、重复记录、价格异常、复权序列断裂、导入批次状态和第二数据源抽样交叉验证。研究报告必须记录数据源、导入批次、复权方式、数据时间范围和无法交叉验证的原因。
 
-M1 的 PostgreSQL 表、字段、约束和 kernel 归属详见 [08-m1-data-model.md](../20-m1/08-m1-data-model.md)。
+M1 的 PostgreSQL 表、字段、约束和 kernel 归属详见 [data-model.md](../backend/data/data-model.md)。
 
-M1 的 Python 接口类、DTO、Protocol 和服务调用边界详见 [09-m1-kernel-interfaces.md](../20-m1/09-m1-kernel-interfaces.md)。数据表是持久化事实源，接口类是 kernel 之间的协作契约；后续实现时不能把 SQLAlchemy ORM 模型直接当作 kernel 传输对象。
+M1 的 Python 接口类、DTO、Protocol 和服务调用边界详见 [kernel-interfaces.md](../backend/kernel/kernel-interfaces.md)。数据表是持久化事实源，接口类是 kernel 之间的协作契约；后续实现时不能把 SQLAlchemy ORM 模型直接当作 kernel 传输对象。
 
 ### 4.4 消息面与宏观事件分析模块
 
@@ -418,7 +418,7 @@ OMS 需要保证两个特性：
 
 ### 4.9 统一券商交易网关
 
-`TradingGateway` 是本项目的关键交易抽象层。它负责把内部统一订单转换为具体券商适配器调用，并在网关处统一执行能力模式、交易开关和审计约束。行情数据由 `QuotationDataGateway` 负责，不混入交易网关。详细分层、能力模式、适配器边界、幂等、错误映射、日志脱敏和测试策略见 [18-broker-trading-gateway-design.md](../30-trading/18-broker-trading-gateway-design.md)。
+`TradingGateway` 是本项目的关键交易抽象层。它负责把内部统一订单转换为具体券商适配器调用，并在网关处统一执行能力模式、交易开关和审计约束。行情数据由 `QuotationDataGateway` 负责，不混入交易网关。详细分层、能力模式、适配器边界、幂等、错误映射、日志脱敏和测试策略见 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md)。
 
 建议定义统一接口：
 
@@ -716,11 +716,11 @@ RobustQuant/
 
 这里的 `rq_core` 是领域核心，不依赖 Web 框架。M1 采用拆分 kernel 的方式：数据、股票池、研究、回测、报告、风控、OMS、券商适配分别保持高内聚，通过明确接口协作。`backend` 和 `cli` 都只是入口层，不能沉淀核心业务规则。`outputs/` 保存中间产物和报告，默认不进入代码库。
 
-M1 先实现 `data_kernel`、`universe_kernel`、`research_kernel`、`backtest_kernel` 和 `report_kernel` 的接口类，具体设计见 [09-m1-kernel-interfaces.md](../20-m1/09-m1-kernel-interfaces.md)。`risk_kernel`、`oms_kernel` 和 `broker_kernel` 暂时只保留长期目录方向，真实交易接口必须等后续交易链路设计确认后再实现。
+M1 先实现 `data_kernel`、`universe_kernel`、`research_kernel`、`backtest_kernel` 和 `report_kernel` 的接口类，具体设计见 [kernel-interfaces.md](../backend/kernel/kernel-interfaces.md)。`risk_kernel`、`oms_kernel` 和 `broker_kernel` 暂时只保留长期目录方向，真实交易接口必须等后续交易链路设计确认后再实现。
 
 ## 8. 里程碑路线图
 
-本节保留架构视角下的里程碑摘要。项目级路线、细分实施计划、交付顺序和验收标准详见 [05-technical-roadmap.md](05-technical-roadmap.md)。
+本节保留架构视角下的里程碑摘要。项目级路线、细分实施计划、交付顺序和验收标准详见 [technical-roadmap.md](../project-progress/technical-roadmap.md)。
 
 ### 设计基线：设计与工程底座
 
@@ -736,7 +736,7 @@ M1 先实现 `data_kernel`、`universe_kernel`、`research_kernel`、`backtest_k
 ### M1：A 股研究回测闭环
 
 - 建立 A 股主题股票池数据存储和数据质量检查。
-- 按 [08-m1-data-model.md](../20-m1/08-m1-data-model.md) 建立 M1 数据模型和迁移。
+- 按 [data-model.md](../backend/data/data-model.md) 建立 M1 数据模型和迁移。
 - 通过数据网关接入 AKShare 作为默认研究启动源，为后续券商行情接口替换预留 Provider 抽象。
 - 接入第二数据源做关键字段抽样交叉验证。
 - 对正式研究股票池执行长期停牌、低成交额、低换手率和异常小票过滤。

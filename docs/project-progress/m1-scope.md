@@ -15,12 +15,12 @@
 
 本文档不替代专项设计：
 
-- 系统总览见 [01-architecture.md](../00-project/01-architecture.md)。
-- M1 工程设计见 [07-m1-engineering-design.md](07-m1-engineering-design.md)。
-- M1 数据模型见 [08-m1-data-model.md](08-m1-data-model.md)。
-- M1 Kernel 接口见 [09-m1-kernel-interfaces.md](09-m1-kernel-interfaces.md)。
-- M1 实施拆解见 [11-m1-implementation-plan.md](11-m1-implementation-plan.md)。
-- 交易安全边界见 [14-trading-safety-spec.md](../30-trading/14-trading-safety-spec.md)。
+- 系统总览见 [overview.md](../architecture/overview.md)。
+- M1 工程设计见 [engineering-design.md](../backend/engineering-design.md)。
+- M1 数据模型见 [data-model.md](../backend/data/data-model.md)。
+- M1 Kernel 接口见 [kernel-interfaces.md](../backend/kernel/kernel-interfaces.md)。
+- M1 实施拆解见 [implementation-plan.md](implementation-plan.md)。
+- 交易安全边界见 [trading-safety.md](../architecture/trading-safety.md)。
 
 任何新增功能如果不能在本文档找到范围依据，必须先更新本文档和对应专项 spec，经用户确认后再进入编码。
 
@@ -223,7 +223,7 @@ M3 目标是受控实盘交易闭环，前提是 miniQMT 或其他券商 API 行
 
 M3 进入任何真实下单前，都必须重新更新交易链路设计并经用户确认。
 
-盈立 OpenAPI 申请材料需要源码截图时，该事项按券商申请材料处理，不作为 RobustQuant 开发交付。开发侧只按 [17-yingli-openapi-reference.md](../30-trading/17-yingli-openapi-reference.md) 解析官方 PDF，并且不允许真实提交委托。
+盈立 OpenAPI 申请材料需要源码截图时，该事项按券商申请材料处理，不作为 RobustQuant 开发交付。开发侧只按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 解析官方 PDF，并且不允许真实提交委托。
 
 ## 10. 当前需要讨论的决策
 
