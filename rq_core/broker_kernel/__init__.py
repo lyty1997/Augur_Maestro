@@ -36,10 +36,10 @@ __all__ = [
     "BrokerOrderRequest",
     "BrokerSession",
     "BrokerTradingAdapter",
-    "TradingGateway",
     "CapabilityConfig",
     "OrderSide",
     "OrderStatus",
     "OrderType",
     "PriceType",
+    "TradingGateway",
 ]

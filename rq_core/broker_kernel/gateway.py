@@ -4,7 +4,6 @@ from rq_core.broker_kernel.capability import CapabilityGuard
 from rq_core.broker_kernel.contracts import (
     AccountRef,
     BrokerAction,
-    BrokerTradingAdapter,
     BrokerCancelAck,
     BrokerCancelRequest,
     BrokerGatewayConfig,
@@ -14,6 +13,7 @@ from rq_core.broker_kernel.contracts import (
     BrokerOrderAck,
     BrokerOrderRequest,
     BrokerSession,
+    BrokerTradingAdapter,
 )
 
 

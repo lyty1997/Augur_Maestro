@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
-from abc import ABC, abstractmethod
 from typing import Any
 
 
@@ -120,7 +120,7 @@ class BrokerOrderRequest:
     risk_check_id: str
     trace_id: str
     manual_confirm_id: str | None = None
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass(frozen=True)

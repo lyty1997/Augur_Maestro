@@ -62,7 +62,9 @@ class uSmartOpenApiTradingAdapter(BrokerTradingAdapter):
             status=OrderStatus.UNKNOWN,
             broker=self.broker,
             broker_status_raw="unknown_by_pdf",
-            broker_message="uSmart place order endpoint prepared; response mapping requires PDF confirmation",
+            broker_message=(
+                "uSmart place order endpoint prepared; response mapping requires PDF confirmation"
+            ),
             unknown_reason=f"dry_run={response.data.get('dry_run', False)}",
         )
 
@@ -78,7 +80,9 @@ class uSmartOpenApiTradingAdapter(BrokerTradingAdapter):
             status=OrderStatus.UNKNOWN,
             broker=self.broker,
             broker_order_id=request.broker_order_id,
-            broker_message="uSmart modify endpoint prepared; modify semantics require PDF confirmation",
+            broker_message=(
+                "uSmart modify endpoint prepared; modify semantics require PDF confirmation"
+            ),
             unknown_reason=f"dry_run={response.data.get('dry_run', False)}",
         )
 
@@ -94,7 +98,9 @@ class uSmartOpenApiTradingAdapter(BrokerTradingAdapter):
             status=OrderStatus.UNKNOWN,
             broker=self.broker,
             broker_order_id=request.broker_order_id,
-            broker_message="uSmart cancel uses modify endpoint; cancel parameters require PDF confirmation",
+            broker_message=(
+                "uSmart cancel uses modify endpoint; cancel parameters require PDF confirmation"
+            ),
             unknown_reason=f"dry_run={response.data.get('dry_run', False)}",
         )
 
@@ -125,7 +131,9 @@ class uSmartOpenApiTradingAdapter(BrokerTradingAdapter):
             "accountRef": request.account_ref.value,
             "brokerOrderId": request.broker_order_id,
             "newQuantity": str(request.new_quantity) if request.new_quantity is not None else None,
-            "newLimitPrice": str(request.new_limit_price) if request.new_limit_price is not None else None,
+            "newLimitPrice": (
+                str(request.new_limit_price) if request.new_limit_price is not None else None
+            ),
             "clientOrderId": request.order_id,
             "requestId": request.request_id,
             "semantic": "modify_unknown_by_pdf",
