@@ -1,0 +1,2 @@
+# Runtime dependencies for the current M1 kernel.
+# Keep this file intentionally small; add external SDKs only after the relevant design doc is confirmed.

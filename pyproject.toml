@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robustquant"
+version = "0.1.0"
+description = "RobustQuant research and trading safety kernel."
+readme = "docs/README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "detect-secrets>=1.5,<2",
+    "mypy>=1.13,<2",
+    "pip-audit>=2.7,<3",
+    "pre-commit>=4.0,<5",
+    "pytest>=9.0.3,<10",
+    "pytest-cov>=5.0,<7",
+    "ruff>=0.8,<1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rq_core*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--cov=rq_core",
+    "--cov-report=term-missing",
+    "--cov-fail-under=60",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["rq_core"]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+skip_covered = false
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "\\.\\.\\.",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "UP",
+    "RUF",
+]
+ignore = [
+    # 项目文档、注释和用户可见错误信息默认使用中文标点。
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["rq_core"]
+strict = true
+warn_unused_configs = true
+show_error_codes = true

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  python-quality:
+    name: Python quality gates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-dev.lock.txt
+            pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.lock.txt
+
+      - name: Ruff lint
+        run: python -m ruff check .
+
+      - name: Ruff format check
+        run: python -m ruff format --check .
+
+      - name: Mypy typecheck
+        run: python -m mypy rq_core
+
+      - name: Secret scan
+        run: detect-secrets-hook --baseline .secrets.baseline $(git ls-files)
+
+      - name: Dependency audit
+        run: python -m pip_audit -r requirements-dev.lock.txt
+
+      - name: Trading safety static check
+        run: python scripts/quality/trading_safety_static_check.py
+
+      - name: Markdown docs check
+        run: python scripts/quality/markdown_docs_check.py
+
+      - name: Pytest
+        run: python -m pytest
