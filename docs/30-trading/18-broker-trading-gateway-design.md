@@ -2,13 +2,15 @@
 
 版本：v0.1  
 状态：设计草案，待用户确认  
-最后更新：2026-05-15
+最后更新：2026-05-19
 
 ## 0. 文档定位
 
 本文档定义 RobustQuant 后续对接券商交易接口的 `TradingGateway` 模块设计。`TradingGateway` 是 OMS 与具体券商适配器之间的统一交易安全边界，上层同时覆盖 miniQMT、盈立 OpenAPI、Ptrade 和后续券商接口。OpenAPI、miniQMT、Ptrade 都只是适配器类型，不是网关本体。
 
 行情数据另设 `QuotationDataGateway`。`TradingGateway` 只处理账户、资金、持仓、订单、成交、下单、改单、撤单等交易相关能力；`QuotationDataGateway` 负责 K 线、快照、盘口、逐笔和 WebSocket 行情推送。两者可以共用券商底层连接配置，但对上层暴露独立接口，避免行情链路和交易链路混杂。
+
+uSmart OpenAPI 真实 HTTP 调用、签名认证、登录、下单、改单、撤单和只读查询的下层 API 设计见 [19-usmart-openapi-call-design.md](19-usmart-openapi-call-design.md)。
 
 本设计只进入文档阶段，不代表可以开始真实下单、改单、撤单或连接真实账户。任何会改变券商侧订单状态的接口，都必须等 OMS、风控、交易时间检查、账户/标的白名单、人工确认、对账和告警设计确认后才能实现和启用。
 
@@ -133,9 +135,18 @@ rq_core/
 broker_gateway:
   mode: read_only
   trading_enabled: false
+  allow_login: true
+  allow_trade_status_query: true
+  allow_account_query: true
+  allow_position_query: true
+  allow_order_query: true
+  allow_trade_query: true
   allow_place_order: false
   allow_modify_order: false
   allow_cancel_order: false
+  allow_trade_login: false
+  allow_trade_quantity_query: true
+  allow_modify_range_query: true
   allow_odd_lot_order: false
   allow_ipo: false
   allow_prepost_market: false
@@ -146,6 +157,8 @@ broker_gateway:
 - `mode != live_guarded` 时，所有真实交易接口必须返回 `broker.trading_disabled`。
 - 即使 `mode=live_guarded`，只要 `trading_enabled=false`，也不能调用交易接口。
 - 下单、改单、撤单三个能力必须分别开关，不能用一个总开关隐式放开所有交易行为。
+- 登录、账户、持仓、订单、成交、行情等只读能力也要单独开关，便于未来只读联调逐项开放。
+- `trade-login` 虽然不是下单接口，但会改变账户交易可用状态，必须单独开关，默认关闭。
 - IPO 申购、碎股交易、盘前盘后、高级订单必须默认关闭，并单独设计后才能启用。
 
 ## 5. 统一接口契约
@@ -156,11 +169,15 @@ broker_gateway:
 class TradingGateway:
     def health_check(self) -> BrokerHealth: ...
     def connect(self) -> BrokerSession: ...
+    def get_trade_status(self, account_ref: AccountRef) -> BrokerTradeUnlockStatus: ...
     def get_account(self, account_ref: AccountRef) -> AccountSnapshot: ...
     def get_positions(self, account_ref: AccountRef) -> list[PositionSnapshot]: ...
     def get_cash(self, account_ref: AccountRef) -> CashSnapshot: ...
     def query_order(self, request: QueryOrderRequest) -> BrokerOrderSnapshot: ...
+    def query_orders(self, request: QueryOrderListRequest) -> Page[BrokerOrderSnapshot]: ...
     def query_trades(self, request: QueryTradeRequest) -> list[BrokerTradeSnapshot]: ...
+    def query_trade_quantity(self, request: TradeQuantityRequest) -> TradeQuantitySnapshot: ...
+    def query_modify_range(self, request: ModifyRangeRequest) -> ModifyRangeSnapshot: ...
     def get_quote(self, request: QuoteRequest) -> QuoteSnapshot: ...
     def place_order(self, request: BrokerOrderRequest) -> BrokerOrderAck: ...
     def modify_order(self, request: BrokerModifyRequest) -> BrokerModifyAck: ...
@@ -169,11 +186,15 @@ class TradingGateway:
 
 class BrokerTradingAdapter:
     def connect(self) -> BrokerSession: ...
+    def get_trade_status(self, account_ref: AccountRef) -> BrokerTradeUnlockStatus: ...
     def get_account(self, account_ref: AccountRef) -> AccountSnapshot: ...
     def get_positions(self, account_ref: AccountRef) -> list[PositionSnapshot]: ...
     def get_cash(self, account_ref: AccountRef) -> CashSnapshot: ...
     def query_order(self, request: QueryOrderRequest) -> BrokerOrderSnapshot: ...
+    def query_orders(self, request: QueryOrderListRequest) -> Page[BrokerOrderSnapshot]: ...
     def query_trades(self, request: QueryTradeRequest) -> list[BrokerTradeSnapshot]: ...
+    def query_trade_quantity(self, request: TradeQuantityRequest) -> TradeQuantitySnapshot: ...
+    def query_modify_range(self, request: ModifyRangeRequest) -> ModifyRangeSnapshot: ...
     def place_order(self, request: BrokerOrderRequest) -> BrokerOrderAck: ...
     def modify_order(self, request: BrokerModifyRequest) -> BrokerModifyAck: ...
     def cancel_order(self, request: BrokerCancelRequest) -> BrokerCancelAck: ...
@@ -188,9 +209,9 @@ class QuotationDataGateway:
 
 接口分组：
 
-- 连接与权限：`health_check`、`connect`。
+- 连接与权限：`health_check`、`connect`、`get_trade_status`。
 - 只读账户：`get_account`、`get_positions`、`get_cash`。
-- 只读订单：`query_order`、`query_trades`。
+- 只读订单：`query_order`、`query_orders`、`query_trades`、`query_trade_quantity`、`query_modify_range`。
 - 行情数据不放在 `TradingGateway`，由 `QuotationDataGateway` 提供。
 - 交易动作：`place_order`、`modify_order`、`cancel_order`。
 
@@ -235,6 +256,27 @@ class QuotationDataGateway:
 | `accepted_at` | 券商接受时间，可为空 |
 | `unknown_reason` | 状态未知原因，可为空 |
 
+只读查询 DTO 建议字段：
+
+| DTO | 建议字段 | 说明 |
+|---|---|---|
+| `QueryOrderRequest` | `account_ref`、`broker_order_id`、`request_id`、`trace_id` | 查询单笔订单详情 |
+| `QueryOrderListRequest` | `account_ref`、`market`、`start_date`、`end_date`、`page_num`、`page_size`、`request_id`、`trace_id` | 今日订单或历史订单分页查询 |
+| `QueryTradeRequest` | `account_ref`、`market`、`symbol`、`broker_order_id`、`start_date`、`end_date`、`page_num`、`page_size`、`request_id`、`trace_id` | 成交流水查询 |
+| `AccountSnapshot` | `account_ref`、`broker`、`market`、`currency`、`asset`、`market_value`、`cash`、`raw_hash`、`as_of` | 账户资产快照，日志中不得输出完整金额 |
+| `CashSnapshot` | `available_cash`、`withdrawable_cash`、`frozen_cash`、`on_way_cash`、`currency`、`as_of` | 资金快照 |
+| `PositionSnapshot` | `market`、`symbol`、`name`、`quantity`、`available_quantity`、`frozen_quantity`、`odd_quantity`、`last_price`、`cost_price` | 持仓快照 |
+| `BrokerOrderSnapshot` | `broker_order_id`、`market`、`symbol`、`side`、`quantity`、`filled_quantity`、`limit_price`、`avg_fill_price`、`status`、`broker_status_raw`、`final_state_flag` | 订单快照 |
+| `BrokerTradeSnapshot` | `broker_trade_id`、`broker_order_id`、`market`、`symbol`、`side`、`quantity`、`price`、`amount`、`business_status_raw`、`business_time` | 成交快照 |
+| `TradeQuantitySnapshot` | `market`、`symbol`、`side`、`max_quantity`、`raw_hash` | 最大可买可卖数量，只能做风控辅助 |
+| `ModifyRangeSnapshot` | `broker_order_id`、`modified_lower_amount`、`modified_upper_amount`、`business_amount`、`raw_hash` | 改单范围，只能做改单前校验 |
+
+只读 DTO 规则：
+
+- DTO 不保存券商完整原始响应，只保存必要字段、脱敏摘要和 `raw_hash`。
+- 真实资金、持仓市值和完整账号不能进入普通日志；需要审计时仅记录哈希或脱敏摘要。
+- 查询结果可以用于风控辅助，但不能替代对账状态；对账异常时必须暂停相关账户或策略的自动交易。
+
 ## 6. 盈立 OpenAPI 能力映射
 
 盈立官方 PDF 已转换为 Markdown，索引见 `券商API/盈立/API文档/markdown/zh-Hans/API_ENDPOINT_INDEX.md`。以下只是当前抽取结果，字段和状态码仍需逐页核对 PDF。
@@ -260,7 +302,7 @@ class QuotationDataGateway:
 | 能力 | 盈立 endpoint | 默认模式 |
 |---|---|---|
 | 普通下单 | `/stock-order-server/open-api/entrust-order` | 禁用，需 `live_guarded` |
-| 委托改单/撤单 | `/stock-order-server/open-api/modify-order` | 禁用，需单独确认语义 |
+| 委托改单/撤单 | `/stock-order-server/open-api/modify-order` | 禁用；PDF 初步显示 `actionType=1` 为改单、`actionType=0` 为撤单，但仍需确认最终语义 |
 | 改单范围 | `/stock-order-server/open-api/modified-range` | 只读查询，可用于改单前校验 |
 | 碎股下单 | `/stock-order-server/open-api/odd-entrust` | 禁用 |
 | 碎股撤单 | `/stock-order-server/open-api/odd-modify` | 禁用 |
@@ -272,9 +314,10 @@ class QuotationDataGateway:
 
 关键待确认：
 
-- `/modify-order` 是同时承载改单和撤单，还是通过参数区分动作。
+- `/modify-order` 的 `actionType=0/1` 是否分别稳定表示撤单/改单。
 - 改单是否为原生修改，还是券商侧 cancel + replace。
-- 下单响应中哪个字段可稳定作为 `broker_order_id`。
+- 下单响应中 `data.entrustId` 是否可稳定作为 `broker_order_id`。
+- 改单/撤单响应中的 `data.entrustId` 是原委托 ID、新委托 ID，还是申请编号。
 - 订单状态码与 `submitted`、`accepted`、`partial_filled`、`filled`、`cancelled`、`broker_rejected`、`unknown` 的映射。
 - HTTP 成功但业务失败、业务成功但状态未知、网络超时三类情况如何区分。
 
@@ -292,6 +335,8 @@ class QuotationDataGateway:
 
 - 真实资金和持仓属于隐私数据，日志只能记录是否查询成功、字段数量、摘要哈希和脱敏账户。
 - 风控可以读取可用资金、可卖数量和持仓比例，但不能直接依赖未经对账的单次查询结果启用自动交易。
+- 批量资产和聚合资产可以作为统一账户视图的数据源候选，但第一版最小闭环优先使用单账户 `stock-asset` 和 `stock-holding`。
+- 查询汇率只用于估值和展示辅助，不能单独触发调仓或换汇动作。
 
 ### 6.4 行情查询与推送
 
@@ -309,6 +354,7 @@ WebSocket 推送：
 
 - 接入地址：`wss://open-hz.yxzq.com/wss/v1`
 - 消息类型：`auth`、`sub`、`unsub`、`update`、`ping`、`pong`
+- 推送订阅限制按 PDF 初步摘录为每秒最多订阅 10 个 topic、最大订阅 topic 数 10、每秒最多取消订阅 10 个 topic；正式实现前需再次核对 PDF。
 
 规则：
 
@@ -334,7 +380,9 @@ WebSocket 推送：
 - 请求使用 HTTPS。
 - Header 中包含 `X-Sign`。
 - `X-Sign` 使用 `MD5withRSA` 对 Body 内容加密或签名后，再经过 `safeBase64` 编码。
+- 基础报价 PDF 进一步说明签名原文包含 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 的有序拼接；交易 API 当前摘录以 body 签名为主，二者不能混为一个硬编码策略。
 - `X-Request-Id` 用于确保唯一和防重。
+- PDF 对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；正式实现前必须通过 PDF 逐页校对或官方确认。
 - 接入涉及 IP 白名单。
 
 设计规则：
@@ -371,6 +419,7 @@ order_id -> broker_request_id -> X-Request-Id -> broker_order_id
 
 - 每次向券商提交请求前，由 OMS 创建本地 `order_id`。
 - 网关为每一次券商 HTTP 请求生成 `broker_request_id`，并映射到 `X-Request-Id`。
+- 下单 body 的 `serialNo` 也必须和 `broker_request_id` 建立映射；不得直接使用用户输入。
 - `X-Request-Id` 必须持久化到本地订单审计表。
 - 下单超时后，不得用同一个或新的 `X-Request-Id` 自动重发下单。
 - 撤单超时后，不得自动重复撤单。
@@ -487,7 +536,12 @@ USMART_WS_URL=...
 USMART_CHANNEL_ID=...
 USMART_PRIVATE_KEY_PATH=...
 USMART_PUBLIC_KEY_PATH=...
+USMART_PASSWORD_PUBLIC_KEY_PATH=...
 USMART_ACCOUNT_REF=...
+USMART_LOGIN_AREA_CODE=...
+USMART_LOGIN_PHONE=...
+USMART_LOGIN_PASSWORD_SECRET_REF=...
+USMART_TRADE_PASSWORD_SECRET_REF=...
 ```
 
 `configs/broker/usmart.yaml`，可以进入 Git，但不得包含秘密：
@@ -506,17 +560,27 @@ rate_limit:
   trading_per_second: 1
 
 capabilities:
+  login: true
+  trade_status_query: true
   quote_http: true
   quote_ws: true
   account_query: true
   position_query: true
   order_query: true
   trade_query: true
+  trade_quantity_query: true
+  modify_range_query: true
+  trade_login: false
   place_order: false
   modify_order: false
   cancel_order: false
   odd_lot_order: false
   ipo: false
+  prepost_market: false
+
+request_id:
+  header_length: unknown_by_pdf
+  serial_no_length: 19
 
 safety:
   require_oms_caller: true
@@ -544,6 +608,9 @@ safety:
 - 测试 fixture 不得包含真实账号、token、真实资金和真实持仓。
 - 对 `unknown`、超时、401、限流、字段缺失必须有单元测试。
 - 对日志脱敏必须有测试，防止未来把 token 或账户打出来。
+- 对盈立 PDF 字段映射必须有契约测试：下单 `serialNo/entrustAmount/entrustPrice/entrustProp/entrustType/exchangeType/stockCode`，改单 `actionType=1`，撤单 `actionType=0`。
+- 对只读 DTO 映射必须有契约测试：资产、持仓、订单、成交、最大可买可卖、改单范围。
+- 对 `X-Request-Id` 与 `serialNo` 的生成、长度校验和审计映射必须有单元测试。
 
 ## 14. 开发阶段划分
 
@@ -620,13 +687,17 @@ safety:
 
 - 盈立是否提供 sandbox 或 paper trading 环境。
 - 交易 API base URL，当前索引只对行情 base URL 抽取较明确。
-- `/stock-order-server/open-api/modify-order` 如何通过参数区分改单和撤单。
+- `/stock-order-server/open-api/modify-order` 的 `actionType=0/1` 是否分别稳定表示撤单/改单。
 - 改单是原生修改还是 cancel + replace。
-- 普通下单响应中的券商订单号字段。
+- 普通下单响应中的 `data.entrustId` 是否稳定作为券商订单号字段。
+- 改单/撤单响应中的 `data.entrustId` 是原委托 ID、新委托 ID，还是申请编号。
 - 订单状态码完整枚举和状态流转。
 - 错误码完整枚举。
 - 订单类型、价格类型、市场、币种、盘前盘后规则。
-- `X-Request-Id` 的有效期、重复请求返回语义和长度限制。
+- `X-Request-Id` 的有效期、重复请求返回语义和长度限制；PDF 摘录存在 19 位和 30 位两种描述。
+- 下单 body `serialNo` 与 header `X-Request-Id` 的关系。
+- `X-Sign` 对交易 API 和基础报价 API 的签名原文是否不同。
+- `X-Type` 是否必填及可用枚举。
 - token 有效期、刷新方式和多会话冲突规则。
 - HTTP 频率限制和 WebSocket 订阅上限。
 

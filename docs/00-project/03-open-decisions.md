@@ -395,14 +395,27 @@
 - 已拿到盈立繁体中文 PDF 官方文档，位置为 `券商API/盈立/API文档/`。
 - 当前已知 OpenAPI 主要覆盖直接管理交易、查看账户信息、查询行情变化和接收订单/持仓/报价实时变动。
 - 交易相关 PDF 包括 `交易開放API接口文檔V1.0-20201029(繁).pdf`，行情相关 PDF 包括 `基礎報價開放API(繁)_20201029.pdf` 和 `報價推送(繁)_20201029.pdf`。
+- 交易 PDF 初步摘录显示普通下单 endpoint 为 `/stock-order-server/open-api/entrust-order`，改单/撤单共用 `/stock-order-server/open-api/modify-order`。
+- 交易 PDF 初步摘录显示 `modify-order` 通过 `actionType=1` 表示改单、`actionType=0` 表示撤单；最终语义仍需官方或逐页 PDF 校对确认。
+- 交易 PDF 初步摘录显示下单响应 `data.entrustId` 可用于查询订单、修改订单和取消订单；是否可稳定作为内部 `broker_order_id` 仍需确认。
 
 待确认：
 
 - 盈立是否提供 sandbox。
 - 改单是原生 modify API，还是 cancel + replace 流程。
-- 认证方式、base URL、endpoint、签名、订单类型、错误码和订单状态码需要从官方 PDF 逐条提取确认。
+- 交易 API base URL。
+- `X-Request-Id` 长度、有效期和重复请求语义；当前 PDF 摘录存在 19 位和 30 位两种描述。
+- 下单 body `serialNo` 与 header `X-Request-Id` 的关系。
+- `X-Sign` 签名原文：交易 API 当前摘录以 body 为主，基础报价 API 摘录为 header+body 有序拼接，需确认能否分策略处理。
+- `X-Type` 是否必填及枚举。
+- 登录手机号、登录密码、交易密码使用的 RSA 公钥和字段名。
+- `data.entrustId` 在下单、改单、撤单响应中分别代表原委托 ID、新委托 ID 还是申请编号。
+- 订单类型、价格类型、`entrustProp`、`exchangeType`、`sessionType`、盘前盘后/暗盘规则。
+- 错误码、订单状态码、`finalStateFlag` 和状态流转完整枚举。
+- token 有效期、刷新方式、多会话冲突语义、HTTP 频率限制、WebSocket 订阅上限和 IP 白名单生效规则。
 
 建议：
 
 - 只解析 PDF，为未来正式接入做设计依据。
 - PDF 中找不到的 sandbox 和改单语义，标记为 `unknown_by_pdf`；不把券商申请截图格式作为当前开发阻塞项。
+- 具体调用栈、字段映射、只读查询 DTO 和签名策略按 [19-usmart-openapi-call-design.md](../30-trading/19-usmart-openapi-call-design.md) 继续维护；统一网关能力模式和安全边界按 [18-broker-trading-gateway-design.md](../30-trading/18-broker-trading-gateway-design.md) 维护。

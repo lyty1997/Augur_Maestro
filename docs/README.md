@@ -44,6 +44,7 @@ docs/
 - [14-trading-safety-spec.md](30-trading/14-trading-safety-spec.md)：交易安全、风控、OMS 和券商网关规范，作为后续模拟盘和实盘前置设计。
 - [17-yingli-openapi-reference.md](30-trading/17-yingli-openapi-reference.md)：盈立 OpenAPI 官方文档解析说明，记录官方 PDF、接口能力和后续正式接入前的安全边界。
 - [18-broker-trading-gateway-design.md](30-trading/18-broker-trading-gateway-design.md)：TradingGateway 统一券商交易网关模块设计，定义统一交易门面、适配器基类、uSmart/miniQMT/Ptrade 派生、能力模式、幂等、错误映射、日志脱敏和测试策略。
+- [19-usmart-openapi-call-design.md](30-trading/19-usmart-openapi-call-design.md)：uSmart OpenAPI 调用栈全链路设计，定义从本地入口到券商 server 的完整调用层、签名认证、登录、下单、改单、撤单、只读查询和错误处理。
 
 ### 40-ops：运维审计
 
@@ -62,6 +63,7 @@ docs/
 | 数据导入、质量检查、股票池、研究、回测和报告服务怎么工作 | [13-m1-service-specs.md](20-m1/13-m1-service-specs.md) |
 | 真实交易前必须满足哪些安全条件 | [14-trading-safety-spec.md](30-trading/14-trading-safety-spec.md) |
 | 统一券商交易网关怎么设计、uSmart 和 miniQMT 如何接入 | [18-broker-trading-gateway-design.md](30-trading/18-broker-trading-gateway-design.md) |
+| uSmart OpenAPI 全链路怎么调用、怎么签名 | [19-usmart-openapi-call-design.md](30-trading/19-usmart-openapi-call-design.md) |
 | 日志、审计、trace_id、敏感信息怎么处理 | [15-observability-audit-spec.md](40-ops/15-observability-audit-spec.md) |
 | React 控制台能做什么、不能做什么 | [16-frontend-console-spec.md](20-m1/16-frontend-console-spec.md) |
 | 盈立 OpenAPI 官方 PDF 怎么解析和使用 | [17-yingli-openapi-reference.md](30-trading/17-yingli-openapi-reference.md) |
