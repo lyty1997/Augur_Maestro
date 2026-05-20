@@ -387,7 +387,7 @@ POST /stock-order-server/open-api/modify-order
 |---|---|---|
 | `code` | `broker_response_code` | 业务返回码 |
 | `msg` | `broker_message` | 脱敏 |
-| `data.entrustId` | `broker_order_id` | 原委托 ID、新委托 ID 或申请编号语义待确认 |
+| `data.entrustId` | `broker_apply_id` | PDF 回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
 | `data.status` | `broker_status_raw` | 不能单独判断终态 |
 | `data.statusName` | `broker_status_name_raw` | 审计辅助 |
 
@@ -430,7 +430,7 @@ POST /stock-order-server/open-api/modify-order
 |---|---|---|
 | `code` | `broker_response_code` | 业务返回码 |
 | `msg` | `broker_message` | 脱敏 |
-| `data.entrustId` | `broker_order_id` | 语义待确认 |
+| `data.entrustId` | `broker_apply_id` | PDF 回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
 | `data.status` | `broker_status_raw` | 不能单独判断终态 |
 | `data.statusName` | `broker_status_name_raw` | 审计辅助 |
 
@@ -569,9 +569,8 @@ class uSmartHttpTransport:
 - `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；但它必须和 `X-Sign` 渠道签名密钥材料分离。
 - token 有效期、刷新机制。
-- 下单 `data.entrustId` 是否稳定作为券商订单号。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
-- 改单响应 `data.entrustId` 的业务语义。
 - 改单是原生修改还是 cancel + replace。
-- 订单状态、错误码完整枚举。
+- 订单明细 `orderStatus` 历史节点的完整枚举。
+- 错误码完整枚举。
 - `entrustProp` 在港股、美股、暗盘、盘前盘后的适用规则。

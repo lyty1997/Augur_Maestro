@@ -574,13 +574,22 @@ POST /stock-order-server/open-api/entrust-order
 
 | `entrustProp` | PDF 含义 | 第一版策略 |
 |---|---|---|
-| `0` | 美股限价单 / 暗盘委托 limit order | 默认不启用暗盘；美股限价单需进一步确认 |
+| `0` | 美股限价单 / 暗盘委托 limit order | 美股限价单候选；暗盘默认不启用 |
 | `d` | 竞价单 | 默认不启用 |
-| `e` | 增强限价单 | 港股第一版候选限价类型，需确认适用市场 |
+| `e` | 增强限价单 | 港股第一版候选限价类型 |
 | `g` | 竞价限价单 | 默认不启用 |
-| `h` | 港股限价单 | 第一版候选限价类型，需确认与 `e` 的差异 |
+| `h` | 港股限价单 | 在查询响应字段中出现；第一版下单暂不主动发送，需确认与 `e` 的适用差异 |
 | `j` | 特殊限价单 | 默认不启用 |
 | `u` | 碎股单 | 不进入第一版 |
+
+交易阶段 `sessionType`：
+
+| `sessionType` | PDF 含义 | 第一版策略 |
+|---|---|---|
+| `0` / 不传 | 正常订单交易，默认值 | 第一版仅允许正常交易 |
+| `1` | 盘前交易 | 默认不启用 |
+| `2` | 盘后交易 | 默认不启用 |
+| `3` | 暗盘交易 | 默认不启用 |
 
 `OrderType.MARKET`、盘前盘后、暗盘、碎股和 `forceEntrustFlag=true` 默认全部拒绝。若后续需要支持，必须先更新风控和订单类型设计。
 
@@ -591,7 +600,7 @@ POST /stock-order-server/open-api/entrust-order
 | `code` | `broker_response_code` | 业务状态码 |
 | `msg` | `broker_message` | 脱敏后消息 |
 | `data.entrustId` | `broker_order_id` | PDF 说明可用于查询订单、修改订单、取消订单 |
-| `data.status` | `broker_status_raw` | 状态码，完整枚举待确认 |
+| `data.status` | `broker_status_raw` | 普通订单状态码，枚举见 12.1 |
 | `data.statusName` | `broker_status_name_raw` | 状态名摘要，日志需脱敏 |
 
 - `code=0` 且存在 `data.entrustId` 时，才能认为券商返回了可追踪订单号。
@@ -641,8 +650,8 @@ MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=1
 |---|---|---|
 | `code` | `broker_response_code` | 业务状态码 |
 | `msg` | `broker_message` | 脱敏后消息 |
-| `data.entrustId` | `broker_order_id` | 改单申请编号或原委托 ID，需以 PDF/官方确认语义 |
-| `data.status` | `broker_status_raw` | 示例中 `5` 为等待改单，但完整枚举待确认 |
+| `data.entrustId` | `broker_apply_id` | PDF 回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
+| `data.status` | `broker_status_raw` | 普通订单状态码，`5` 表示等待改单 |
 | `data.statusName` | `broker_status_name_raw` | 状态名摘要 |
 
 改单前置校验：
@@ -692,8 +701,8 @@ MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=0
 |---|---|---|
 | `code` | `broker_response_code` | 业务状态码 |
 | `msg` | `broker_message` | 脱敏后消息 |
-| `data.entrustId` | `broker_order_id` | 原委托 ID 或撤单申请编号，需以 PDF/官方确认语义 |
-| `data.status` | `broker_status_raw` | 撤单状态码，完整枚举待确认 |
+| `data.entrustId` | `broker_apply_id` | PDF 回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
+| `data.status` | `broker_status_raw` | 普通订单状态码，撤单申请后通常需查询确认最终状态 |
 | `data.statusName` | `broker_status_name_raw` | 状态名摘要 |
 
 安全规则：
@@ -786,12 +795,20 @@ PDF 字段映射：
 
 ### 12.1 状态映射初稿
 
-以下只来自当前 PDF 摘录和示例，不能视为完整枚举。没有列出的状态码一律映射为 `unknown_by_pdf`，并保留原始状态摘要供人工确认。
+普通订单 `status` 已在交易 API 手册资料字典 `5.1 訂單狀態（Status）` 中给出。没有列出的状态码一律映射为 `unknown_by_pdf`，并保留原始状态摘要供人工确认。
 
-| 来源字段 | PDF 示例值 | PDF 示例状态名 | 内部建议状态 | 说明 |
+| 来源字段 | PDF 值 | PDF 状态名 | 内部建议状态 | 说明 |
 |---|---|---|---|---|
-| 下单响应 `data.status` | `1` | 等待提交 | `submitted` 或 `accepted` 待确认 | 是否已被券商/交易所接受需官方确认 |
-| 改单响应 `data.status` | `5` | 等待改单 | `submitted` 或 `unknown` 待确认 | 只表示改单申请状态，不等同最终改单成功 |
+| 普通订单 `status` | `-1` | 失败 | `broker_rejected` | 失败原因取 `msg` 或后续查询 |
+| 普通订单 `status` | `0` | 全部成交 | `filled` | 订单终态候选，仍需结合成交和对账 |
+| 普通订单 `status` | `1` | 等待提交 | `submitted` | 尚非终态 |
+| 普通订单 `status` | `2` | 待成交 | `accepted` | 尚非终态 |
+| 普通订单 `status` | `3` | 部分成交 | `partial_filled` | 尚非终态 |
+| 普通订单 `status` | `4` | 等待撤单 | `cancel_pending` | 撤单申请中，尚非终态 |
+| 普通订单 `status` | `5` | 等待改单 | `modify_pending` | 改单申请中，尚非终态 |
+| 普通订单 `status` | `6` | 已撤单 | `cancelled` | 订单终态候选 |
+| 普通订单 `status` | `7` | 部成撤单 | `partial_cancelled` | 部分成交后撤单，终态候选 |
+| 普通订单 `status` | `8` | 废单 | `broker_rejected` | 订单终态候选 |
 | 订单明细 `orderStatus` | `11` | 委托下单 | `submitted` 或 `accepted` 待确认 | 示例历史节点 |
 | 订单明细 `orderStatus` | `21` | 改单（最新订单） | `accepted` 或 `unknown` 待确认 | 示例历史节点 |
 | 订单明细 `orderStatus` | `0` | 全部成交（订单结束） | `filled` | 示例显示为最终成交 |
@@ -803,6 +820,7 @@ PDF 字段映射：
 - 下单、改单、撤单响应里的 `status` 只能表示本次申请状态，不能单独作为最终订单状态。
 - 订单最终状态以订单明细、今日/历史订单、成交流水和对账综合确认。
 - `finalStateFlag` 若为最终状态标识，必须先确认枚举含义；未确认前不得用它自动结束 OMS 订单。
+- `orderStatus` 是订单明细历史节点状态，手册未提供完整资料字典；第一版只按已见示例做审计展示，不用于 OMS 主状态判断。
 - 任意状态名文本只能做审计辅助，不能作为唯一状态判断依据。
 
 ## 13. 配置和密钥
@@ -953,13 +971,11 @@ safety:
 - `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
 - token 有效期、刷新方式、多会话冲突语义。
-- 下单返回的 `data.entrustId` 是否稳定作为券商订单号。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
-- `modify-order` 的 `data.entrustId` 是原委托 ID、申请编号，还是新委托 ID。
 - 改单是原生修改还是券商侧 cancel + replace。
-- 订单状态码、错误码完整枚举。
+- 订单明细 `orderStatus` 历史节点的完整枚举。
+- 错误码完整枚举。
 - `finalStateFlag` 的完整枚举和是否可作为 OMS 订单终态判断依据。
-- `exchangeType` 在不同接口中的枚举差异，尤其是查询接口里的 `67-A 股` 和下单接口里的沪深港通枚举。
 - `entrustProp` 中 `e`、`h`、`0` 对港股/美股限价单的适用规则。
 - `sessionType` 的盘前、盘后、暗盘规则，以及是否会形成非交易时间挂单。
 - 频率限制、IP 白名单生效规则。

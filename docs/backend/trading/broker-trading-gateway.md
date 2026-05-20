@@ -320,9 +320,9 @@ class QuotationDataGateway:
 
 - IPO 改撤单接口也使用 `actionType`，但枚举与普通股票委托不同，不得复用普通委托映射。
 - 改单是否为原生修改，还是券商侧 cancel + replace。
-- 下单响应中 `data.entrustId` 是否可稳定作为 `broker_order_id`。
-- 改单/撤单响应中的 `data.entrustId` 是原委托 ID、新委托 ID，还是申请编号。
-- 订单状态码与 `submitted`、`accepted`、`partial_filled`、`filled`、`cancelled`、`broker_rejected`、`unknown` 的映射。
+- 订单明细 `orderStatus` 历史节点的完整枚举。
+- 改单/撤单是否有独立申请编号查询接口或只能通过原委托 ID 查询。
+- 普通订单状态码与 `submitted`、`accepted`、`partial_filled`、`filled`、`cancelled`、`broker_rejected`、`unknown` 的最终映射策略。
 - HTTP 成功但业务失败、业务成功但状态未知、网络超时三类情况如何区分。
 
 ### 6.3 账户、资金和持仓
@@ -700,9 +700,7 @@ safety:
 - 交易 API base URL：当前官方手册未提供，需要 OpenAPI 申请通过后由盈立提供；当前代码只能保留配置占位并默认 dry-run。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 改单是原生修改还是 cancel + replace。
-- 普通下单响应中的 `data.entrustId` 是否稳定作为券商订单号字段。
-- 改单/撤单响应中的 `data.entrustId` 是原委托 ID、新委托 ID，还是申请编号。
-- 订单状态码完整枚举和状态流转。
+- 订单明细 `orderStatus` 历史节点的完整枚举和状态流转。
 - 错误码完整枚举。
 - 订单类型、价格类型、市场、币种、盘前盘后规则。
 - `X-Request-Id` 的有效期和重复请求返回语义。

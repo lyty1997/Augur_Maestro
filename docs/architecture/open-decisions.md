@@ -397,7 +397,8 @@
 - 交易开放 API PDF 是 `交易開放API接口文檔V1.0-20201029(繁).pdf`，基础报价 API PDF 是 `基礎報價開放API(繁)_20201029.pdf`，报价推送 API PDF 是 `報價推送(繁)_20201029.pdf`。
 - 交易 PDF 初步摘录显示普通下单 endpoint 为 `/stock-order-server/open-api/entrust-order`，改单/撤单共用 `/stock-order-server/open-api/modify-order`。
 - MinerU 重新转换后的交易 API 手册确认普通股票委托 `modify-order` 通过 `actionType=1` 表示改单、`actionType=0` 表示撤单；IPO 改撤单接口的 `actionType` 枚举不同，不能混用。
-- 交易 PDF 初步摘录显示下单响应 `data.entrustId` 可用于查询订单、修改订单和取消订单；是否可稳定作为内部 `broker_order_id` 仍需确认。
+- MinerU 重新转换后的交易 API 手册确认普通下单响应 `data.entrustId` 为订单 id，可用于查询订单、修改订单和取消订单；改单/撤单响应里的 `data.entrustId` 为申请编号，不覆盖原委托 ID。
+- 交易 API 手册资料字典确认普通订单 `status`：`-1` 失败、`0` 全部成交、`1` 等待提交、`2` 待成交、`3` 部分成交、`4` 等待撤单、`5` 等待改单、`6` 已撤单、`7` 部成撤单、`8` 废单。
 
 待确认：
 
@@ -409,9 +410,8 @@
 - 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。
 - 登录手机号、登录密码、交易密码使用的 RSA 公钥和字段名。
-- `data.entrustId` 在下单、改单、撤单响应中分别代表原委托 ID、新委托 ID 还是申请编号。
 - 订单类型、价格类型、`entrustProp`、`exchangeType`、`sessionType`、盘前盘后/暗盘规则。
-- 错误码、订单状态码、`finalStateFlag` 和状态流转完整枚举。
+- 错误码、订单明细 `orderStatus` 历史节点、`finalStateFlag` 和状态流转完整枚举。
 - token 有效期、刷新方式、多会话冲突语义、HTTP 频率限制、WebSocket 订阅上限和 IP 白名单生效规则。
 
 建议：
