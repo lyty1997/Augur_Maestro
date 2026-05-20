@@ -1,0 +1,871 @@
+openapi: 3.1.0
+info:
+  title: uSmart Trade OpenAPI Integration Draft
+  version: 0.1.0-draft
+  summary: Draft contract for RobustQuant integration with uSmart trade OpenAPI.
+  description: >
+    This draft covers only the uSmart trade OpenAPI. It does not include the
+    basic quote OpenAPI or quote push WebSocket API. Fields marked with
+    x-pending-confirmation must be verified against the official PDF or uSmart
+    before implementation is treated as final.
+  x-robustquant-source-docs:
+    - ../usmart-openapi-call-design.md
+    - ../usmart-openapi-api-manual.md
+    - ../../trading/broker-trading-gateway.md
+  x-robustquant-scope:
+    api_family: trade_openapi
+    excludes:
+      - basic_quote_openapi
+      - quote_push_websocket_api
+servers:
+  - url: https://pending-usmart-trade-api-base-url.invalid
+    description: Pending uSmart trade API base URL.
+    x-pending-confirmation: Trade API base URL is not provided before approval.
+tags:
+  - name: auth
+    description: Login and captcha endpoints.
+  - name: account
+    description: Read-only account, cash, and position endpoints.
+  - name: orders
+    description: Order, modification, cancellation, and order query endpoints.
+  - name: trades
+    description: Trade record endpoints.
+  - name: guarded-trade
+    description: Trade actions that RobustQuant must block outside live_guarded.
+paths:
+  /user-server/open-api/login:
+    post:
+      tags: [auth]
+      operationId: usmartPasswordLogin
+      summary: Channel password login.
+      description: >
+        Password login using phone number, password, and channel headers. In
+        application screenshots this endpoint must be shown by dry-run only.
+      x-robustquant-first-readonly: true
+      x-robustquant-dry-run-for-application: true
+      parameters:
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordLoginRequest"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+  /user-server/open-api/send-phone-captcha:
+    post:
+      tags: [auth]
+      operationId: usmartSendPhoneCaptcha
+      summary: Send phone captcha for channel captcha login.
+      x-robustquant-first-readonly: false
+      x-robustquant-dry-run-for-application: true
+      parameters:
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendPhoneCaptchaRequest"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessResponse"
+  /user-server/open-api/loginCaptcha:
+    post:
+      tags: [auth]
+      operationId: usmartCaptchaLogin
+      summary: Channel captcha login.
+      x-robustquant-first-readonly: true
+      x-robustquant-dry-run-for-application: true
+      x-pending-confirmation: >
+        Official example contains modifyUserConfigParam, but parameter table
+        lists only areaCode, captcha, and phoneNumber. RobustQuant does not send
+        modifyUserConfigParam until uSmart confirms it is required.
+      parameters:
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaptchaLoginRequest"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+  /stock-order-server/open-api/entrust-order:
+    post:
+      tags: [orders, guarded-trade]
+      operationId: usmartPlaceOrder
+      summary: Place a normal stock order.
+      description: >
+        RobustQuant must block real calls unless the gateway is in live_guarded
+        mode and all OMS, risk, time-window, and audit checks pass.
+      x-robustquant-first-live-scope: us_regular_hours_limit_order
+      x-robustquant-blocked-in-read-only: true
+      x-robustquant-dry-run-for-application: true
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceOrderRequest"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderActionResponse"
+  /stock-order-server/open-api/modify-order:
+    post:
+      tags: [orders, guarded-trade]
+      operationId: usmartModifyOrCancelOrder
+      summary: Modify or cancel a normal stock order.
+      description: >
+        The same endpoint is used for normal stock order modification and
+        cancellation. actionType=1 means modify, and actionType=0 means cancel.
+        IPO modification/cancellation uses different enums and is excluded.
+      x-robustquant-blocked-in-read-only: true
+      x-robustquant-dry-run-for-application: true
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/ModifyOrderRequest"
+                - $ref: "#/components/schemas/CancelOrderRequest"
+              discriminator:
+                propertyName: actionType
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderActionResponse"
+  /stock-order-server/open-api/odd-entrust:
+    post:
+      tags: [orders, guarded-trade]
+      operationId: usmartPlaceOddLotOrder
+      summary: Place an odd-lot order.
+      x-robustquant-first-live-scope: us_odd_lot_only
+      x-robustquant-blocked-in-read-only: true
+      x-pending-confirmation: >
+        Request and response field tables for odd-lot order must be confirmed
+        against the official manual before implementation.
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PendingOfficialFieldTable"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessResponse"
+  /stock-order-server/open-api/odd-modify:
+    post:
+      tags: [orders, guarded-trade]
+      operationId: usmartCancelOddLotOrder
+      summary: Cancel an odd-lot order.
+      x-robustquant-first-live-scope: us_odd_lot_only
+      x-robustquant-blocked-in-read-only: true
+      x-pending-confirmation: >
+        Request and response field tables for odd-lot cancellation must be
+        confirmed against the official manual before implementation.
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PendingOfficialFieldTable"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessResponse"
+  /stock-order-server/open-api/stock-asset:
+    post:
+      tags: [account]
+      operationId: usmartGetStockAsset
+      summary: Query account asset.
+      x-robustquant-first-readonly: true
+      x-pending-confirmation: Official request and response field tables need full schema extraction.
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReadOnlyQueryRequestPending"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetQueryResponseDraft"
+  /stock-order-server/open-api/stock-holding:
+    post:
+      tags: [account]
+      operationId: usmartGetStockHolding
+      summary: Query stock holdings.
+      x-robustquant-first-readonly: true
+      x-pending-confirmation: Official request and response field tables need full schema extraction.
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReadOnlyQueryRequestPending"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HoldingQueryResponseDraft"
+  /stock-order-server/open-api/today-entrust:
+    post:
+      tags: [orders]
+      operationId: usmartQueryTodayOrders
+      summary: Query today's orders.
+      x-robustquant-first-readonly: true
+      x-pending-confirmation: Official request and response field tables need full schema extraction.
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderQueryRequestPending"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderQueryResponseDraft"
+  /stock-order-server/open-api/his-entrust:
+    post:
+      tags: [orders]
+      operationId: usmartQueryHistoryOrders
+      summary: Query historical orders.
+      x-robustquant-first-readonly: true
+      x-pending-confirmation: Official request and response field tables need full schema extraction.
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderQueryRequestPending"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderQueryResponseDraft"
+  /stock-order-server/open-api/order-detail:
+    post:
+      tags: [orders]
+      operationId: usmartQueryOrderDetail
+      summary: Query order detail.
+      x-robustquant-first-readonly: true
+      x-pending-confirmation: Official request and response field tables need full schema extraction.
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderDetailRequestPending"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailResponseDraft"
+  /stock-order-server/open-api/stock-record:
+    post:
+      tags: [trades]
+      operationId: usmartQueryStockRecords
+      summary: Query trade records.
+      x-robustquant-first-readonly: true
+      x-pending-confirmation: Official request and response field tables need full schema extraction.
+      parameters:
+        - $ref: "#/components/parameters/HeaderAuthorization"
+        - $ref: "#/components/parameters/HeaderContentType"
+        - $ref: "#/components/parameters/HeaderLang"
+        - $ref: "#/components/parameters/HeaderChannel"
+        - $ref: "#/components/parameters/HeaderTime"
+        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderAppType"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - $ref: "#/components/parameters/HeaderSign"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeRecordQueryRequestPending"
+      responses:
+        "200":
+          description: Business response from uSmart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeRecordResponseDraft"
+components:
+  parameters:
+    HeaderAuthorization:
+      name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Login token. Must never be logged in full.
+    HeaderContentType:
+      name: Content-Type
+      in: header
+      required: true
+      schema:
+        type: string
+        const: application/json; charset=utf-8
+    HeaderLang:
+      name: X-Lang
+      in: header
+      required: true
+      schema:
+        type: string
+        examples: ["1"]
+      x-pending-confirmation: Full language enum.
+    HeaderChannel:
+      name: X-Channel
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Channel ID assigned by uSmart.
+    HeaderTime:
+      name: X-Time
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Unix epoch milliseconds represented as a string.
+    HeaderDeviceType:
+      name: X-Dt
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: ["1", "2", "3", "4", "5"]
+      description: 1 Android, 2 iOS, 3 other, 4 Windows, 5 Mac.
+    HeaderAppType:
+      name: X-Type
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: ["1", "2"]
+        default: "1"
+      description: 1 mainland app, 2 Hong Kong app.
+    HeaderRequestId:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 30
+      x-pending-confirmation: Effective length, lifetime, and duplicate semantics.
+    HeaderSign:
+      name: X-Sign
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Signature over stable JSON body using trade OpenAPI key material.
+  schemas:
+    PasswordLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [areaCode, phoneNumber, password]
+      properties:
+        areaCode:
+          type: string
+        phoneNumber:
+          type: string
+          description: Encrypted phone number.
+          x-sensitive: true
+          x-pending-confirmation: RSA public key and padding mode.
+        password:
+          type: string
+          description: Encrypted login password.
+          x-sensitive: true
+          x-pending-confirmation: RSA public key and padding mode.
+    SendPhoneCaptchaRequest:
+      type: object
+      additionalProperties: false
+      required: [areaCode, phoneNumber, type]
+      properties:
+        areaCode:
+          type: string
+        phoneNumber:
+          type: string
+          description: Encrypted phone number.
+          x-sensitive: true
+          x-pending-confirmation: RSA public key and padding mode.
+        type:
+          oneOf:
+            - type: integer
+              const: 106
+            - type: string
+              const: "106"
+          x-pending-confirmation: Official JSON scalar type.
+    CaptchaLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [areaCode, phoneNumber, captcha]
+      properties:
+        areaCode:
+          type: string
+        phoneNumber:
+          type: string
+          description: Encrypted phone number.
+          x-sensitive: true
+          x-pending-confirmation: RSA public key and padding mode.
+        captcha:
+          type: string
+          x-sensitive: true
+    PlaceOrderRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - serialNo
+        - entrustAmount
+        - entrustPrice
+        - entrustProp
+        - entrustType
+        - exchangeType
+        - stockCode
+      properties:
+        serialNo:
+          type: string
+          maxLength: 19
+          description: Body serial number mapped from local broker_request_id.
+        entrustAmount:
+          $ref: "#/components/schemas/DecimalOrNumberPending"
+        entrustPrice:
+          $ref: "#/components/schemas/DecimalOrNumberPending"
+        entrustProp:
+          type: string
+          enum: ["0", "d", "e", "g", "h", "j", "u"]
+          x-robustquant-first-live-allowed: ["0", "u"]
+          x-pending-confirmation: >
+            Precise applicability for US regular-hours limit order and US odd-lot
+            order must be confirmed. HK grey-market rules are design-only.
+        entrustType:
+          oneOf:
+            - type: integer
+              enum: [0, 1]
+            - type: string
+              enum: ["0", "1"]
+          description: 0 buy, 1 sell.
+          x-pending-confirmation: Official JSON scalar type.
+        exchangeType:
+          oneOf:
+            - type: integer
+              enum: [0, 5, 6, 7]
+            - type: string
+              enum: ["0", "5", "6", "7"]
+          x-robustquant-first-live-allowed: [5, "5"]
+          x-pending-confirmation: Interface-specific enum and JSON scalar type.
+        stockCode:
+          type: string
+        stockName:
+          type: string
+        password:
+          type: string
+          x-sensitive: true
+          x-pending-confirmation: Whether trading password is required and how it is encrypted.
+        forceEntrustFlag:
+          oneOf:
+            - type: boolean
+            - type: string
+              enum: ["true", "false"]
+          default: false
+          x-robustquant-default: false
+          x-pending-confirmation: Official JSON scalar type.
+        sessionType:
+          oneOf:
+            - type: integer
+              enum: [0, 1, 2, 3]
+            - type: string
+              enum: ["0", "1", "2", "3"]
+          x-robustquant-first-live-allowed: [0, "0"]
+          x-pending-confirmation: Official JSON scalar type and default omission behavior.
+    ModifyOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [actionType, entrustAmount, entrustId, entrustPrice]
+      properties:
+        actionType:
+          oneOf:
+            - type: integer
+              const: 1
+            - type: string
+              const: "1"
+          description: Normal stock order modification.
+          x-pending-confirmation: Official JSON scalar type.
+        entrustAmount:
+          $ref: "#/components/schemas/DecimalOrNumberPending"
+        entrustId:
+          type: string
+          description: Original broker order ID.
+        entrustPrice:
+          $ref: "#/components/schemas/DecimalOrNumberPending"
+        password:
+          type: string
+          x-sensitive: true
+          x-pending-confirmation: Whether trading password is required and how it is encrypted.
+        forceEntrustFlag:
+          oneOf:
+            - type: boolean
+            - type: string
+              enum: ["true", "false"]
+          default: false
+          x-pending-confirmation: Official JSON scalar type.
+    CancelOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [actionType, entrustAmount, entrustId, entrustPrice]
+      properties:
+        actionType:
+          oneOf:
+            - type: integer
+              const: 0
+            - type: string
+              const: "0"
+          description: Normal stock order cancellation.
+          x-pending-confirmation: Official JSON scalar type.
+        entrustAmount:
+          oneOf:
+            - type: integer
+              const: 0
+            - type: string
+              const: "0"
+          x-pending-confirmation: Official JSON scalar type.
+        entrustId:
+          type: string
+          description: Original broker order ID.
+        entrustPrice:
+          oneOf:
+            - type: integer
+              const: 0
+            - type: string
+              const: "0"
+          x-pending-confirmation: Official JSON scalar type.
+        password:
+          type: string
+          x-sensitive: true
+          x-pending-confirmation: Whether trading password is required and how it is encrypted.
+    LoginResponse:
+      type: object
+      additionalProperties: true
+      required: [token]
+      properties:
+        token:
+          type: string
+          x-sensitive: true
+          description: Top-level token, stored only in memory.
+        expiration:
+          type: string
+          x-pending-confirmation: Expiration format and timezone.
+        tradePassword:
+          x-pending-confirmation: Official scalar type.
+        openedAccount:
+          x-pending-confirmation: Official scalar type.
+        extendStatusBit:
+          x-pending-confirmation: Official field semantics.
+    BusinessResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        code:
+          $ref: "#/components/schemas/BusinessCode"
+        msg:
+          type: string
+        data:
+          description: Endpoint-specific response payload.
+      x-pending-confirmation: Complete business error code list.
+    OrderActionResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        code:
+          $ref: "#/components/schemas/BusinessCode"
+        msg:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+          properties:
+            entrustId:
+              type: string
+              description: Order ID for place-order; application ID for modify/cancel.
+            status:
+              $ref: "#/components/schemas/OrderStatusRaw"
+            statusName:
+              type: string
+      x-pending-confirmation: Response data required fields per operation.
+    BusinessCode:
+      oneOf:
+        - type: integer
+        - type: string
+      description: uSmart business response code. code=0 may indicate business success.
+      x-pending-confirmation: Complete enum and JSON scalar type.
+    OrderStatusRaw:
+      oneOf:
+        - type: integer
+          enum: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+        - type: string
+          enum: ["-1", "0", "1", "2", "3", "4", "5", "6", "7", "8"]
+      x-pending-confirmation: Official JSON scalar type and status flow.
+    DecimalOrNumberPending:
+      oneOf:
+        - type: string
+        - type: number
+      x-pending-confirmation: Official JSON scalar type and decimal precision.
+    PendingOfficialFieldTable:
+      type: object
+      additionalProperties: true
+      x-pending-confirmation: Official request/response field table must be extracted.
+    ReadOnlyQueryRequestPending:
+      type: object
+      additionalProperties: true
+      x-pending-confirmation: Official request fields for this read-only query are not fully extracted.
+    OrderQueryRequestPending:
+      type: object
+      additionalProperties: true
+      properties:
+        exchangeType:
+          $ref: "#/components/schemas/QueryExchangeTypePending"
+        pageNum:
+          $ref: "#/components/schemas/PageNumberPending"
+        pageSize:
+          $ref: "#/components/schemas/PageSizePending"
+      x-pending-confirmation: Official query field names, required fields, and pagination names.
+    OrderDetailRequestPending:
+      type: object
+      additionalProperties: true
+      properties:
+        entrustId:
+          type: string
+      x-pending-confirmation: Official order-detail request field table.
+    TradeRecordQueryRequestPending:
+      type: object
+      additionalProperties: true
+      properties:
+        exchangeType:
+          $ref: "#/components/schemas/QueryExchangeTypePending"
+        stockCode:
+          type: string
+        entrustId:
+          type: string
+        pageNum:
+          $ref: "#/components/schemas/PageNumberPending"
+        pageSize:
+          $ref: "#/components/schemas/PageSizePending"
+      x-pending-confirmation: Official trade-record request field table.
+    QueryExchangeTypePending:
+      oneOf:
+        - type: integer
+        - type: string
+      description: Query-only market enum; value 100 may mean all markets.
+      x-pending-confirmation: Interface-specific enum and JSON scalar type.
+    PageNumberPending:
+      oneOf:
+        - type: integer
+        - type: string
+      x-pending-confirmation: Official pagination field type and base index.
+    PageSizePending:
+      oneOf:
+        - type: integer
+        - type: string
+      x-pending-confirmation: Official pagination field type and maximum page size.
+    AssetQueryResponseDraft:
+      allOf:
+        - $ref: "#/components/schemas/BusinessResponse"
+      x-known-fields:
+        - asset
+        - marketValue
+        - enableBalance
+        - withdrawBalance
+        - frozenBalance
+        - onWayBalance
+      x-pending-confirmation: Complete response shape.
+    HoldingQueryResponseDraft:
+      allOf:
+        - $ref: "#/components/schemas/BusinessResponse"
+      x-known-fields:
+        - exchangeType
+        - stockCode
+        - stockName
+        - currentAmount
+        - enableAmount
+        - frozenAmount
+        - oddAmount
+      x-pending-confirmation: Complete response shape.
+    OrderQueryResponseDraft:
+      allOf:
+        - $ref: "#/components/schemas/BusinessResponse"
+      x-known-fields:
+        - entrustId
+        - status
+        - statusName
+        - finalStateFlag
+      x-pending-confirmation: Complete response shape and pagination wrapper.
+    OrderDetailResponseDraft:
+      allOf:
+        - $ref: "#/components/schemas/BusinessResponse"
+      x-pending-confirmation: Complete response shape and historical status node schema.
+    TradeRecordResponseDraft:
+      allOf:
+        - $ref: "#/components/schemas/BusinessResponse"
+      x-known-fields:
+        - businessStatus
+        - entrustId
+        - stockCode
+        - stockName
+      x-pending-confirmation: Complete response shape and pagination wrapper.
