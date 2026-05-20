@@ -75,9 +75,9 @@ flowchart TB
 - 依赖：无。
 - 目标：建立 Python 工程基础目录和最小测试入口。
 - 交付：
-  - `rq_core/`。
-  - `cli/`。
-  - `backend/`。
+  - `src/rq_core/`。
+  - `src/cli/`。
+  - `src/backend/`。
   - `configs/`。
   - `tests/`。
   - `.env.example`。
@@ -93,7 +93,7 @@ flowchart TB
   - `rq_core` 不依赖 FastAPI、Typer、SQLAlchemy、AKShare、Qlib 或 VectorBT。
 - 当前进展：
   - 已落地最小工程骨架、开发依赖、CI 和本地质量检查命令。
-  - `cli/`、`backend/` 和 `configs/` 当前仅保留目录说明；具体实现按后续任务推进。
+  - `src/cli/`、`src/backend/` 和 `configs/` 当前仅保留目录说明；具体实现按后续任务推进。
 
 ### M1.A.02 配置、错误和日志底座
 
@@ -417,19 +417,19 @@ flowchart TB
   - `requirements-dev.lock.txt`。
   - `.pre-commit-config.yaml`。
   - `.secrets.baseline`。
-  - `scripts/quality/trading_safety_static_check.py`。
-  - `scripts/quality/markdown_docs_check.py`。
+  - `src/scripts/quality/trading_safety_static_check.py`。
+  - `src/scripts/quality/markdown_docs_check.py`。
   - `.github/pull_request_template.md`。
   - `.github/CODEOWNERS`。
 - DoD：
   - CI 使用 Python 3.11。
   - CI 运行 `python -m ruff check .`。
   - CI 运行 `python -m ruff format --check .`。
-  - CI 运行 `python -m mypy rq_core`。
+  - CI 运行 `python -m mypy -p rq_core`。
   - CI 运行 `detect-secrets-hook --baseline .secrets.baseline $(git ls-files)`。
   - CI 运行 `python -m pip_audit -r requirements-dev.lock.txt`。
-  - CI 运行 `python scripts/quality/trading_safety_static_check.py`。
-  - CI 运行 `python scripts/quality/markdown_docs_check.py`。
+  - CI 运行 `python src/scripts/quality/trading_safety_static_check.py`。
+  - CI 运行 `python src/scripts/quality/markdown_docs_check.py`。
   - CI 运行 `python -m pytest`。
   - 测试覆盖率第一版阈值不低于 60%。
   - 真实券商接口不会在 CI 中被调用。

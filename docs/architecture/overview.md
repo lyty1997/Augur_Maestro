@@ -685,36 +685,38 @@ miniQMT 已确认支持无人值守运行，但仍需要确认具体运行环境
 ```text
 RobustQuant/
   docs/
-  backend/
-    app/
-      api/
-      core/
-      models/
-      services/
-  cli/
-  rq_core/
-    data_kernel/
-    universe_kernel/
-    research_kernel/
-    backtest_kernel/
-    report_kernel/
-    strategy_kernel/
-    risk_kernel/
-    oms_kernel/
-    broker_kernel/
-      miniqmt/
-      usmart/
-      ptrade/
-    quotation_kernel/
-    common/
+  src/
+    backend/
+      app/
+        api/
+        core/
+        models/
+        services/
+    cli/
+    rq_core/
+      data_kernel/
+      universe_kernel/
+      research_kernel/
+      backtest_kernel/
+      report_kernel/
+      strategy_kernel/
+      risk_kernel/
+      oms_kernel/
+      broker_kernel/
+        miniqmt/
+        usmart/
+        ptrade/
+      quotation_kernel/
+      common/
+    scripts/
+      quality/
   configs/
   outputs/
   frontend/
-  scripts/
   tests/
 ```
 
-这里的 `rq_core` 是领域核心，不依赖 Web 框架。M1 采用拆分 kernel 的方式：数据、股票池、研究、回测、报告、风控、OMS、券商适配分别保持高内聚，通过明确接口协作。`backend` 和 `cli` 都只是入口层，不能沉淀核心业务规则。`outputs/` 保存中间产物和报告，默认不进入代码库。
+这里的 `src/rq_core` 是领域核心，不依赖 Web 框架。M1 采用拆分 kernel 的方式：数据、股票池、研究、回测、报告、风控、OMS、券商适配分别保持高内聚，通过明确接口协作。`src/backend` 和 `src/cli` 都只是入口层，不能沉淀核心业务规则。`outputs/` 保存中间产物和报告，默认不进入代码库。
 
 M1 先实现 `data_kernel`、`universe_kernel`、`research_kernel`、`backtest_kernel` 和 `report_kernel` 的接口类，具体设计见 [kernel-interfaces.md](../backend/kernel/kernel-interfaces.md)。`risk_kernel`、`oms_kernel` 和 `broker_kernel` 暂时只保留长期目录方向，真实交易接口必须等后续交易链路设计确认后再实现。
 

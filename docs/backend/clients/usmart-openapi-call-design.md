@@ -176,20 +176,21 @@ RobustQuant 后续可能有自己的 FastAPI server。它和 uSmart OpenAPI serv
 建议目标代码结构：
 
 ```text
-rq_core/
-  broker_kernel/
-    gateway.py                    TradingGateway：统一交易安全门面
-    contracts.py                  统一 DTO、枚举、适配器基类
-    capability.py                 交易能力和模式检查
-    errors.py                     统一异常
-    usmart/
-      adapter.py                  uSmartOpenApiTradingAdapter
-      client.py                   uSmartOpenApiClient
-      auth.py                     uSmartAuthSigner
-      transport.py                uSmartHttpTransport
-      endpoints.py                endpoint 常量
-      mapper.py                   OpenAPI 响应与内部 DTO 映射
-      rate_limit.py               OpenAPI 频率限制
+src/
+  rq_core/
+    broker_kernel/
+      gateway.py                    TradingGateway：统一交易安全门面
+      contracts.py                  统一 DTO、枚举、适配器基类
+      capability.py                 交易能力和模式检查
+      errors.py                     统一异常
+      usmart/
+        adapter.py                  uSmartOpenApiTradingAdapter
+        client.py                   uSmartOpenApiClient
+        auth.py                     uSmartAuthSigner
+        transport.py                uSmartHttpTransport
+        endpoints.py                endpoint 常量
+        mapper.py                   OpenAPI 响应与内部 DTO 映射
+        rate_limit.py               OpenAPI 频率限制
 ```
 
 职责边界：

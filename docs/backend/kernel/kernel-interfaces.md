@@ -28,26 +28,27 @@
 推荐目录：
 
 ```text
-rq_core/
-  common/
-    types.py
-    errors.py
-  data_kernel/
-    records.py
-    ports.py
-    services.py
-  universe_kernel/
-    records.py
-    ports.py
-    services.py
-  research_kernel/
-    records.py
-    ports.py
-    services.py
-  backtest_kernel/
-    records.py
-    ports.py
-    services.py
+src/
+  rq_core/
+    common/
+      types.py
+      errors.py
+    data_kernel/
+      records.py
+      ports.py
+      services.py
+    universe_kernel/
+      records.py
+      ports.py
+      services.py
+    research_kernel/
+      records.py
+      ports.py
+      services.py
+    backtest_kernel/
+      records.py
+      ports.py
+      services.py
   report_kernel/
     records.py
     ports.py

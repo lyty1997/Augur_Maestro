@@ -69,25 +69,26 @@ flowchart LR
 建议代码分层如下：
 
 ```text
-rq_core/
-  broker_kernel/
-    contracts.py              统一 DTO、枚举、Protocol
-    gateway.py                TradingGateway 门面
-    adapter_base.py           BrokerTradingAdapter 统一接口基类
-    capability.py             能力模式、权限判断
-    errors.py                 统一错误与状态映射
-    idempotency.py            请求幂等与 request_id 生成
-    redaction.py              脱敏工具
-    audit.py                  审计事件模型
-    usmart/
-      adapter.py              uSmartOpenApiTradingAdapter
-      client.py               uSmart HTTP/WebSocket 原始客户端
-      auth.py                 uSmart 认证、签名、token 生命周期
-      mapper.py               uSmart 字段与内部 DTO 映射
-      endpoints.py            uSmart endpoint 常量与能力声明
-      rate_limit.py           uSmart 限流策略
-    miniqmt/
-      adapter.py              MiniQMTTradingAdapter，占位派生，当前不实现具体连接
+src/
+  rq_core/
+    broker_kernel/
+      contracts.py              统一 DTO、枚举、Protocol
+      gateway.py                TradingGateway 门面
+      adapter_base.py           BrokerTradingAdapter 统一接口基类
+      capability.py             能力模式、权限判断
+      errors.py                 统一错误与状态映射
+      idempotency.py            请求幂等与 request_id 生成
+      redaction.py              脱敏工具
+      audit.py                  审计事件模型
+      usmart/
+        adapter.py              uSmartOpenApiTradingAdapter
+        client.py               uSmart HTTP/WebSocket 原始客户端
+        auth.py                 uSmart 认证、签名、token 生命周期
+        mapper.py               uSmart 字段与内部 DTO 映射
+        endpoints.py            uSmart endpoint 常量与能力声明
+        rate_limit.py           uSmart 限流策略
+      miniqmt/
+        adapter.py              MiniQMTTradingAdapter，占位派生，当前不实现具体连接
     ptrade/
       adapter.py              PtradeTradingAdapter，占位派生，后续按同一基类实现
   quotation_kernel/
