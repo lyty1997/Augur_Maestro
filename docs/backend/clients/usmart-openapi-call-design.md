@@ -221,19 +221,21 @@ src/
 
 ## 3. Endpoint 范围
 
-第一版只覆盖券商申请、只读联调、对账和交易网关最小闭环需要的接口。字段以官方 PDF 为准；本文只记录当前设计映射。
+第一版只覆盖券商申请、只读联调、对账和交易网关最小闭环需要的接口。申请材料截图只使用 dry-run / offline request builder，不做真实登录；只读联调可在用户显式授权后触达登录和查询接口，但不允许下单、改单、撤单。字段以官方 PDF 为准；本文只记录当前设计映射。
 
 ### 3.1 交易 API endpoint 分组
 
 | 能力 | 方法 | endpoint | 当前允许触达 OpenAPI |
 |---|---|---|---|
-| 渠道密码登录 | POST | `/user-server/open-api/login` | 只读联调阶段可允许 |
-| 获取手机验证码 | POST | `/user-server/open-api/send-phone-captcha` | 只作为验证码登录前置步骤；短信登录验证码 `type=106`，避免自动化滥用 |
-| 渠道验证码登录 | POST | `/user-server/open-api/loginCaptcha` | 只读联调阶段可作为备选登录方式 |
+| 渠道密码登录 | POST | `/user-server/open-api/login` | 申请材料只 dry-run；只读联调阶段可显式允许 |
+| 获取手机验证码 | POST | `/user-server/open-api/send-phone-captcha` | 申请材料只 dry-run；短信登录验证码 `type=106`，避免自动化滥用 |
+| 渠道验证码登录 | POST | `/user-server/open-api/loginCaptcha` | 申请材料只 dry-run；只读联调阶段可作为备选登录方式 |
 | 获取交易解锁状态 | POST | `/user-server/open-api/get-trade-status` | 只读联调阶段可允许 |
 | 普通下单 | POST | `/stock-order-server/open-api/entrust-order` | 默认禁止，需 `live_guarded` |
 | 委托改单 | POST | `/stock-order-server/open-api/modify-order` | 默认禁止，需 `live_guarded` |
 | 委托撤单 | POST | `/stock-order-server/open-api/modify-order` | 默认禁止，需 `live_guarded` |
+| 碎股下单 | POST | `/stock-order-server/open-api/odd-entrust` | 默认禁止，需 `live_guarded` + 碎股能力 |
+| 碎股撤单 | POST | `/stock-order-server/open-api/odd-modify` | 默认禁止，需 `live_guarded` + 碎股能力 |
 | 改单范围查询 | POST | `/stock-order-server/open-api/modified-range` | 只读联调阶段可允许，用于改单前校验 |
 | 最大可买可卖数量 | POST | `/stock-order-server/open-api/trade-quantity` | 只读联调阶段可允许，用于风控辅助 |
 | 今日订单查询 | POST | `/stock-order-server/open-api/today-entrust` | 只读联调阶段可允许 |
@@ -250,9 +252,8 @@ src/
 
 - 修改、重置登录密码或交易密码。
 - 交易解锁 `trade-login`。
-- IPO 申购和 IPO 改单。
-- 碎股下单和碎股撤单。
-- 盘前盘后交易。
+- IPO 申购和 IPO 改单；港股新股暗盘交易若通过普通下单接口和 `sessionType=3` 处理，不属于 IPO 申购接口。
+- 美股盘前盘后交易。
 - 条件单、止盈止损、触发单。
 
 `trade-login` 不是下单接口，但可能改变账户交易可用状态，因此不作为只读联调接口。
@@ -458,7 +459,7 @@ class uSmartTradeOpenApiClient:
 
 ## 7. 登录 API 设计
 
-交易开放 API 有两种登录方式：
+交易开放 API 有两种登录方式。申请材料截图只展示 dry-run 请求构造和调用栈，不做真实登录；真实登录只允许在只读联调配置显式开启后发生。
 
 1. 渠道密码登录：手机 + 登录密码 + 渠道，endpoint 为 `/user-server/open-api/login`。
 2. 渠道验证码登录：先调用 `/user-server/open-api/send-phone-captcha` 获取手机验证码，短信登录验证码类型为 `type=106`；再用手机 + 验证码 + 渠道调用 `/user-server/open-api/loginCaptcha`。
@@ -558,7 +559,7 @@ POST /stock-order-server/open-api/entrust-order
 | 内部市场 | `exchangeType` | 第一版策略 |
 |---|---|---|
 | `HK` | `0` | 可作为港股只读和未来受控交易候选 |
-| `US` | `5` | 可作为美股只读和未来受控交易候选 |
+| `US` | `5` | 主要交易市场，可作为美股只读和未来受控交易候选 |
 | `SH_HK_CONNECT` | `6` | 第一版不启用真实交易 |
 | `SZ_HK_CONNECT` | `7` | 第一版不启用真实交易 |
 | `ALL` | `100` | 仅查询接口使用，不允许下单 |
@@ -574,24 +575,24 @@ POST /stock-order-server/open-api/entrust-order
 
 | `entrustProp` | PDF 含义 | 第一版策略 |
 |---|---|---|
-| `0` | 美股限价单 / 暗盘委托 limit order | 美股限价单候选；暗盘默认不启用 |
+| `0` | 美股限价单 / 暗盘委托 limit order | 美股主要限价类型候选；港股暗盘候选 |
 | `d` | 竞价单 | 默认不启用 |
-| `e` | 增强限价单 | 港股第一版候选限价类型 |
+| `e` | 增强限价单 | 港股普通交易候选 |
 | `g` | 竞价限价单 | 默认不启用 |
 | `h` | 港股限价单 | 在查询响应字段中出现；第一版下单暂不主动发送，需确认与 `e` 的适用差异 |
 | `j` | 特殊限价单 | 默认不启用 |
-| `u` | 碎股单 | 不进入第一版 |
+| `u` | 碎股单 | 碎股交易候选；优先使用碎股专用 endpoint 建模 |
 
 交易阶段 `sessionType`：
 
 | `sessionType` | PDF 含义 | 第一版策略 |
 |---|---|---|
-| `0` / 不传 | 正常订单交易，默认值 | 第一版仅允许正常交易 |
-| `1` | 盘前交易 | 默认不启用 |
-| `2` | 盘后交易 | 默认不启用 |
-| `3` | 暗盘交易 | 默认不启用 |
+| `0` / 不传 | 正常订单交易，默认值 | 正常交易候选 |
+| `1` | 盘前交易 | 美股盘前候选，需单独风控开关 |
+| `2` | 盘后交易 | 美股盘后候选，需单独风控开关 |
+| `3` | 暗盘交易 | 港股新股暗盘候选，不使用 IPO 申购接口 |
 
-`OrderType.MARKET`、盘前盘后、暗盘、碎股和 `forceEntrustFlag=true` 默认全部拒绝。若后续需要支持，必须先更新风控和订单类型设计。
+`OrderType.MARKET`、`forceEntrustFlag=true`、未建模的高级订单默认拒绝。美股、碎股和港股暗盘需要在 request builder 中建模，但当前 `read_only` 阶段仍不会真实触达下单 endpoint。
 
 响应处理目标：
 
@@ -613,7 +614,7 @@ POST /stock-order-server/open-api/entrust-order
 - 未来即使允许调用，也必须由 OMS 发起，并携带 `order_id`、`risk_check_id`、`trace_id`。
 - 下单 HTTP timeout、网络异常或未知响应时，内部订单进入 `unknown`，不得自动重试。
 - 默认不启用 `forceEntrustFlag`。
-- 默认不支持盘前、盘后、暗盘，`sessionType` 不传或只允许正常交易。
+- 美股为主要交易市场；港股暗盘和碎股需要专门能力开关。当前 `read_only` 阶段只构造 dry-run 请求，不真实提交。
 
 ## 9. 改单 API 设计
 
@@ -663,7 +664,7 @@ MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=1
 安全规则：
 
 - 默认 `read_only` 下，`TradingGateway.modify_order` 阻断，不触达 OpenAPI。
-- 改单语义必须确认：是原生 modify，还是 cancel + replace。
+- 改单在 OMS 风险模型中按 cancel + replace 风险处理，即使券商接口名为 modify；改单后必须通过查询和对账确认最终订单状态。
 - 改单 timeout 或未知响应进入 `unknown`，不得自动再次改单。
 - 改单前必须确认本地 OMS 状态允许修改。
 
@@ -767,6 +768,12 @@ PDF 字段映射：
 规则：
 
 - 只读查询可以在 `read_only` 模式下触达 OpenAPI。
+- 只读联调允许真实登录、账户、持仓、订单、成交查询；不允许 `trade-login`、下单、改单、撤单、IPO 申购、IPO 改单。
+- 申请材料截图不做真实登录；截图只展示 dry-run 请求构造、签名边界、脱敏和交易阻断。
+- 只读联调启用前必须显式配置 `allow_real_http_readonly=true`、base URL、IP 白名单、渠道号和密钥路径；缺任一项只能 dry-run。
+- 只读联调输出默认只在本地控制台展示脱敏摘要；普通日志只保留 endpoint、request_id、字段名、响应 code、耗时和 raw_hash，不保存完整 raw response。
+- token 只保存在进程内存；除非后续单独设计加密会话缓存，不落盘。
+- 建议本地脱敏审计日志保留 30 天；包含真实资金、持仓市值或完整订单明细的调试输出默认不落盘。
 - 查询失败可以按限流策略做有限重试。
 - 查询结果中的真实资金、持仓市值、完整账号不得写入普通日志。
 - 对账和风控只能使用结构化结果，不直接传播券商原始响应。
@@ -882,8 +889,10 @@ capabilities:
   modify_order: false
   cancel_order: false
   odd_lot_order: false
+  grey_market_order: false
   ipo: false
   prepost_market: false
+  allow_real_http_readonly: false
 
 request_id:
   header_length: 30
@@ -893,7 +902,8 @@ request_id:
 safety:
   block_trade_login_in_read_only: true
   block_force_entrust: true
-  block_session_type_prepost: true
+  block_unknown_session_type: true
+  block_ipo_endpoints: true
   require_query_before_unknown_resolution: true
 ```
 
@@ -954,6 +964,8 @@ safety:
 - 只允许登录、账户、持仓、订单、成交查询。
 - 不允许 `trade-login`。
 - 不允许触达下单、改单、撤单 endpoint。
+- 不允许触达 IPO 申购、IPO 改单 endpoint。
+- 申请材料截图路径必须保持 dry-run，不做真实登录。
 - 所有输出脱敏。
 
 受控实盘前测试：
@@ -972,12 +984,12 @@ safety:
 - 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
 - token 有效期、刷新方式、多会话冲突语义。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
-- 改单是原生修改还是券商侧 cancel + replace。
+- 券商内部改单是原生修改还是券商侧 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举。
 - 错误码完整枚举。
 - `finalStateFlag` 的完整枚举和是否可作为 OMS 订单终态判断依据。
-- `entrustProp` 中 `e`、`h`、`0` 对港股/美股限价单的适用规则。
-- `sessionType` 的盘前、盘后、暗盘规则，以及是否会形成非交易时间挂单。
+- `entrustProp` 中 `e`、`h`、`0` 对港股普通、美股限价、港股暗盘的精确适用规则。
+- `sessionType` 的美股盘前、盘后和港股暗盘规则，以及是否会形成非交易时间挂单。
 - 频率限制、IP 白名单生效规则。
 
 ## 17. 后续实现顺序
@@ -990,5 +1002,5 @@ safety:
 4. 实现 dry-run adapter 的 PDF 字段请求体构造，契约测试只断言字段和脱敏，不出网。
 5. 实现 `uSmartMapper`，用 PDF 示例和人工脱敏 fixture 覆盖成功、业务拒绝、未知状态、缺失字段。
 6. 实现真实 HTTP transport，但默认配置仍为 `dry_run=true` 或 `mode=read_only`；没有用户明确配置时不能出网。
-7. 若用户确认只读联调，再只开放登录、账户、持仓、订单、成交和行情查询；禁止 `trade-login` 和所有交易动作。
+7. 用户已确认允许只读查询联调；实现时只开放登录、账户、持仓、订单、成交和行情查询，禁止 `trade-login` 和所有交易动作。申请材料截图仍不做真实登录。
 8. 只有官方 sandbox 明确存在且不会产生真实委托时，才进入下单、改单、撤单链路验证；否则停在离线契约测试和只读联调。

@@ -8,7 +8,7 @@
 
 本文档面向“盈立 OpenAPI 申请材料需要源码截图”的紧急任务，定义交易开放 API 中登录、下单、改单、撤单四条链路从本地入口到券商交易开放 API 的完整设计。它补足 [broker-trading-gateway.md](../trading/broker-trading-gateway.md) 和 [usmart-openapi-call-design.md](usmart-openapi-call-design.md) 中仍停留在总体设计、缺少接口级手册的部分。
 
-本文档只定义调用栈、模块 API、输入输出、字段映射、审计和安全边界。申请材料代码可以实现 dry-run / offline request builder 和完整调用链截图，但不得为了截图触达真实下单、改单、撤单接口。
+本文档只定义调用栈、模块 API、输入输出、字段映射、审计和安全边界。申请材料代码可以实现 dry-run / offline request builder 和完整调用链截图，但不得为了截图触达真实登录、真实下单、改单、撤单接口。
 
 命名说明：项目文档中 `uSmart`、`盈立` 指同一 OpenAPI 接入方向；代码命名暂沿用 `usmart` 包名，文档面向券商申请时使用“盈立 OpenAPI”。
 
@@ -103,7 +103,7 @@ src/
 
 | 本地能力 | 本地入口 | 应用服务方法 | 网关方法 | 券商 endpoint | 默认模式 |
 |---|---|---|---|---|---|
-| 登录 | `broker login` / `POST /broker/usmart/login` | `connect_broker` | `connect` | `/user-server/open-api/login` | `read_only` 可 dry-run |
+| 登录 | `broker login` / `POST /broker/usmart/login` | `connect_broker` | `connect` | `/user-server/open-api/login` | 申请材料只 dry-run；只读联调需显式开启真实 HTTP |
 | 下单 | `broker dry-run-place-order` / `POST /broker/usmart/orders` | `place_order` | `place_order` | `/stock-order-server/open-api/entrust-order` | 默认阻断；dry-run 只构造请求 |
 | 改单 | `broker dry-run-modify-order` / `PATCH /broker/usmart/orders/{id}` | `modify_order` | `modify_order` | `/stock-order-server/open-api/modify-order` | 默认阻断；dry-run 只构造请求 |
 | 撤单 | `broker dry-run-cancel-order` / `POST /broker/usmart/orders/{id}/cancel` | `cancel_order` | `cancel_order` | `/stock-order-server/open-api/modify-order` | 默认阻断；dry-run 只构造请求 |
@@ -143,7 +143,7 @@ class BrokerLoginRequest:
 | `method` | 入口参数 | `password` 为渠道密码登录；`captcha` 为手机验证码登录 |
 | `login_profile_ref` | 本地密钥配置 | 指向区号、手机号、登录密码 secret 的引用 |
 | `request_id` | L1/L3 | 用于 `X-Request-Id` |
-| `allow_real_http` | 运行配置 | 默认 `False`；申请截图代码必须使用 dry-run |
+| `allow_real_http` | 运行配置 | 默认 `False`；申请截图代码必须使用 dry-run，不做真实登录 |
 
 登录输出：
 
@@ -330,12 +330,12 @@ POST /stock-order-server/open-api/entrust-order
 | `request.limit_price` | `entrustPrice` | 限价必填；市价第一版拒绝 |
 | `request.price_type` + `market` | `entrustProp` | 只允许明确白名单映射 |
 | `request.side` | `entrustType` | `buy -> 0`，`sell -> 1` |
-| `request.market` | `exchangeType` | `HK -> 0`，`US -> 5`；其他先禁用真实交易 |
+| `request.market` | `exchangeType` | `US -> 5` 为主要交易市场；`HK -> 0` 可用于港股普通和暗盘；沪深港通先禁用真实交易 |
 | `request.symbol` | `stockCode` | 股票代码 |
 | 可选名称 | `stockName` | 非主键，可不传 |
 | 交易密码 secret | `password` | 若 PDF 要求，则加密后传 |
 | 固定安全默认 | `forceEntrustFlag` | 默认不启用 |
-| 固定安全默认 | `sessionType` | 默认正常交易；盘前盘后不启用 |
+| `request.session` | `sessionType` | 正常交易为 `0` / 不传；港股暗盘候选为 `3`；美股盘前盘后另行开关 |
 
 ### 8.4 输出映射
 
@@ -570,7 +570,7 @@ class uSmartHttpTransport:
 - 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；但它必须和 `X-Sign` 渠道签名密钥材料分离。
 - token 有效期、刷新机制。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
-- 改单是原生修改还是 cancel + replace。
+- 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举。
 - 错误码完整枚举。
 - `entrustProp` 在港股、美股、暗盘、盘前盘后的适用规则。

@@ -10,7 +10,7 @@
 
 `TradingGateway` 统一券商交易网关模块设计详见 [broker-trading-gateway.md](../trading/broker-trading-gateway.md)。本文档只做官方资料事实源，不承载统一网关分层、能力模式和错误处理设计。
 
-盈立申请材料要求“源码截图”属于当前券商接入紧急任务。登录、下单、改单、撤单的源码截图应基于离线 / dry-run 调用栈实现，具体接口设计见 [usmart-openapi-api-manual.md](usmart-openapi-api-manual.md)。申请材料代码不得触达真实下单、改单、撤单接口，也不得泄露真实账号、密码、token 或私钥。
+盈立申请材料要求“源码截图”属于当前券商接入紧急任务。登录、下单、改单、撤单的源码截图应基于离线 / dry-run 调用栈实现，具体接口设计见 [usmart-openapi-api-manual.md](usmart-openapi-api-manual.md)。申请材料代码不得触达真实登录、真实下单、改单、撤单接口，也不得泄露真实账号、密码、token 或私钥。
 
 ## 1. 官方资料
 
@@ -40,7 +40,7 @@
 ## 2. 安全边界
 
 - 解析 PDF 不等于启用盈立 OpenAPI 正式接入。
-- M1 不实现盈立真实下单、改单、撤单、账户查询、持仓查询或行情接入。
+- M1 可在用户明确授权后实现只读联调查询；申请材料截图仍只使用 dry-run / offline request builder，不做真实登录。
 - 不允许用真实下单、真实改单、真实撤单接口做连通性测试、截图演示或权限测试。
 - PDF 中没有明确说明的 sandbox、paper trading、改单语义、订单状态和错误码，统一标记为 `unknown_by_pdf`。
 - 任何未来真实交易接入都必须重新完成 OMS、风控、交易时间检查、账户/标的白名单、人工暂停和对账设计。
@@ -85,5 +85,5 @@
 ## 6. 待解析或标记为未知
 
 - 是否存在官方 sandbox：若 PDF 未写明，标记为 `unknown_by_pdf`。
-- 普通股票委托的 `actionType` 已按 MinerU 重新转换的交易 API 手册核对；改单是否为原生 modify API，还是 cancel + replace，PDF 未写明则 `unknown_by_pdf`。
+- 普通股票委托的 `actionType` 已按 MinerU 重新转换的交易 API 手册核对；券商内部改单是否为原生 modify 仍未写明，本地 OMS 风险模型按 cancel + replace 处理。
 - 申请材料截图格式：与开发无关，不作为本项目设计阻塞项。

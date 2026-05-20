@@ -377,7 +377,7 @@
 
 待确认：
 
-- 第一版真实交易是否只允许限价单。
+- 第一版真实交易以美股为主要市场，需要覆盖美股限价、碎股和港股新股暗盘；IPO 申购接口排除。
 - 单笔订单最大金额。
 - 单只股票最大持仓比例。
 - 单日最大交易次数。
@@ -399,18 +399,21 @@
 - MinerU 重新转换后的交易 API 手册确认普通股票委托 `modify-order` 通过 `actionType=1` 表示改单、`actionType=0` 表示撤单；IPO 改撤单接口的 `actionType` 枚举不同，不能混用。
 - MinerU 重新转换后的交易 API 手册确认普通下单响应 `data.entrustId` 为订单 id，可用于查询订单、修改订单和取消订单；改单/撤单响应里的 `data.entrustId` 为申请编号，不覆盖原委托 ID。
 - 交易 API 手册资料字典确认普通订单 `status`：`-1` 失败、`0` 全部成交、`1` 等待提交、`2` 待成交、`3` 部分成交、`4` 等待撤单、`5` 等待改单、`6` 已撤单、`7` 部成撤单、`8` 废单。
+- 申请材料源码截图只展示 dry-run / offline request builder，不做真实登录。
+- 用户确认允许后续只读联调真实登录和查询账户、持仓、订单、成交，但不允许下单、改单、撤单。
+- 用户确认本地 OMS 风险模型按 cancel + replace 处理改单。
+- 用户确认未来交易范围以美股为主，同时需要覆盖碎股和港股新股暗盘；IPO 申购和 IPO 改单排除。
 
 待确认：
 
 - 盈立是否提供 sandbox。
-- 改单是原生 modify API，还是 cancel + replace 流程。
 - 交易 API base URL。
 - `X-Request-Id` 长度、有效期和重复请求语义；当前 PDF 摘录存在 19 位和 30 位两种描述。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的关系。
 - 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。
 - 登录手机号、登录密码、交易密码使用的 RSA 公钥和字段名。
-- 订单类型、价格类型、`entrustProp`、`exchangeType`、`sessionType`、盘前盘后/暗盘规则。
+- `entrustProp`、`exchangeType`、`sessionType` 在美股、碎股和港股暗盘上的精确适用规则。
 - 错误码、订单明细 `orderStatus` 历史节点、`finalStateFlag` 和状态流转完整枚举。
 - token 有效期、刷新方式、多会话冲突语义、HTTP 频率限制、WebSocket 订阅上限和 IP 白名单生效规则。
 

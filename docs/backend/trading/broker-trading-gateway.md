@@ -153,8 +153,10 @@ broker_gateway:
   allow_trade_quantity_query: true
   allow_modify_range_query: true
   allow_odd_lot_order: false
+  allow_grey_market_order: false
   allow_ipo: false
   allow_prepost_market: false
+  allow_real_http_readonly: false
 ```
 
 规则：
@@ -164,7 +166,7 @@ broker_gateway:
 - 下单、改单、撤单三个能力必须分别开关，不能用一个总开关隐式放开所有交易行为。
 - 登录、账户、持仓、订单、成交等交易开放 API 只读能力也要单独开关，便于未来只读联调逐项开放。基础报价 API 和报价推送 API 的开关归 `QuotationDataGateway`，不归 `TradingGateway`。
 - `trade-login` 虽然不是下单接口，但会改变账户交易可用状态，必须单独开关，默认关闭。
-- IPO 申购、碎股交易、盘前盘后、高级订单必须默认关闭，并单独设计后才能启用。
+- IPO 申购必须排除在第一版外。美股、碎股和港股暗盘需要预留能力开关，但在 `read_only` 和申请材料截图阶段必须保持阻断，只允许 dry-run 构造。
 
 ## 5. 统一接口契约
 
@@ -298,6 +300,7 @@ class QuotationDataGateway:
 规则：
 
 - 登录接口可作为只读联调范围，但日志禁止记录手机号、密码、token。
+- 申请材料截图只展示登录 dry-run 调用栈，不做真实登录。
 - `trade-login` 虽然不是下单，但它会改变账户交易可用状态，必须按敏感动作处理；默认不在只读联调中调用。
 - 设置、重置、修改登录密码或交易密码属于账户安全操作，不进入 RobustQuant 网关第一版。
 
@@ -308,8 +311,8 @@ class QuotationDataGateway:
 | 普通下单 | `/stock-order-server/open-api/entrust-order` | 禁用，需 `live_guarded` |
 | 委托改单/撤单 | `/stock-order-server/open-api/modify-order` | 禁用；普通股票委托 `actionType=1` 为改单、`actionType=0` 为撤单 |
 | 改单范围 | `/stock-order-server/open-api/modified-range` | 只读查询，可用于改单前校验 |
-| 碎股下单 | `/stock-order-server/open-api/odd-entrust` | 禁用 |
-| 碎股撤单 | `/stock-order-server/open-api/odd-modify` | 禁用 |
+| 碎股下单 | `/stock-order-server/open-api/odd-entrust` | 默认禁止；未来受控实盘需碎股能力开关 |
+| 碎股撤单 | `/stock-order-server/open-api/odd-modify` | 默认禁止；未来受控实盘需碎股能力开关 |
 | 最大可买可卖 | `/stock-order-server/open-api/trade-quantity` | 只读风控辅助 |
 | 今日订单 | `/stock-order-server/open-api/today-entrust` | 只读对账 |
 | 全部订单 | `/stock-order-server/open-api/his-entrust` | 只读对账 |
@@ -319,7 +322,7 @@ class QuotationDataGateway:
 关键待确认：
 
 - IPO 改撤单接口也使用 `actionType`，但枚举与普通股票委托不同，不得复用普通委托映射。
-- 改单是否为原生修改，还是券商侧 cancel + replace。
+- 券商内部改单是否为原生修改未知；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举。
 - 改单/撤单是否有独立申请编号查询接口或只能通过原委托 ID 查询。
 - 普通订单状态码与 `submitted`、`accepted`、`partial_filled`、`filled`、`cancelled`、`broker_rejected`、`unknown` 的最终映射策略。
@@ -374,10 +377,10 @@ class QuotationDataGateway:
 - 设置、重置、修改登录密码。
 - 设置、重置、修改交易密码。
 - IPO 申购和 IPO 改单。
-- 碎股交易。
-- 盘前盘后交易。
 - 条件单、止盈止损或触发单。
 - 任何 PDF 未明确解释语义的高级订单。
+
+不进入第一版的是 IPO 申购接口本身；港股新股暗盘若通过普通下单接口和 `sessionType=3` 交易，按港股暗盘交易能力建模，不使用 IPO endpoint。
 
 ## 7. 认证、签名和 token 生命周期
 
@@ -586,8 +589,10 @@ capabilities:
   modify_order: false
   cancel_order: false
   odd_lot_order: false
+  grey_market_order: false
   ipo: false
   prepost_market: false
+  allow_real_http_readonly: false
 
 request_id:
   header_length: 30
@@ -650,7 +655,8 @@ safety:
 - 允许登录、账户、持仓、订单、成交查询。
 - 行情联调通过 `QuotationDataGateway`，不通过 `TradingGateway`。
 - uSmart 通过 `uSmartOpenApiTradingAdapter` 接入；miniQMT 通过 `MiniQMTTradingAdapter` 接入。
-- 禁止 `trade-login`、下单、改单、撤单、IPO、碎股交易。
+- 禁止 `trade-login`、下单、改单、撤单、IPO 申购。
+- 只读联调允许真实登录和查询，但申请材料截图仍必须使用 dry-run，不做真实登录。
 - 所有输出脱敏。
 
 ### Phase 3：模拟盘网关
@@ -699,7 +705,7 @@ safety:
 - 盈立是否提供 sandbox 或 paper trading 环境。
 - 交易 API base URL：当前官方手册未提供，需要 OpenAPI 申请通过后由盈立提供；当前代码只能保留配置占位并默认 dry-run。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
-- 改单是原生修改还是 cancel + replace。
+- 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举和状态流转。
 - 错误码完整枚举。
 - 订单类型、价格类型、市场、币种、盘前盘后规则。
@@ -713,7 +719,6 @@ safety:
 需要用户确认：
 
 - `TradingGateway` 第一版上层抽象同时预留 uSmart OpenAPI、miniQMT 和 Ptrade；代码实现先落 `TradingGateway`、`BrokerTradingAdapter`、`uSmartOpenApiTradingAdapter`、`MiniQMTTradingAdapter` 的同层骨架，uSmart 申请所需方法外形放在 uSmart 适配器内。
-- 只读联调阶段是否允许真实登录和账户/持仓查询。
-- 如果允许只读联调，脱敏输出和本地日志保存周期。
-- 第一版受控实盘是否强制只允许限价单。
+- 只读联调允许真实登录和账户、持仓、订单、成交查询，但申请材料截图不做真实登录；普通日志只保留脱敏摘要和 `raw_hash`，建议本地审计日志保留 30 天。
+- 第一版受控实盘以美股为主要交易市场，需要覆盖美股限价、碎股和港股新股暗盘；IPO 申购接口排除。
 - 第一批实盘宽基 ETF 白名单和单笔金额上限。
