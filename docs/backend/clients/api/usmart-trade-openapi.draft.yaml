@@ -547,12 +547,8 @@ components:
           x-sensitive: true
           x-pending-confirmation: RSA public key and padding mode.
         type:
-          oneOf:
-            - type: integer
-              const: 106
-            - type: string
-              const: "106"
-          x-pending-confirmation: Official JSON scalar type.
+          type: integer
+          const: 106
     CaptchaLoginRequest:
       type: object
       additionalProperties: false
@@ -585,9 +581,9 @@ components:
           maxLength: 19
           description: Body serial number mapped from local broker_request_id.
         entrustAmount:
-          $ref: "#/components/schemas/DecimalOrNumberPending"
+          $ref: "#/components/schemas/DecimalNumber"
         entrustPrice:
-          $ref: "#/components/schemas/DecimalOrNumberPending"
+          $ref: "#/components/schemas/DecimalNumber"
         entrustProp:
           type: string
           enum: ["0", "d", "e", "g", "h", "j", "u"]
@@ -596,21 +592,14 @@ components:
             Precise applicability for US regular-hours limit order and US odd-lot
             order must be confirmed. HK grey-market rules are design-only.
         entrustType:
-          oneOf:
-            - type: integer
-              enum: [0, 1]
-            - type: string
-              enum: ["0", "1"]
+          type: integer
+          enum: [0, 1]
           description: 0 buy, 1 sell.
-          x-pending-confirmation: Official JSON scalar type.
         exchangeType:
-          oneOf:
-            - type: integer
-              enum: [0, 5, 6, 7]
-            - type: string
-              enum: ["0", "5", "6", "7"]
-          x-robustquant-first-live-allowed: [5, "5"]
-          x-pending-confirmation: Interface-specific enum and JSON scalar type.
+          type: integer
+          enum: [0, 5, 6, 7]
+          x-robustquant-first-live-allowed: [5]
+          x-pending-confirmation: Interface-specific enum.
         stockCode:
           type: string
         stockName:
@@ -620,82 +609,55 @@ components:
           x-sensitive: true
           x-pending-confirmation: Whether trading password is required and how it is encrypted.
         forceEntrustFlag:
-          oneOf:
-            - type: boolean
-            - type: string
-              enum: ["true", "false"]
+          type: boolean
           default: false
           x-robustquant-default: false
-          x-pending-confirmation: Official JSON scalar type.
         sessionType:
-          oneOf:
-            - type: integer
-              enum: [0, 1, 2, 3]
-            - type: string
-              enum: ["0", "1", "2", "3"]
-          x-robustquant-first-live-allowed: [0, "0"]
-          x-pending-confirmation: Official JSON scalar type and default omission behavior.
+          type: integer
+          enum: [0, 1, 2, 3]
+          x-robustquant-first-live-allowed: [0]
+          x-pending-confirmation: Default omission behavior.
     ModifyOrderRequest:
       type: object
       additionalProperties: false
       required: [actionType, entrustAmount, entrustId, entrustPrice]
       properties:
         actionType:
-          oneOf:
-            - type: integer
-              const: 1
-            - type: string
-              const: "1"
+          type: integer
+          const: 1
           description: Normal stock order modification.
-          x-pending-confirmation: Official JSON scalar type.
         entrustAmount:
-          $ref: "#/components/schemas/DecimalOrNumberPending"
+          $ref: "#/components/schemas/DecimalNumber"
         entrustId:
           type: string
           description: Original broker order ID.
         entrustPrice:
-          $ref: "#/components/schemas/DecimalOrNumberPending"
+          $ref: "#/components/schemas/DecimalNumber"
         password:
           type: string
           x-sensitive: true
           x-pending-confirmation: Whether trading password is required and how it is encrypted.
         forceEntrustFlag:
-          oneOf:
-            - type: boolean
-            - type: string
-              enum: ["true", "false"]
+          type: boolean
           default: false
-          x-pending-confirmation: Official JSON scalar type.
     CancelOrderRequest:
       type: object
       additionalProperties: false
       required: [actionType, entrustAmount, entrustId, entrustPrice]
       properties:
         actionType:
-          oneOf:
-            - type: integer
-              const: 0
-            - type: string
-              const: "0"
+          type: integer
+          const: 0
           description: Normal stock order cancellation.
-          x-pending-confirmation: Official JSON scalar type.
         entrustAmount:
-          oneOf:
-            - type: integer
-              const: 0
-            - type: string
-              const: "0"
-          x-pending-confirmation: Official JSON scalar type.
+          type: number
+          const: 0
         entrustId:
           type: string
           description: Original broker order ID.
         entrustPrice:
-          oneOf:
-            - type: integer
-              const: 0
-            - type: string
-              const: "0"
-          x-pending-confirmation: Official JSON scalar type.
+          type: number
+          const: 0
         password:
           type: string
           x-sensitive: true
@@ -750,23 +712,16 @@ components:
               type: string
       x-pending-confirmation: Response data required fields per operation.
     BusinessCode:
-      oneOf:
-        - type: integer
-        - type: string
+      type: integer
       description: uSmart business response code. code=0 may indicate business success.
-      x-pending-confirmation: Complete enum and JSON scalar type.
+      x-pending-confirmation: Complete enum.
     OrderStatusRaw:
-      oneOf:
-        - type: integer
-          enum: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
-        - type: string
-          enum: ["-1", "0", "1", "2", "3", "4", "5", "6", "7", "8"]
+      type: integer
+      enum: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
       x-pending-confirmation: Official JSON scalar type and status flow.
-    DecimalOrNumberPending:
-      oneOf:
-        - type: string
-        - type: number
-      x-pending-confirmation: Official JSON scalar type and decimal precision.
+    DecimalNumber:
+      type: number
+      x-pending-confirmation: Decimal precision.
     PendingOfficialFieldTable:
       type: object
       additionalProperties: true
@@ -809,21 +764,15 @@ components:
           $ref: "#/components/schemas/PageSizePending"
       x-pending-confirmation: Official trade-record request field table.
     QueryExchangeTypePending:
-      oneOf:
-        - type: integer
-        - type: string
+      type: integer
       description: Query-only market enum; value 100 may mean all markets.
-      x-pending-confirmation: Interface-specific enum and JSON scalar type.
+      x-pending-confirmation: Interface-specific enum.
     PageNumberPending:
-      oneOf:
-        - type: integer
-        - type: string
-      x-pending-confirmation: Official pagination field type and base index.
+      type: integer
+      x-pending-confirmation: Official pagination base index.
     PageSizePending:
-      oneOf:
-        - type: integer
-        - type: string
-      x-pending-confirmation: Official pagination field type and maximum page size.
+      type: integer
+      x-pending-confirmation: Official maximum page size.
     AssetQueryResponseDraft:
       allOf:
         - $ref: "#/components/schemas/BusinessResponse"
