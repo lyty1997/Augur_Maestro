@@ -22,12 +22,12 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["rq_core*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src"]
 addopts = [
     "--strict-config",
     "--strict-markers",
@@ -73,6 +73,7 @@ ignore = [
 [tool.mypy]
 python_version = "3.11"
 packages = ["rq_core"]
+mypy_path = "src"
 strict = true
 warn_unused_configs = true
 show_error_codes = true

@@ -4,8 +4,8 @@ import ast
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-RQ_CORE = ROOT / "rq_core"
+ROOT = Path(__file__).resolve().parents[3]
+RQ_CORE = ROOT / "src" / "rq_core"
 
 FORBIDDEN_NETWORK_IMPORTS = {
     "aiohttp",

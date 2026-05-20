@@ -13,11 +13,11 @@
 
 - [ ] `python -m ruff check .`
 - [ ] `python -m ruff format --check .`
-- [ ] `python -m mypy rq_core`
+- [ ] `python -m mypy -p rq_core`
 - [ ] `detect-secrets-hook --baseline .secrets.baseline $(git ls-files)`
 - [ ] `python -m pip_audit -r requirements-dev.lock.txt`
-- [ ] `python scripts/quality/trading_safety_static_check.py`
-- [ ] `python scripts/quality/markdown_docs_check.py`
+- [ ] `python src/scripts/quality/trading_safety_static_check.py`
+- [ ] `python src/scripts/quality/markdown_docs_check.py`
 - [ ] `python -m pytest`
 
 ## 备注

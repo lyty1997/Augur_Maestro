@@ -2,6 +2,6 @@
 * @lyty
 
 # Trading safety and broker integration changes need explicit owner review.
-/rq_core/broker_kernel/ @lyty
+/src/rq_core/broker_kernel/ @lyty
 /docs/30-trading/ @lyty
-/scripts/quality/trading_safety_static_check.py @lyty
+/src/scripts/quality/trading_safety_static_check.py @lyty
