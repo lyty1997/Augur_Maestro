@@ -575,7 +575,7 @@ POST /stock-order-server/open-api/entrust-order
 | `buy` | `0` |
 | `sell` | `1` |
 
-委托属性映射：
+普通下单请求里的委托属性映射：
 
 | `entrustProp` | PDF 含义 | 第一版策略 |
 |---|---|---|
@@ -583,9 +583,8 @@ POST /stock-order-server/open-api/entrust-order
 | `d` | 竞价单 | 默认不启用 |
 | `e` | 增强限价单 | 第一批不启用；后续港股普通交易候选 |
 | `g` | 竞价限价单 | 默认不启用 |
-| `h` | 港股限价单 | 在查询响应字段中出现；第一版下单暂不主动发送，需确认与 `e` 的适用差异 |
-| `j` | 特殊限价单 | 默认不启用 |
-| `u` | 碎股单 | 仅美股碎股候选；港股碎股不做 |
+
+`h`、`j` 出现在今日订单、历史订单或订单明细等查询响应字段说明中，不在普通下单请求字段表中。`u` 出现在最大可买可卖数量接口的 `entrustProp` 参数说明中，不在碎股下单 `/stock-order-server/open-api/odd-entrust` 的请求体中。第一版 request builder 不得把 `h`、`j`、`u` 发送到普通下单接口。
 
 交易阶段 `sessionType`：
 
@@ -596,7 +595,7 @@ POST /stock-order-server/open-api/entrust-order
 | `2` | 盘后交易 | 不进第一批实现 |
 | `3` | 暗盘交易 | 港股新股暗盘仅保留设计，不进第一批实现 |
 
-`OrderType.MARKET`、`forceEntrustFlag=true`、未建模的高级订单默认拒绝。第一批交易实现目标是美股盘中限价和美股碎股；港股新股暗盘只保留设计，不实现真实请求构造。
+`OrderType.MARKET`、`forceEntrustFlag=true`、未建模的高级订单默认拒绝。第一批交易实现目标是美股盘中限价和美股碎股；美股碎股使用碎股专用 endpoint，不通过普通下单 `entrustProp=u` 建模。港股新股暗盘只保留设计，不实现真实请求构造。
 
 响应处理目标：
 

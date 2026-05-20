@@ -573,4 +573,4 @@ class uSmartHttpTransport:
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举。
 - 错误码完整枚举。
-- `entrustProp` 在美股盘中和美股碎股上的精确适用规则；港股暗盘和盘前盘后后置。
+- `entrustProp` 中 `0` 在美股盘中限价单上的精确适用规则；港股暗盘和盘前盘后后置。美股碎股使用 `/stock-order-server/open-api/odd-entrust` 专用接口，不通过普通下单 `entrustProp` 建模。

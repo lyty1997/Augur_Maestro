@@ -207,8 +207,9 @@ paths:
       x-robustquant-first-live-scope: us_odd_lot_only
       x-robustquant-blocked-in-read-only: true
       x-pending-confirmation: >
-        Request and response field tables for odd-lot order must be confirmed
-        against the official manual before implementation.
+        Official manual lists odd-lot entrustType as 1 sell. Confirm with
+        uSmart whether US odd-lot buy is supported by this endpoint before
+        enabling buy-side odd-lot trading.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
         - $ref: "#/components/parameters/HeaderContentType"
@@ -224,7 +225,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PendingOfficialFieldTable"
+              $ref: "#/components/schemas/OddLotOrderRequest"
       responses:
         "200":
           description: Business response from uSmart.
@@ -239,9 +240,6 @@ paths:
       summary: Cancel an odd-lot order.
       x-robustquant-first-live-scope: us_odd_lot_only
       x-robustquant-blocked-in-read-only: true
-      x-pending-confirmation: >
-        Request and response field tables for odd-lot cancellation must be
-        confirmed against the official manual before implementation.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
         - $ref: "#/components/parameters/HeaderContentType"
@@ -257,7 +255,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PendingOfficialFieldTable"
+              $ref: "#/components/schemas/OddLotCancelRequest"
       responses:
         "200":
           description: Business response from uSmart.
@@ -586,11 +584,13 @@ components:
           $ref: "#/components/schemas/DecimalNumber"
         entrustProp:
           type: string
-          enum: ["0", "d", "e", "g", "h", "j", "u"]
-          x-robustquant-first-live-allowed: ["0", "u"]
+          enum: ["0", "d", "e", "g"]
+          x-robustquant-first-live-allowed: ["0"]
           x-pending-confirmation: >
-            Precise applicability for US regular-hours limit order and US odd-lot
-            order must be confirmed. HK grey-market rules are design-only.
+            Precise applicability for US regular-hours limit order must be
+            confirmed. HK grey-market rules are design-only. Odd-lot orders use
+            /stock-order-server/open-api/odd-entrust and do not send entrustProp
+            according to the current manual.
         entrustType:
           type: integer
           enum: [0, 1]
@@ -662,6 +662,39 @@ components:
           type: string
           x-sensitive: true
           x-pending-confirmation: Whether trading password is required and how it is encrypted.
+    OddLotOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [entrustAmount, entrustPrice, entrustType, exchangeType, stockCode]
+      properties:
+        entrustAmount:
+          $ref: "#/components/schemas/DecimalNumber"
+        entrustPrice:
+          $ref: "#/components/schemas/DecimalNumber"
+        entrustType:
+          type: integer
+          enum: [1]
+          description: Official manual lists 1 sell for odd-lot order.
+          x-pending-confirmation: Whether buy-side US odd-lot trading is supported.
+        exchangeType:
+          type: integer
+          enum: [0, 5]
+          x-robustquant-first-live-allowed: [5]
+        stockCode:
+          type: string
+    OddLotCancelRequest:
+      type: object
+      additionalProperties: false
+      required: [actionType, oddId]
+      properties:
+        actionType:
+          type: integer
+          const: 0
+          description: Odd-lot cancellation.
+        oddId:
+          type: integer
+          format: int64
+          description: Odd-lot entrust ID.
     LoginResponse:
       type: object
       additionalProperties: true
