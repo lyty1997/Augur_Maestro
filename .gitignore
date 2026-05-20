@@ -36,3 +36,6 @@ outputs/
 Thumbs.db
 .idea/
 .vscode/
+
+# Broker docs
+./API_manual/uSmart/申请资料
