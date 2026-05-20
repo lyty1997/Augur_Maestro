@@ -466,7 +466,7 @@ flowchart TB
 ### YL.01 官方文档解析确认
 
 - 状态：[!]
-- 依赖：用户已提供 `券商API/盈立/API文档/` 下的繁体中文 PDF。
+- 依赖：用户已提供 `API_manual/uSmart/API_manual/` 下的繁体中文 PDF，并已用 MinerU 重新转换到 `API_manual/uSmart/API_manual/markdown/`。
 - 目标：从官方 PDF 提取认证、endpoint、签名、下单、改单、撤单、订单状态、账户查询、行情查询和推送能力。
 - DoD：
   - 明确认证方式、endpoint、签名、下单、改单、撤单参数。

@@ -2,7 +2,7 @@
 
 版本：v0.1  
 状态：设计草案，待用户确认  
-最后更新：2026-05-19
+最后更新：2026-05-21
 
 ## 0. 文档定位
 
@@ -228,8 +228,8 @@ src/
 | 能力 | 方法 | endpoint | 当前允许触达 OpenAPI |
 |---|---|---|---|
 | 渠道密码登录 | POST | `/user-server/open-api/login` | 只读联调阶段可允许 |
-| 渠道验证码登录 | POST | `/user-server/open-api/loginCaptcha` | 第一版不主动实现，保留扩展 |
-| 获取手机验证码 | POST | `/user-server/open-api/send-phone-captcha` | 第一版不主动实现，避免短信验证码自动化 |
+| 获取手机验证码 | POST | `/user-server/open-api/send-phone-captcha` | 只作为验证码登录前置步骤；短信登录验证码 `type=106`，避免自动化滥用 |
+| 渠道验证码登录 | POST | `/user-server/open-api/loginCaptcha` | 只读联调阶段可作为备选登录方式 |
 | 获取交易解锁状态 | POST | `/user-server/open-api/get-trade-status` | 只读联调阶段可允许 |
 | 普通下单 | POST | `/stock-order-server/open-api/entrust-order` | 默认禁止，需 `live_guarded` |
 | 委托改单 | POST | `/stock-order-server/open-api/modify-order` | 默认禁止，需 `live_guarded` |
@@ -284,8 +284,9 @@ src/
 | `Content-Type` | 固定 | `application/json; charset=utf-8` |
 | `X-Lang` | 配置 | 语言类别，例如 `1` 表示简体 |
 | `X-Channel` | uSmart 分配 | 渠道 ID |
-| `X-Time` | 本地生成 | 时间戳或时间标记，格式以 PDF/券商确认为准 |
-| `X-Dt` | 配置 | 设备类型，例如 Windows / Mac 等，具体值以 PDF 为准 |
+| `X-Time` | 本地生成 | Unix epoch milliseconds，作为字符串写入 header |
+| `X-Dt` | 配置 | 设备类型数字字符串，默认 `"4"` 表示 Windows |
+| `X-Type` | 配置 | APP 类别，默认 `"1"` 表示大陆版 |
 | `X-Request-Id` | 本地生成 | 幂等防重 ID |
 | `X-Sign` | 交易开放 API signer 生成 | 对 body 内容签名/加密后的值 |
 
@@ -295,9 +296,30 @@ src/
 - `X-Sign` 只由交易开放 API signer 生成，其他模块不接触私钥。
 - `Authorization` token 只保存在内存会话中，默认不落库。
 - 日志只记录 header key 列表、`X-Request-Id` 和脱敏 token 摘要，不记录完整 token 或签名。
-- `X-Type` 在交易 PDF 示例中出现，但字段含义和是否必填尚未从表格确认；第一版配置中保留 `x_type` 可选项，默认不猜值。
+- `X-Type` 按官方说明为 APP 类别，`"1"` 表示大陆版、`"2"` 表示港版；本项目默认大陆版。
 - `Content-Type` 统一由 client 注入，调用方不允许手工传入，避免签名 body 和实际 body 不一致。
 - 同一请求的 header、body_json、endpoint 和 request_id 必须作为不可变对象进入签名流程，签名后不得再修改 body。
+
+`X-Dt` 设备类型按官方说明中的 `t1`、`t2`、`t3`、`t4`、`t5` 语义理解，但 header 示例使用数字值，因此代码中保存为数字字符串：
+
+| `X-Dt` | 设备类型 |
+|---|---|
+| `"1"` | Android |
+| `"2"` | iOS |
+| `"3"` | 其他 |
+| `"4"` | Windows |
+| `"5"` | Mac |
+
+默认值为 `"4"`，匹配本地 Windows 开发和申请材料截图环境；如盈立后续要求 `t4` 字面值，可通过配置切换。
+
+`X-Type` APP 类别：
+
+| `X-Type` | APP 类别 |
+|---|---|
+| `"1"` | 大陆版 |
+| `"2"` | 港版 |
+
+本项目默认 `"1"`，即大陆版。
 
 ### 4.1 请求 ID 策略
 
@@ -334,7 +356,7 @@ broker_order_id <- entrustId
 - 签名算法描述：`MD5withRSA`。
 - 交易开放 API 概述描述签名内容为 Body 内容。
 - 基础报价 API 描述签名原文为 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 内容按序拼接；这是另一套 API，不在本文档的交易 signer 中实现。
-- 编码方式：`safeBase64` / URL-safe Base64。
+- 编码方式：`safeBase64` / URL-safe Base64；默认保留 `=` padding，并通过配置允许切换。
 - 幂等字段：`X-Request-Id`。
 - 访问控制：IP 白名单。
 
@@ -342,7 +364,7 @@ broker_order_id <- entrustId
 
 | 签名器 | 适用范围 | 输入 |
 |---|---|---|
-| `uSmartTradeAuthSigner` | 交易开放 API | 稳定 JSON body，最终以交易 PDF/官方确认为准 |
+| `uSmartTradeAuthSigner` | 交易开放 API | 稳定 JSON body，不拼接 header |
 | `uSmartQuoteHttpAuthSigner` | 基础报价 API | 不在本文档实现；后续按基础报价 PDF 独立设计 |
 | `uSmartQuoteWsAuthSigner` | 报价推送 API | 不在本文档实现；后续按报价推送 PDF 独立设计 |
 
@@ -366,25 +388,23 @@ class uSmartTradeAuthSigner:
 
 1. 将 body 使用稳定 JSON 序列化，保证签名前后的 body 字节一致。
 2. 生成或接收 `X-Request-Id`。
-3. 按交易开放 API 规则生成签名前原文。
+3. 按交易开放 API 规则生成签名前原文：只使用稳定 JSON body，不拼接 header 字段。
 4. 对交易开放 API 签名结果做 URL-safe Base64 编码，写入 `X-Sign`。
 5. 组装 `Authorization`、`X-Lang`、`X-Channel`、`X-Time`、`X-Dt`、`X-Request-Id`、`X-Sign`。
 
 隐私字段加密与签名分开处理：
 
-- 登录手机号、登录密码、交易密码等字段使用 PDF 所说的“隐私资料加密公钥”，与 `X-Sign` 渠道私钥不是同一件事。
+- 官方手册同时出现“验签测试公开密钥”和“隐私资料加密测试公开密钥”，说明 `X-Sign` 渠道签名密钥材料与隐私资料加密密钥材料是两套，不得混用。
+- 登录手机号、登录密码、交易密码等字段使用 PDF 所说的“隐私资料加密”密钥材料，与 `X-Sign` 渠道签名私钥不是同一件事。
+- 手册对隐私资料加密方向存在“公开密钥”和“私密金钥”两种表述；实现中必须把 key role 和 padding/transform 做成配置。默认按常见模式使用隐私资料加密公钥加密，若盈立最终要求私钥变换，可通过配置切换。
 - `uSmartTradeSensitiveFieldEncryptor` 负责加密 `phoneNumber`、`password`、交易密码等交易开放 API 字段。
 - `uSmartTradeAuthSigner` 只负责交易开放 API 请求签名，不接收明文密码和手机号。
 - 明文敏感字段只能从本地密钥管理层读出后在内存中短暂存在，禁止进入 DTO、日志、异常消息和测试 fixture。
 
 待确认项：
 
-- `X-Time` 精确格式。
-- `X-Dt` 可用枚举值。
 - `X-Request-Id` 重复请求返回语义。
-- `safeBase64` 是否需要去掉 padding。
-- 登录密码、交易密码使用的 RSA 公钥是否与 `X-Sign` 私钥不同。
-- 交易开放 API 的 `X-Sign` 是否仅签 body，还是也需要拼接 header 字段；基础报价 API 已确认是独立签名规则，不作为交易 API 实现依据。
+- 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式。
 
 ## 6. 交易开放 API Client 设计
 
@@ -438,7 +458,12 @@ class uSmartTradeOpenApiClient:
 
 ## 7. 登录 API 设计
 
-方法：
+交易开放 API 有两种登录方式：
+
+1. 渠道密码登录：手机 + 登录密码 + 渠道，endpoint 为 `/user-server/open-api/login`。
+2. 渠道验证码登录：先调用 `/user-server/open-api/send-phone-captcha` 获取手机验证码，短信登录验证码类型为 `type=106`；再用手机 + 验证码 + 渠道调用 `/user-server/open-api/loginCaptcha`。
+
+统一适配器方法：
 
 ```python
 class uSmartOpenApiTradingAdapter:
@@ -446,24 +471,45 @@ class uSmartOpenApiTradingAdapter:
         ...
 ```
 
-OpenAPI：
+密码登录 OpenAPI：
 
 ```text
 POST /user-server/open-api/login
 ```
 
-请求 body 设计：
+密码登录请求 body 设计：
 
 | 字段 | 来源 | 说明 |
 |---|---|---|
 | `areaCode` | 配置 | 区号 |
-| `phoneNumber` | 本地密钥配置 | PDF 登录接口字段，需使用隐私资料公钥 RSA 加密 |
+| `phoneNumber` | 本地密钥配置 | PDF 登录接口字段，需使用隐私资料加密密钥材料处理，默认按公钥加密 |
 | `password` | 本地密钥配置 | RSA 加密后的登录密码 |
+
+登录手机号字段名确认使用 `phoneNumber`，不使用 `mobile`、`phone` 或 `telephone`。
+
+获取验证码请求 body 设计：
+
+| 字段 | 来源 | 说明 |
+|---|---|---|
+| `areaCode` | 配置 | 区号 |
+| `phoneNumber` | 本地密钥配置 | 使用隐私资料加密密钥材料处理 |
+| `type` | 固定值 | `106` 表示短信登录验证码 |
+
+验证码登录请求 body 设计：
+
+| 字段 | 来源 | 说明 |
+|---|---|---|
+| `areaCode` | 配置 | 区号 |
+| `phoneNumber` | 本地密钥配置 | 使用隐私资料加密密钥材料处理 |
+| `captcha` | 用户输入 / 人工流程 | 手机验证码，不写日志 |
+
+`loginCaptcha` 参数表只列出 `areaCode`、`captcha`、`phoneNumber` 三个 body 字段；请求 body 示例里出现了 `modifyUserConfigParam`。第一版不主动发送 `modifyUserConfigParam`，除非盈立确认该示例字段在当前渠道必填。
 
 响应处理：
 
-- 成功后提取 token。
-- 记录 token 过期时间 `expiration`，但不记录 token 原文。
+- 登录响应不是 `data.token` 包装结构；手册示例为顶层对象直接包含 `token`、`expiration`、`tradePassword`、`openedAccount` 等字段。
+- 成功后从顶层字段提取 `token`。
+- 从顶层字段读取 token 过期时间 `expiration`，但不记录 token 原文。
 - 读取 `tradePassword`、`openedAccount`、`extendStatusBit` 作为权限和账户状态摘要；仅保存脱敏布尔值或摘要，不保存完整用户资料。
 - token 存入内存 `uSmartSession`。
 - 返回 `BrokerSession`，其中只包含脱敏 `session_id_masked`。
@@ -576,7 +622,7 @@ OpenAPI：
 POST /stock-order-server/open-api/modify-order
 ```
 
-PDF 初步显示 `actionType=1` 表示改单。
+MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=1` 表示改单。IPO 改撤单接口的 `actionType` 枚举不同，不能复用这里的映射。
 
 内部字段映射：
 
@@ -628,7 +674,7 @@ OpenAPI：
 POST /stock-order-server/open-api/modify-order
 ```
 
-PDF 初步显示 `actionType=0` 表示撤单。
+MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=0` 表示撤单。IPO 改撤单接口的 `actionType` 枚举不同，不能复用这里的映射。
 
 内部字段映射：
 
@@ -769,9 +815,9 @@ USMART_QUOTE_BASE_URL=https://open-hz.yxzq.com/quotes-openservice/api/v1
 USMART_WS_URL=wss://open-hz.yxzq.com/wss/v1
 USMART_CHANNEL_ID=...
 USMART_ACCOUNT_REF=...
-USMART_PRIVATE_KEY_PATH=...
-USMART_PUBLIC_KEY_PATH=...
-USMART_PASSWORD_PUBLIC_KEY_PATH=...
+USMART_SIGN_PRIVATE_KEY_PATH=...
+USMART_SIGN_VERIFY_PUBLIC_KEY_PATH=...
+USMART_SENSITIVE_KEY_PATH=...
 USMART_LOGIN_AREA_CODE=...
 USMART_LOGIN_PHONE=...
 USMART_LOGIN_PASSWORD_SECRET_REF=...
@@ -791,8 +837,19 @@ transport:
 
 headers:
   x_lang: "1"
-  x_dt: "t4"
-  x_type: null
+  x_dt: "4"
+  x_type: "1"
+  x_time_format: epoch_ms
+  x_time_type: string
+
+sign:
+  key_ref: USMART_SIGN_PRIVATE_KEY_PATH
+  urlsafe_base64_strip_padding: false
+
+sensitive_encrypt:
+  key_ref: USMART_SENSITIVE_KEY_PATH
+  key_role: public
+  padding: unknown_by_official
 
 capabilities:
   login: true
@@ -892,17 +949,12 @@ safety:
 需要从 PDF 或 uSmart 官方确认：
 
 - 交易 API base URL：当前官方手册未提供，需要 OpenAPI 申请通过后由盈立提供；实现中只能保留 `USMART_API_BASE_URL` 配置占位，默认 dry-run 不出网。
-- `X-Time` 格式。
-- `X-Dt` 可用枚举。
-- `X-Type` 是否必填及可用枚举。
 - `X-Request-Id` 重复请求返回语义。
-- `X-Sign` 的精确签名输入、输出编码和 padding 规则。
-- 交易开放 API 签名是否只签 body，还是也需要拼接 header 字段；基础报价 API 是另一套 API，不能作为交易 API 的实现依据。
-- 登录手机号字段名、是否需要 RSA 加密、使用哪把公钥。
-- 登录密码和交易密码是否使用与 `X-Sign` 不同的 RSA 公钥。
+- `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
+- 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
 - token 有效期、刷新方式、多会话冲突语义。
 - 下单返回的 `data.entrustId` 是否稳定作为券商订单号。
-- `modify-order` 的 `actionType=0/1` 是否分别稳定表示撤单/改单。
+- IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - `modify-order` 的 `data.entrustId` 是原委托 ID、申请编号，还是新委托 ID。
 - 改单是原生修改还是券商侧 cancel + replace。
 - 订单状态码、错误码完整枚举。

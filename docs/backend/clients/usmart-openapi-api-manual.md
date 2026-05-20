@@ -2,7 +2,7 @@
 
 版本：v0.1  
 状态：申请材料优先实现设计  
-最后更新：2026-05-20
+最后更新：2026-05-21
 
 ## 0. 文档定位
 
@@ -128,6 +128,7 @@ src/
 class BrokerLoginRequest:
     broker: BrokerName
     account_ref: AccountRef
+    method: Literal["password", "captcha"]
     login_profile_ref: str
     trace_id: str
     request_id: str
@@ -139,6 +140,7 @@ class BrokerLoginRequest:
 | 字段 | 来源 | 说明 |
 |---|---|---|
 | `account_ref` | 本地配置 | 脱敏账户引用，不是完整账号 |
+| `method` | 入口参数 | `password` 为渠道密码登录；`captcha` 为手机验证码登录 |
 | `login_profile_ref` | 本地密钥配置 | 指向区号、手机号、登录密码 secret 的引用 |
 | `request_id` | L1/L3 | 用于 `X-Request-Id` |
 | `allow_real_http` | 运行配置 | 默认 `False`；申请截图代码必须使用 dry-run |
@@ -231,6 +233,7 @@ class uSmartTradeOpenApiResponse:
 规则：
 
 - `body` 必须先稳定 JSON 序列化，再签名。
+- 交易开放 API 的 `X-Sign` 签名原文只使用稳定 JSON body，不拼接 header 字段。
 - 签名完成后 body 不得再修改。
 - `raw_hash` 用于审计，不保存完整原始响应。
 - 申请材料截图可以展示 `dry_run=True` 的 `uSmartOpenApiRequest` 和脱敏 response。
@@ -257,22 +260,37 @@ CLI/FastAPI
 POST /user-server/open-api/login
 ```
 
+验证码登录使用：
+
+```text
+POST /user-server/open-api/send-phone-captcha
+POST /user-server/open-api/loginCaptcha
+```
+
 ### 7.3 输入映射
 
 | 来源 | uSmart 字段 | 处理 |
 |---|---|---|
 | `login_profile.area_code` | `areaCode` | 配置读取 |
-| `login_profile.phone_number` | `phoneNumber` | 使用隐私资料公钥加密后写入 body |
-| `login_profile.password` | `password` | 使用隐私资料公钥加密后写入 body |
+| `login_profile.phone_number` | `phoneNumber` | 使用隐私资料加密密钥材料处理后写入 body，默认按公钥加密 |
+| `login_profile.password` | `password` | 使用隐私资料加密密钥材料处理后写入 body，默认按公钥加密 |
+| 固定值 | `type` | 仅用于 `/send-phone-captcha`，`106` 表示短信登录验证码 |
+| 用户输入 / 人工流程 | `captcha` | 仅用于 `/loginCaptcha`，不写日志 |
 | `request.request_id` | `X-Request-Id` | header |
 | channel 配置 | `X-Channel` | header |
 | signer | `X-Sign` | header |
 
+登录手机号字段名确认使用 `phoneNumber`，不使用 `mobile`、`phone` 或 `telephone`。
+
+`loginCaptcha` 参数表只列出 `areaCode`、`captcha`、`phoneNumber` 三个 body 字段；请求 body 示例里出现了 `modifyUserConfigParam`。第一版不主动发送 `modifyUserConfigParam`，除非盈立确认该示例字段在当前渠道必填。
+
 ### 7.4 输出映射
 
-| uSmart 响应 | 内部字段 | 说明 |
+登录响应不是 `data.token` 包装结构；手册示例为顶层对象直接包含 `token`、`expiration`、`tradePassword`、`openedAccount` 等字段。
+
+| uSmart 顶层响应字段 | 内部字段 | 说明 |
 |---|---|---|
-| `token` / `Authorization` 来源字段 | `uSmartSession.token` | 仅内存保存，不进日志 |
+| `token` | `uSmartSession.token` | 仅内存保存，不进日志 |
 | `expiration` | `expires_at` | 过期时间 |
 | `tradePassword` | `metadata.trade_password_enabled` | 布尔或摘要 |
 | `openedAccount` | `metadata.opened_account` | 布尔或摘要 |
@@ -356,7 +374,7 @@ POST /stock-order-server/open-api/modify-order
 
 | 内部字段 | uSmart body 字段 | 第一版规则 |
 |---|---|---|
-| 固定值 | `actionType` | `1` 表示改单，仍需官方最终确认 |
+| 固定值 | `actionType` | 普通股票委托 `1` 表示改单；IPO 改撤单接口枚举不同，不得复用 |
 | `request.new_quantity` | `entrustAmount` | 未改数量时按 PDF 要求处理；不能猜默认 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | `request.new_limit_price` | `entrustPrice` | 未改价格时按 PDF 要求处理；不能猜默认 |
@@ -400,7 +418,7 @@ POST /stock-order-server/open-api/modify-order
 
 | 内部字段 | uSmart body 字段 | 第一版规则 |
 |---|---|---|
-| 固定值 | `actionType` | `0` 表示撤单，仍需官方最终确认 |
+| 固定值 | `actionType` | 普通股票委托 `0` 表示撤单；IPO 改撤单接口枚举不同，不得复用 |
 | 固定值 | `entrustAmount` | `0` |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | 固定值 | `entrustPrice` | `0` |
@@ -465,8 +483,9 @@ class uSmartTradeAuthSigner:
 - `Authorization`，登录接口可为空
 - `X-Lang`
 - `X-Channel`
-- `X-Time`
-- `X-Dt`
+- `X-Time`，Unix epoch milliseconds 字符串
+- `X-Dt`，设备类型数字字符串，默认 `"4"` 表示 Windows
+- `X-Type`，APP 类别数字字符串，默认 `"1"` 表示大陆版
 - `X-Request-Id`
 - `X-Sign`
 
@@ -546,14 +565,12 @@ class uSmartHttpTransport:
 以下事项不能靠代码猜测，必须从 PDF 或盈立官方确认：
 
 - 交易 API base URL：当前官方手册未提供，需要 OpenAPI 申请通过后由盈立提供；实现中只能保留 `USMART_API_BASE_URL` 配置占位，默认 dry-run 不出网。
-- `X-Time` 精确格式。
-- `X-Dt`、`X-Type` 可用枚举和是否必填。
 - `X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。
-- `X-Sign` 精确签名原文、编码和 padding 规则。
-- 手机号、登录密码、交易密码是否使用同一套 RSA 公钥。
-- token 字段名、有效期、刷新机制。
+- `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
+- 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；但它必须和 `X-Sign` 渠道签名密钥材料分离。
+- token 有效期、刷新机制。
 - 下单 `data.entrustId` 是否稳定作为券商订单号。
-- `modify-order` 的 `actionType=0/1` 是否稳定表示撤单/改单。
+- IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 改单响应 `data.entrustId` 的业务语义。
 - 改单是原生修改还是 cancel + replace。
 - 订单状态、错误码完整枚举。

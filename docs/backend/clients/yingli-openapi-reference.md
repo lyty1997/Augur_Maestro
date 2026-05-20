@@ -2,7 +2,7 @@
 
 版本：v0.1
 状态：部分确认
-最后更新：2026-05-15
+最后更新：2026-05-21
 
 ## 0. 文档定位
 
@@ -14,13 +14,13 @@
 
 ## 1. 官方资料
 
-用户已提供繁体中文官方 PDF，位置为 `券商API/盈立/API文档/`：
+用户已提供繁体中文官方 PDF，位置为 `API_manual/uSmart/API_manual/`：
 
 - `交易開放API接口文檔V1.0-20201029(繁).pdf`
 - `基礎報價開放API(繁)_20201029.pdf`
 - `報價推送(繁)_20201029.pdf`
 
-已转换为便于检索的 Markdown，位置为 `券商API/盈立/API文档/markdown/`。其中简体中文版本位于 `券商API/盈立/API文档/markdown/zh-Hans/`。Markdown 由 PDF 自动抽取文本生成，表格版式可能不如原 PDF 精确，正式设计仍以 PDF 原文为准。
+已使用 MinerU 重新转换为便于检索的 Markdown，位置为 `API_manual/uSmart/API_manual/markdown/`。Markdown 由 PDF 自动抽取文本生成，表格版式可能不如原 PDF 精确，正式设计仍以 PDF 原文为准。
 
 盈立官方资料包含三套不同 API，不能混为一套：
 
@@ -66,6 +66,8 @@
 - 交易开放 API 提到 IP 白名单、HTTPS、`X-Sign`、`MD5withRSA`、`safeBase64`、`X-Request-Id` 幂等防重。
 - 交易 API 包含登录接口 `/user-server/open-api/login`。
 - 交易 API 官方手册只给出相对路径，base URL 需要 OpenAPI 申请通过后由盈立提供。
+- 交易 API 验证码登录前置接口 `/user-server/open-api/send-phone-captcha` 的 `type=106` 表示短信登录。
+- 交易 API 普通股票委托改单/撤单共用 `/stock-order-server/open-api/modify-order`，其中普通股票委托 `actionType=1` 表示改单、`actionType=0` 表示撤单；IPO 改撤单接口的 `actionType` 枚举不同，不能混用。
 - 基础报价 API 使用 HTTP POST，并包含请求频率限制和统一 header。
 - 报价推送 API 使用 websocket，入口示例为 `wss://open-hz.yxzq.com/wss/v1`，包含 `auth`、`sub`、`unsub`、`update` 等消息。
 - 三套 API 的 base URL、签名原文、认证方式、限流和连接生命周期需要分别实现，不能共用一个 client / signer / mapper。
@@ -83,5 +85,5 @@
 ## 6. 待解析或标记为未知
 
 - 是否存在官方 sandbox：若 PDF 未写明，标记为 `unknown_by_pdf`。
-- 改单是否为原生 modify API，还是 cancel + replace：以 PDF 为准；PDF 未写明则 `unknown_by_pdf`。
+- 普通股票委托的 `actionType` 已按 MinerU 重新转换的交易 API 手册核对；改单是否为原生 modify API，还是 cancel + replace，PDF 未写明则 `unknown_by_pdf`。
 - 申请材料截图格式：与开发无关，不作为本项目设计阻塞项。

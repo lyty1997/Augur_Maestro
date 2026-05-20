@@ -283,7 +283,7 @@ class QuotationDataGateway:
 
 ## 6. 盈立交易开放 API 能力映射
 
-盈立官方 PDF 已转换为 Markdown，索引见 `API_manual/uSmart/API_manual/markdown/zh-Hans/API_ENDPOINT_INDEX.md`。以下只映射交易开放 API；基础报价 API 和报价推送 API 不属于 `TradingGateway`，不得把三套 API 的 endpoint、签名和连接生命周期混用。字段和状态码仍需逐页核对 PDF。
+盈立官方 PDF 已使用 MinerU 转换为 Markdown，位置为 `API_manual/uSmart/API_manual/markdown/`。以下只映射交易开放 API；基础报价 API 和报价推送 API 不属于 `TradingGateway`，不得把三套 API 的 endpoint、签名和连接生命周期混用。字段和状态码仍需逐页核对 PDF。
 
 ### 6.1 认证与登录
 
@@ -291,7 +291,7 @@ class QuotationDataGateway:
 |---|---|---|
 | 渠道密码登录 | `/user-server/open-api/login` | 建立登录态，获取 token |
 | 渠道验证码登录 | `/user-server/open-api/loginCaptcha` | 登录备选路径 |
-| 获取手机验证码 | `/user-server/open-api/send-phone-captcha` | 登录验证码流程 |
+| 获取手机验证码 | `/user-server/open-api/send-phone-captcha` | 登录验证码流程；短信登录验证码 `type=106` |
 | 解锁交易 | `/user-server/open-api/trade-login` | 交易解锁，属于高风险前置能力 |
 | 获取交易解锁状态 | `/user-server/open-api/get-trade-status` | 只读检查交易状态 |
 
@@ -306,7 +306,7 @@ class QuotationDataGateway:
 | 能力 | 盈立 endpoint | 默认模式 |
 |---|---|---|
 | 普通下单 | `/stock-order-server/open-api/entrust-order` | 禁用，需 `live_guarded` |
-| 委托改单/撤单 | `/stock-order-server/open-api/modify-order` | 禁用；PDF 初步显示 `actionType=1` 为改单、`actionType=0` 为撤单，但仍需确认最终语义 |
+| 委托改单/撤单 | `/stock-order-server/open-api/modify-order` | 禁用；普通股票委托 `actionType=1` 为改单、`actionType=0` 为撤单 |
 | 改单范围 | `/stock-order-server/open-api/modified-range` | 只读查询，可用于改单前校验 |
 | 碎股下单 | `/stock-order-server/open-api/odd-entrust` | 禁用 |
 | 碎股撤单 | `/stock-order-server/open-api/odd-modify` | 禁用 |
@@ -318,7 +318,7 @@ class QuotationDataGateway:
 
 关键待确认：
 
-- `/modify-order` 的 `actionType=0/1` 是否分别稳定表示撤单/改单。
+- IPO 改撤单接口也使用 `actionType`，但枚举与普通股票委托不同，不得复用普通委托映射。
 - 改单是否为原生修改，还是券商侧 cancel + replace。
 - 下单响应中 `data.entrustId` 是否可稳定作为 `broker_order_id`。
 - 改单/撤单响应中的 `data.entrustId` 是原委托 ID、新委托 ID，还是申请编号。
@@ -388,6 +388,11 @@ class QuotationDataGateway:
 - 请求使用 HTTPS。
 - Header 中包含 `X-Sign`。
 - `X-Sign` 使用 `MD5withRSA` 对 Body 内容加密或签名后，再经过 `safeBase64` 编码。
+- 交易开放 API 的 `X-Sign` 签名原文只使用稳定 JSON body，不拼接 header 字段。
+- `safeBase64` 默认保留 `=` padding，并通过配置允许切换。
+- `X-Time` 使用 Unix epoch milliseconds，并作为字符串写入 header。
+- `X-Dt` 默认 `"4"` 表示 Windows；`X-Type` 默认 `"1"` 表示大陆版 APP。
+- `X-Sign` 渠道签名密钥材料与手机号、登录密码、交易密码等隐私资料加密密钥材料必须分离；隐私资料加密方向和 padding 按官方最终材料配置。
 - 基础报价 API PDF 进一步说明其签名原文包含 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 的有序拼接；这属于另一套 API，不应用交易开放 API 的 signer 承接。
 - `X-Request-Id` 用于确保唯一和防重。
 - PDF 对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；当前实现按 `X-Request-Id` 30 位可配置字符串、`serialNo` 最长 19 位处理。
@@ -542,9 +547,9 @@ USMART_API_BASE_URL=...
 USMART_QUOTE_BASE_URL=...
 USMART_WS_URL=...
 USMART_CHANNEL_ID=...
-USMART_PRIVATE_KEY_PATH=...
-USMART_PUBLIC_KEY_PATH=...
-USMART_PASSWORD_PUBLIC_KEY_PATH=...
+USMART_SIGN_PRIVATE_KEY_PATH=...
+USMART_SIGN_VERIFY_PUBLIC_KEY_PATH=...
+USMART_SENSITIVE_KEY_PATH=...
 USMART_ACCOUNT_REF=...
 USMART_LOGIN_AREA_CODE=...
 USMART_LOGIN_PHONE=...
@@ -614,7 +619,7 @@ safety:
 - 测试 fixture 不得包含真实账号、token、真实资金和真实持仓。
 - 对 `unknown`、超时、401、限流、字段缺失必须有单元测试。
 - 对日志脱敏必须有测试，防止未来把 token 或账户打出来。
-- 对盈立 PDF 字段映射必须有契约测试：下单 `serialNo/entrustAmount/entrustPrice/entrustProp/entrustType/exchangeType/stockCode`，改单 `actionType=1`，撤单 `actionType=0`。
+- 对盈立 PDF 字段映射必须有契约测试：下单 `serialNo/entrustAmount/entrustPrice/entrustProp/entrustType/exchangeType/stockCode`，普通股票委托改单 `actionType=1`，普通股票委托撤单 `actionType=0`。
 - 对只读 DTO 映射必须有契约测试：资产、持仓、订单、成交、最大可买可卖、改单范围。
 - 对 `X-Request-Id` 与 `serialNo` 的生成、长度校验和审计映射必须有单元测试。
 
@@ -693,7 +698,7 @@ safety:
 
 - 盈立是否提供 sandbox 或 paper trading 环境。
 - 交易 API base URL：当前官方手册未提供，需要 OpenAPI 申请通过后由盈立提供；当前代码只能保留配置占位并默认 dry-run。
-- `/stock-order-server/open-api/modify-order` 的 `actionType=0/1` 是否分别稳定表示撤单/改单。
+- IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 改单是原生修改还是 cancel + replace。
 - 普通下单响应中的 `data.entrustId` 是否稳定作为券商订单号字段。
 - 改单/撤单响应中的 `data.entrustId` 是原委托 ID、新委托 ID，还是申请编号。
@@ -702,8 +707,8 @@ safety:
 - 订单类型、价格类型、市场、币种、盘前盘后规则。
 - `X-Request-Id` 的有效期和重复请求返回语义。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的官方关系；当前实现只保留本地审计映射，不假设两者相同。
-- 交易开放 API 的 `X-Sign` 是否仅签 body，还是还需要拼接 header 字段；基础报价 API 和报价推送 API 是独立 API，不作为交易 signer 的实现依据。
-- `X-Type` 是否必填及可用枚举。
+- 交易开放 API 的 `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
+- 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式。
 - token 有效期、刷新方式和多会话冲突规则。
 - HTTP 频率限制和 WebSocket 订阅上限。
 
