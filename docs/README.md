@@ -70,6 +70,7 @@ docs/
 
 - [yingli-openapi-reference.md](backend/clients/yingli-openapi-reference.md)：盈立 OpenAPI 官方文档解析说明，记录官方 PDF、接口能力和后续正式接入前的安全边界。
 - [usmart-openapi-call-design.md](backend/clients/usmart-openapi-call-design.md)：uSmart OpenAPI 调用栈全链路设计，定义从本地入口到券商 server 的完整调用层、签名认证、登录、下单、改单、撤单、只读查询和错误处理。
+- [usmart-openapi-api-manual.md](backend/clients/usmart-openapi-api-manual.md)：盈立 OpenAPI 申请材料优先实现手册，定义登录、下单、改单、撤单的接口、输入输出、上下调用层和设计缺口。
 
 ### 项目进度
 
@@ -91,6 +92,7 @@ docs/
 | 真实交易前必须满足哪些安全条件 | [trading-safety.md](architecture/trading-safety.md) |
 | 统一券商交易网关怎么设计、uSmart 和 miniQMT 如何接入 | [broker-trading-gateway.md](backend/trading/broker-trading-gateway.md) |
 | uSmart OpenAPI 全链路怎么调用、怎么签名 | [usmart-openapi-call-design.md](backend/clients/usmart-openapi-call-design.md) |
+| 申请盈立 OpenAPI 的登录、下单、改单、撤单代码截图要覆盖哪些接口 | [usmart-openapi-api-manual.md](backend/clients/usmart-openapi-api-manual.md) |
 | 日志、审计、trace_id、敏感信息怎么处理 | [observability-audit.md](backend/observability-audit.md) |
 | React 控制台能做什么、不能做什么 | [console-spec.md](frontend/console-spec.md) |
 | 盈立 OpenAPI 官方 PDF 怎么解析和使用 | [yingli-openapi-reference.md](backend/clients/yingli-openapi-reference.md) |

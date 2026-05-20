@@ -12,6 +12,8 @@
 
 uSmart OpenAPI 真实 HTTP 调用、签名认证、登录、下单、改单、撤单和只读查询的下层 API 设计见 [usmart-openapi-call-design.md](../clients/usmart-openapi-call-design.md)。
 
+面向盈立 OpenAPI 申请材料的登录、下单、改单、撤单完整调用栈 API 手册见 [usmart-openapi-api-manual.md](../clients/usmart-openapi-api-manual.md)。
+
 本设计只进入文档阶段，不代表可以开始真实下单、改单、撤单或连接真实账户。任何会改变券商侧订单状态的接口，都必须等 OMS、风控、交易时间检查、账户/标的白名单、人工确认、对账和告警设计确认后才能实现和启用。
 
 ## 1. 设计目标

@@ -17,6 +17,8 @@
 
 本文档是 [broker-trading-gateway.md](../trading/broker-trading-gateway.md) 的下层专项设计。`TradingGateway` 是统一交易安全门面；本文档描述从本地入口、应用服务、`TradingGateway`、`uSmartOpenApiTradingAdapter`、`uSmartOpenApiClient`、`uSmartAuthSigner`、HTTP transport 到 uSmart OpenAPI server 的完整调用栈。
 
+登录、下单、改单、撤单四条链路的接口级 API 手册、输入输出、上下调用层和当前设计缺口见 [usmart-openapi-api-manual.md](usmart-openapi-api-manual.md)。
+
 ## 1. 调用链路
 
 RobustQuant 本地系统与 uSmart OpenAPI 是 client-server 架构：

@@ -10,7 +10,7 @@
 
 `TradingGateway` 统一券商交易网关模块设计详见 [broker-trading-gateway.md](../trading/broker-trading-gateway.md)。本文档只做官方资料事实源，不承载统一网关分层、能力模式和错误处理设计。
 
-盈立申请材料要求“源码截图”属于券商申请材料事项，不作为 RobustQuant 的开发交付，也不进入 M1 研究回测任务。Codex 不需要为了截图单独编写申请用源码。
+盈立申请材料要求“源码截图”属于当前券商接入紧急任务。登录、下单、改单、撤单的源码截图应基于离线 / dry-run 调用栈实现，具体接口设计见 [usmart-openapi-api-manual.md](usmart-openapi-api-manual.md)。申请材料代码不得触达真实下单、改单、撤单接口，也不得泄露真实账号、密码、token 或私钥。
 
 ## 1. 官方资料
 
@@ -66,8 +66,7 @@
 
 以下事项不作为 RobustQuant 开发任务：
 
-- 为申请材料专门编写源码截图代码。
-- 为申请材料运行真实登录、下单、改单、撤单。
+- 为申请材料运行真实下单、改单、撤单。
 - 在 M1 中实现真实 `uSmartOpenApiTradingAdapter` transport。
 - 在 M1 中接入盈立账户、持仓、订单、成交、行情或推送。
 
