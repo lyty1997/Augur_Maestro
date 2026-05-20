@@ -48,7 +48,7 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderDeviceTypeObserved"
         - $ref: "#/components/parameters/HeaderAppType"
         - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
@@ -77,7 +77,7 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderDeviceTypeObserved"
         - $ref: "#/components/parameters/HeaderAppType"
         - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
@@ -110,7 +110,7 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
+        - $ref: "#/components/parameters/HeaderDeviceTypeObserved"
         - $ref: "#/components/parameters/HeaderAppType"
         - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
@@ -178,7 +178,6 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
         - $ref: "#/components/parameters/HeaderAppType"
         - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
@@ -246,7 +245,6 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
         - $ref: "#/components/parameters/HeaderAppType"
         - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
@@ -276,16 +274,14 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
         - $ref: "#/components/parameters/HeaderAppType"
-        - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReadOnlyQueryRequestPending"
+              $ref: "#/components/schemas/AssetQueryRequest"
       responses:
         "200":
           description: Business response from uSmart.
@@ -306,16 +302,14 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
         - $ref: "#/components/parameters/HeaderAppType"
-        - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReadOnlyQueryRequestPending"
+              $ref: "#/components/schemas/HoldingQueryRequest"
       responses:
         "200":
           description: Business response from uSmart.
@@ -336,16 +330,14 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
         - $ref: "#/components/parameters/HeaderAppType"
-        - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrderQueryRequestPending"
+              $ref: "#/components/schemas/TodayOrderQueryRequest"
       responses:
         "200":
           description: Business response from uSmart.
@@ -366,16 +358,14 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
         - $ref: "#/components/parameters/HeaderAppType"
-        - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrderQueryRequestPending"
+              $ref: "#/components/schemas/HistoryOrderQueryRequest"
       responses:
         "200":
           description: Business response from uSmart.
@@ -396,9 +386,7 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
         - $ref: "#/components/parameters/HeaderAppType"
-        - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
       requestBody:
         required: true
@@ -426,12 +414,10 @@ paths:
         - $ref: "#/components/parameters/HeaderLang"
         - $ref: "#/components/parameters/HeaderChannel"
         - $ref: "#/components/parameters/HeaderTime"
-        - $ref: "#/components/parameters/HeaderDeviceType"
         - $ref: "#/components/parameters/HeaderAppType"
-        - $ref: "#/components/parameters/HeaderRequestId"
         - $ref: "#/components/parameters/HeaderSign"
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
@@ -455,10 +441,11 @@ components:
     HeaderContentType:
       name: Content-Type
       in: header
-      required: true
+      required: false
       schema:
         type: string
         const: application/json; charset=utf-8
+      description: Declared by OpenAPI requestBody content type; shown explicitly in manual examples.
     HeaderLang:
       name: X-Lang
       in: header
@@ -489,15 +476,23 @@ components:
         type: string
         enum: ["1", "2", "3", "4", "5"]
       description: 1 Android, 2 iOS, 3 other, 4 Windows, 5 Mac.
+    HeaderDeviceTypeObserved:
+      name: X-Dt
+      in: header
+      required: false
+      schema:
+        type: string
+        enum: ["1", "2", "3", "4", "5"]
+      description: Observed in manual examples but not listed as required in the endpoint parameter table.
     HeaderAppType:
       name: X-Type
       in: header
-      required: true
+      required: false
       schema:
         type: string
         enum: ["1", "2"]
         default: "1"
-      description: 1 mainland app, 2 Hong Kong app.
+      description: 1 mainland app, 2 Hong Kong app. Observed in examples; not listed in every endpoint parameter table.
     HeaderRequestId:
       name: X-Request-Id
       in: header
@@ -575,9 +570,10 @@ components:
         - stockCode
       properties:
         serialNo:
-          type: string
-          maxLength: 19
+          type: integer
+          format: int64
           description: Body serial number mapped from local broker_request_id.
+          x-pending-confirmation: Manual field table says int64; one body example serializes it as a string.
         entrustAmount:
           $ref: "#/components/schemas/DecimalNumber"
         entrustPrice:
@@ -755,17 +751,27 @@ components:
     DecimalNumber:
       type: number
       x-pending-confirmation: Decimal precision.
-    PendingOfficialFieldTable:
+    AssetQueryRequest:
       type: object
-      additionalProperties: true
-      x-pending-confirmation: Official request/response field table must be extracted.
-    ReadOnlyQueryRequestPending:
+      additionalProperties: false
+      required: [exchangeType]
+      properties:
+        exchangeType:
+          type: integer
+          enum: [0, 5, 67]
+      x-pending-confirmation: Whether stock-asset supports exchangeType=100.
+    HoldingQueryRequest:
       type: object
-      additionalProperties: true
-      x-pending-confirmation: Official request fields for this read-only query are not fully extracted.
-    OrderQueryRequestPending:
+      additionalProperties: false
+      required: [exchangeType]
+      properties:
+        exchangeType:
+          type: integer
+          enum: [0, 5, 67, 100]
+    TodayOrderQueryRequest:
       type: object
-      additionalProperties: true
+      additionalProperties: false
+      required: [exchangeType]
       properties:
         exchangeType:
           $ref: "#/components/schemas/QueryExchangeTypePending"
@@ -773,29 +779,69 @@ components:
           $ref: "#/components/schemas/PageNumberPending"
         pageSize:
           $ref: "#/components/schemas/PageSizePending"
-      x-pending-confirmation: Official query field names, required fields, and pagination names.
+        stockCode:
+          type: string
+        stockName:
+          type: string
+    HistoryOrderQueryRequest:
+      type: object
+      additionalProperties: false
+      required: [dateFlag, exchangeType]
+      properties:
+        dateFlag:
+          type: string
+          enum: ["1", "2", "3", "4", "5", "6", "7"]
+          description: 1 week, 2 month, 3 three months, 4 last year, 5 this year, 6 custom time, 7 all.
+        exchangeType:
+          $ref: "#/components/schemas/QueryExchangeTypePending"
+        entrustBeginDate:
+          type: string
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        entrustEndDate:
+          type: string
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        pageNum:
+          $ref: "#/components/schemas/PageNumberPending"
+        pageSize:
+          $ref: "#/components/schemas/PageSizePending"
+        stockCode:
+          type: string
     OrderDetailRequestPending:
       type: object
-      additionalProperties: true
+      additionalProperties: false
+      anyOf:
+        - required: [serialNo]
+        - required: [entrustId]
       properties:
+        serialNo:
+          type: integer
+          format: int64
         entrustId:
-          type: string
-      x-pending-confirmation: Official order-detail request field table.
+          type: integer
+          format: int64
+      x-pending-confirmation: Manual marks both fields required but says serialNo or entrustId must provide at least one.
     TradeRecordQueryRequestPending:
       type: object
-      additionalProperties: true
+      additionalProperties: false
+      required: [exchangeType]
       properties:
         exchangeType:
           $ref: "#/components/schemas/QueryExchangeTypePending"
         stockCode:
           type: string
         entrustId:
+          type: integer
+          format: int64
+        beginTime:
           type: string
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        endTime:
+          type: string
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
         pageNum:
           $ref: "#/components/schemas/PageNumberPending"
         pageSize:
           $ref: "#/components/schemas/PageSizePending"
-      x-pending-confirmation: Official trade-record request field table.
     QueryExchangeTypePending:
       type: integer
       description: Query-only market enum; value 100 may mean all markets.

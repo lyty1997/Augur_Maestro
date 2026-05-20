@@ -326,7 +326,7 @@ POST /stock-order-server/open-api/entrust-order
 | 内部字段 | uSmart body 字段 | 第一版规则 |
 |---|---|---|
 | `request.request_id` 派生 | `serialNo` | 最长 19 位；与 `X-Request-Id` 建立审计映射 |
-| `request.quantity` | `entrustAmount` | Decimal 转稳定字符串或 PDF 要求数字格式 |
+| `request.quantity` | `entrustAmount` | 按数字写入 JSON body |
 | `request.limit_price` | `entrustPrice` | 限价必填；市价第一版拒绝 |
 | `request.price_type` + `market` | `entrustProp` | 只允许明确白名单映射 |
 | `request.side` | `entrustType` | `buy -> 0`，`sell -> 1` |
