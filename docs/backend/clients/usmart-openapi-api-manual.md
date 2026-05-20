@@ -330,12 +330,12 @@ POST /stock-order-server/open-api/entrust-order
 | `request.limit_price` | `entrustPrice` | 限价必填；市价第一版拒绝 |
 | `request.price_type` + `market` | `entrustProp` | 只允许明确白名单映射 |
 | `request.side` | `entrustType` | `buy -> 0`，`sell -> 1` |
-| `request.market` | `exchangeType` | `US -> 5` 为主要交易市场；`HK -> 0` 可用于港股普通和暗盘；沪深港通先禁用真实交易 |
+| `request.market` | `exchangeType` | `US -> 5` 为主要交易市场和第一批真实交易范围；`HK -> 0` 仅保留港股暗盘设计；沪深港通先禁用真实交易 |
 | `request.symbol` | `stockCode` | 股票代码 |
 | 可选名称 | `stockName` | 非主键，可不传 |
 | 交易密码 secret | `password` | 若 PDF 要求，则加密后传 |
 | 固定安全默认 | `forceEntrustFlag` | 默认不启用 |
-| `request.session` | `sessionType` | 正常交易为 `0` / 不传；港股暗盘候选为 `3`；美股盘前盘后另行开关 |
+| `request.session` | `sessionType` | 第一批只做正常盘中交易 `0` / 不传；港股暗盘候选为 `3` 但仅保留设计；美股盘前盘后不进第一批 |
 
 ### 8.4 输出映射
 
@@ -573,4 +573,4 @@ class uSmartHttpTransport:
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举。
 - 错误码完整枚举。
-- `entrustProp` 在港股、美股、暗盘、盘前盘后的适用规则。
+- `entrustProp` 在美股盘中和美股碎股上的精确适用规则；港股暗盘和盘前盘后后置。

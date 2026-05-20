@@ -166,7 +166,7 @@ broker_gateway:
 - 下单、改单、撤单三个能力必须分别开关，不能用一个总开关隐式放开所有交易行为。
 - 登录、账户、持仓、订单、成交等交易开放 API 只读能力也要单独开关，便于未来只读联调逐项开放。基础报价 API 和报价推送 API 的开关归 `QuotationDataGateway`，不归 `TradingGateway`。
 - `trade-login` 虽然不是下单接口，但会改变账户交易可用状态，必须单独开关，默认关闭。
-- IPO 申购必须排除在第一版外。美股、碎股和港股暗盘需要预留能力开关，但在 `read_only` 和申请材料截图阶段必须保持阻断，只允许 dry-run 构造。
+- IPO 申购必须排除在第一版外。第一批真实交易只做美股盘中交易和美股碎股；港股新股暗盘只保留能力设计，港股碎股不做。在 `read_only` 和申请材料截图阶段必须保持阻断，只允许 dry-run 构造。
 
 ## 5. 统一接口契约
 
@@ -311,8 +311,8 @@ class QuotationDataGateway:
 | 普通下单 | `/stock-order-server/open-api/entrust-order` | 禁用，需 `live_guarded` |
 | 委托改单/撤单 | `/stock-order-server/open-api/modify-order` | 禁用；普通股票委托 `actionType=1` 为改单、`actionType=0` 为撤单 |
 | 改单范围 | `/stock-order-server/open-api/modified-range` | 只读查询，可用于改单前校验 |
-| 碎股下单 | `/stock-order-server/open-api/odd-entrust` | 默认禁止；未来受控实盘需碎股能力开关 |
-| 碎股撤单 | `/stock-order-server/open-api/odd-modify` | 默认禁止；未来受控实盘需碎股能力开关 |
+| 碎股下单 | `/stock-order-server/open-api/odd-entrust` | 默认禁止；未来受控实盘仅启用美股碎股能力 |
+| 碎股撤单 | `/stock-order-server/open-api/odd-modify` | 默认禁止；未来受控实盘仅启用美股碎股能力 |
 | 最大可买可卖 | `/stock-order-server/open-api/trade-quantity` | 只读风控辅助 |
 | 今日订单 | `/stock-order-server/open-api/today-entrust` | 只读对账 |
 | 全部订单 | `/stock-order-server/open-api/his-entrust` | 只读对账 |
@@ -380,7 +380,7 @@ class QuotationDataGateway:
 - 条件单、止盈止损或触发单。
 - 任何 PDF 未明确解释语义的高级订单。
 
-不进入第一版的是 IPO 申购接口本身；港股新股暗盘若通过普通下单接口和 `sessionType=3` 交易，按港股暗盘交易能力建模，不使用 IPO endpoint。
+不进入第一版的是 IPO 申购接口本身；港股新股暗盘若通过普通下单接口和 `sessionType=3` 交易，按港股暗盘交易能力保留设计，不进入第一批实现，也不使用 IPO endpoint。
 
 ## 7. 认证、签名和 token 生命周期
 
@@ -652,7 +652,7 @@ safety:
 ### Phase 2：只读券商接口联调
 
 - 只在 `read_only` 模式下启用。
-- 允许登录、账户、持仓、订单、成交查询。
+- 第一批只读联调只允许真实登录、资产查询、持仓查询、今日订单、历史订单、订单明细和成交流水。
 - 行情联调通过 `QuotationDataGateway`，不通过 `TradingGateway`。
 - uSmart 通过 `uSmartOpenApiTradingAdapter` 接入；miniQMT 通过 `MiniQMTTradingAdapter` 接入。
 - 禁止 `trade-login`、下单、改单、撤单、IPO 申购。
@@ -674,9 +674,9 @@ safety:
 
 ### Phase 5：受控实盘
 
-- 前提：用户确认、风控阈值确认、ETF 白名单确认、人工暂停和对账可用。
-- 第一批只允许小额、低频、宽基 ETF、限价单。
-- 个股实盘后置。
+- 前提：风控阈值确认、量化研究 Agent 输出交易白名单、人工暂停和对账可用。
+- 第一批只允许小额、低频、美股盘中限价和美股碎股。
+- 港股新股暗盘只保留设计，港股碎股和 IPO 申购接口排除。
 
 ## 15. 验收标准
 
@@ -719,7 +719,4 @@ safety:
 
 需要用户确认：
 
-- `TradingGateway` 第一版上层抽象同时预留 uSmart OpenAPI、miniQMT 和 Ptrade；代码实现先落 `TradingGateway`、`BrokerTradingAdapter`、`uSmartOpenApiTradingAdapter`、`MiniQMTTradingAdapter` 的同层骨架，uSmart 申请所需方法外形放在 uSmart 适配器内。
-- 只读联调允许真实登录和账户、持仓、订单、成交查询，但申请材料截图不做真实登录；控制台显示整理后的自然语言或表格结果，普通日志保留结构化字段和 `raw_hash`，本地只读联调审计日志保留 30 个交易日，可保存原始结构化字段但不保存原始 JSON 文本。
-- 第一版受控实盘以美股为主要交易市场，需要覆盖美股限价、碎股和港股新股暗盘；IPO 申购接口排除。
-- 第一批实盘宽基 ETF 白名单和单笔金额上限。
+- 风控阈值具体数值：单笔订单最大金额、单只股票最大持仓比例、单日最大交易次数、单日最大亏损阈值和快速风险退出最大允许减仓比例。
