@@ -244,8 +244,8 @@ src/
 | 成交流水查询 | POST | `/stock-order-server/open-api/stock-record` | 只读联调阶段可允许 |
 | 持仓查询 | POST | `/stock-order-server/open-api/stock-holding` | 只读联调阶段可允许 |
 | 资产查询 | POST | `/stock-order-server/open-api/stock-asset` | 只读联调阶段可允许 |
-| 客户股票资产批量查询 | POST | `/stock-order-server/open-api/stock-asset-list` | 第一版可作为多账户只读扩展，不进入最小闭环 |
-| 聚合资产查询 | POST | `/aggregation-server/open-api/user-asset-aggregation/v1` | 第一版可作为统一资产视图候选，不进入最小闭环 |
+| 客户股票资产批量查询 | POST | `/stock-order-server/open-api/stock-asset-list` | 第一版不启用；只读联调先限定单账户 |
+| 聚合资产查询 | POST | `/aggregation-server/open-api/user-asset-aggregation/v1` | 第一版不启用；只读联调先限定单账户 |
 | 查询汇率 | POST | `/stock-capital-server/open-api/currency-exchange-info` | 第一版可作为多币种估值辅助，不进入交易决策硬依赖 |
 
 不进入第一版：
@@ -771,15 +771,17 @@ PDF 字段映射：
 - 只读联调允许真实登录、账户、持仓、订单、成交查询；不允许 `trade-login`、下单、改单、撤单、IPO 申购、IPO 改单。
 - 申请材料截图不做真实登录；截图只展示 dry-run 请求构造、签名边界、脱敏和交易阻断。
 - 只读联调启用前必须显式配置 `allow_real_http_readonly=true`、base URL、IP 白名单、渠道号和密钥路径；缺任一项只能 dry-run。
-- 只读联调输出默认只在本地控制台展示脱敏摘要；普通日志只保留 endpoint、request_id、字段名、响应 code、耗时和 raw_hash，不保存完整 raw response。
-- token 只保存在进程内存；除非后续单独设计加密会话缓存，不落盘。
-- 建议本地脱敏审计日志保留 30 天；包含真实资金、持仓市值或完整订单明细的调试输出默认不落盘。
-- 查询失败可以按限流策略做有限重试。
-- 查询结果中的真实资金、持仓市值、完整账号不得写入普通日志。
+- 真实登录 token 只保存在进程内存；除非后续单独设计加密会话缓存，不落盘。
+- 查询结果可以在控制台显示整理后的完整结果，例如账户摘要、持仓表、订单表和成交表；禁止直接输出券商原始 JSON。
+- 普通日志可以保留相对完整的结构化字段：endpoint、request_id、trace_id、账户引用、查询类型、分页参数、响应 code、耗时、字段名、整理后结果摘要和 `raw_hash`；不得记录 token、密码、私钥、完整手机号或券商原始 JSON。
+- 真实资金、持仓市值、订单明细和成交明细可以进入本地只读联调审计日志，但必须是整理后的结构化记录，并标记账户引用和 `raw_hash`，不保存原始 response。
+- 本地只读联调审计日志保留 30 个交易日。
+- 查询失败可以按限流策略做有限重试，默认最多 2 次退避；交易动作不自动重试。
 - 对账和风控只能使用结构化结果，不直接传播券商原始响应。
 - 查询接口分页必须显式传入 `page_num`、`page_size` 或使用配置默认值；不得无限翻页。
 - 多市场 `exchangeType=100` 只允许用于查询，不允许流入下单请求。
 - 只读查询结果可以用于风控辅助，但不能替代对账状态；对账异常时必须暂停相关自动交易。
+- 第一版只做单账户只读联调，不启用批量资产和多账户聚合查询。
 
 ## 12. 错误处理
 
@@ -966,7 +968,8 @@ safety:
 - 不允许触达下单、改单、撤单 endpoint。
 - 不允许触达 IPO 申购、IPO 改单 endpoint。
 - 申请材料截图路径必须保持 dry-run，不做真实登录。
-- 所有输出脱敏。
+- 控制台允许显示整理后的完整只读结果，但不得显示原始 JSON、token、密码、私钥、完整手机号。
+- 本地只读联调审计日志保留 30 个交易日，并覆盖结构化账户、持仓、订单、成交结果。
 
 受控实盘前测试：
 

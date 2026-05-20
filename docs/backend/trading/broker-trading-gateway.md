@@ -279,8 +279,8 @@ class QuotationDataGateway:
 
 只读 DTO 规则：
 
-- DTO 不保存券商完整原始响应，只保存必要字段、脱敏摘要和 `raw_hash`。
-- 真实资金、持仓市值和完整账号不能进入普通日志；需要审计时仅记录哈希或脱敏摘要。
+- DTO 不保存券商完整原始响应，只保存整理后的结构化字段、必要摘要和 `raw_hash`。
+- 真实资金、持仓市值、订单明细和成交明细可以进入本地只读联调审计日志，但普通日志不得记录 token、密码、私钥、完整手机号或券商原始 JSON。
 - 查询结果可以用于风控辅助，但不能替代对账状态；对账异常时必须暂停相关账户或策略的自动交易。
 
 ## 6. 盈立交易开放 API 能力映射
@@ -334,15 +334,15 @@ class QuotationDataGateway:
 |---|---|---|
 | 查询持仓 | `/stock-order-server/open-api/stock-holding` | 持仓快照、对账 |
 | 查询资产 | `/stock-order-server/open-api/stock-asset` | 资金和资产快照 |
-| 批量资产查询 | `/stock-order-server/open-api/stock-asset-list` | 多账户只读观察 |
-| 聚合资产 | `/aggregation-server/open-api/user-asset-aggregation/v1` | 统一账户视图候选数据源 |
+| 批量资产查询 | `/stock-order-server/open-api/stock-asset-list` | 第一版不启用；只读联调先限定单账户 |
+| 聚合资产 | `/aggregation-server/open-api/user-asset-aggregation/v1` | 第一版不启用；只读联调先限定单账户 |
 | 查询汇率 | `/stock-capital-server/open-api/currency-exchange-info` | 多币种估值辅助 |
 
 规则：
 
-- 真实资金和持仓属于隐私数据，日志只能记录是否查询成功、字段数量、摘要哈希和脱敏账户。
+- 真实资金和持仓属于隐私数据；只读联调审计日志可以保留整理后的结构化结果，但不得保存原始 JSON、token、密码、私钥、完整手机号。
 - 风控可以读取可用资金、可卖数量和持仓比例，但不能直接依赖未经对账的单次查询结果启用自动交易。
-- 批量资产和聚合资产可以作为统一账户视图的数据源候选，但第一版最小闭环优先使用单账户 `stock-asset` 和 `stock-holding`。
+- 第一版只做单账户只读联调，优先使用单账户 `stock-asset` 和 `stock-holding`；批量资产和聚合资产后置。
 - 查询汇率只用于估值和展示辅助，不能单独触发调仓或换汇动作。
 
 ### 6.4 基础报价 API 与报价推送 API
@@ -657,7 +657,8 @@ safety:
 - uSmart 通过 `uSmartOpenApiTradingAdapter` 接入；miniQMT 通过 `MiniQMTTradingAdapter` 接入。
 - 禁止 `trade-login`、下单、改单、撤单、IPO 申购。
 - 只读联调允许真实登录和查询，但申请材料截图仍必须使用 dry-run，不做真实登录。
-- 所有输出脱敏。
+- 控制台允许显示整理后的完整只读结果，不显示原始 JSON。
+- 本地只读联调审计日志保留 30 个交易日，可以记录整理后的账户、持仓、订单和成交结构化结果；禁止记录 token、密码、私钥、完整手机号和券商原始 response。
 
 ### Phase 3：模拟盘网关
 
@@ -719,6 +720,6 @@ safety:
 需要用户确认：
 
 - `TradingGateway` 第一版上层抽象同时预留 uSmart OpenAPI、miniQMT 和 Ptrade；代码实现先落 `TradingGateway`、`BrokerTradingAdapter`、`uSmartOpenApiTradingAdapter`、`MiniQMTTradingAdapter` 的同层骨架，uSmart 申请所需方法外形放在 uSmart 适配器内。
-- 只读联调允许真实登录和账户、持仓、订单、成交查询，但申请材料截图不做真实登录；普通日志只保留脱敏摘要和 `raw_hash`，建议本地审计日志保留 30 天。
+- 只读联调允许真实登录和账户、持仓、订单、成交查询，但申请材料截图不做真实登录；控制台显示整理后的完整结果，普通日志保留结构化字段和 `raw_hash`，本地只读联调审计日志保留 30 个交易日，不保存原始 JSON。
 - 第一版受控实盘以美股为主要交易市场，需要覆盖美股限价、碎股和港股新股暗盘；IPO 申购接口排除。
 - 第一批实盘宽基 ETF 白名单和单笔金额上限。
