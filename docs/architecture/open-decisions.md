@@ -393,8 +393,8 @@
 - 源码截图属于券商申请材料事项，不作为 RobustQuant 开发交付。
 - 不允许用真实下单、改单、撤单接口做连通性测试或截图演示。
 - 已拿到盈立繁体中文 PDF 官方文档，位置为 `券商API/盈立/API文档/`。
-- 当前已知 OpenAPI 主要覆盖直接管理交易、查看账户信息、查询行情变化和接收订单/持仓/报价实时变动。
-- 交易相关 PDF 包括 `交易開放API接口文檔V1.0-20201029(繁).pdf`，行情相关 PDF 包括 `基礎報價開放API(繁)_20201029.pdf` 和 `報價推送(繁)_20201029.pdf`。
+- 盈立官方资料实际包含三套 API：交易开放 API、基础报价 API、报价推送 API。三套 API 的协议、base URL、签名/认证、限流、连接生命周期和错误处理不能混用。
+- 交易开放 API PDF 是 `交易開放API接口文檔V1.0-20201029(繁).pdf`，基础报价 API PDF 是 `基礎報價開放API(繁)_20201029.pdf`，报价推送 API PDF 是 `報價推送(繁)_20201029.pdf`。
 - 交易 PDF 初步摘录显示普通下单 endpoint 为 `/stock-order-server/open-api/entrust-order`，改单/撤单共用 `/stock-order-server/open-api/modify-order`。
 - 交易 PDF 初步摘录显示 `modify-order` 通过 `actionType=1` 表示改单、`actionType=0` 表示撤单；最终语义仍需官方或逐页 PDF 校对确认。
 - 交易 PDF 初步摘录显示下单响应 `data.entrustId` 可用于查询订单、修改订单和取消订单；是否可稳定作为内部 `broker_order_id` 仍需确认。
@@ -406,7 +406,7 @@
 - 交易 API base URL。
 - `X-Request-Id` 长度、有效期和重复请求语义；当前 PDF 摘录存在 19 位和 30 位两种描述。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的关系。
-- `X-Sign` 签名原文：交易 API 当前摘录以 body 为主，基础报价 API 摘录为 header+body 有序拼接，需确认能否分策略处理。
+- 交易开放 API 的 `X-Sign` 签名原文：当前摘录以 body 为主，仍需确认是否还要拼接 header 字段。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
 - `X-Type` 是否必填及枚举。
 - 登录手机号、登录密码、交易密码使用的 RSA 公钥和字段名。
 - `data.entrustId` 在下单、改单、撤单响应中分别代表原委托 ID、新委托 ID 还是申请编号。

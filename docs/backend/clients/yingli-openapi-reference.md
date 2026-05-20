@@ -22,7 +22,15 @@
 
 已转换为便于检索的 Markdown，位置为 `券商API/盈立/API文档/markdown/`。其中简体中文版本位于 `券商API/盈立/API文档/markdown/zh-Hans/`。Markdown 由 PDF 自动抽取文本生成，表格版式可能不如原 PDF 精确，正式设计仍以 PDF 原文为准。
 
-当前已知 OpenAPI 主要能力：
+盈立官方资料包含三套不同 API，不能混为一套：
+
+| API | 官方文档 | 协议 | 项目边界 |
+|---|---|---|---|
+| 交易开放 API | `交易開放API接口文檔V1.0-20201029(繁).pdf` | HTTPS POST | 登录、账户、资金、持仓、订单、成交、下单、改单、撤单；归 `TradingGateway` |
+| 基础报价 API | `基礎報價開放API(繁)_20201029.pdf` | HTTPS POST | 市场状态、基础信息、即时报价、分时、K 线、逐笔、盘口；归 `QuotationDataGateway` |
+| 报价推送 API | `報價推送(繁)_20201029.pdf` | WebSocket | 行情推送订阅、取消订阅、心跳和 update；归 `QuotationDataGateway` |
+
+当前已知能力：
 
 - 直接管理交易：创建订单、修改或取消订单、检查订单状态。
 - 查看账户信息：例如账户资金和当前持仓。
@@ -55,10 +63,12 @@
 
 初步文本解析显示：
 
-- 交易 API 提到 IP 白名单、HTTPS、`X-Sign`、`MD5withRSA`、`safeBase64`、`X-Request-Id` 幂等防重。
+- 交易开放 API 提到 IP 白名单、HTTPS、`X-Sign`、`MD5withRSA`、`safeBase64`、`X-Request-Id` 幂等防重。
 - 交易 API 包含登录接口 `/user-server/open-api/login`。
+- 交易 API 官方手册只给出相对路径，base URL 需要 OpenAPI 申请通过后由盈立提供。
 - 基础报价 API 使用 HTTP POST，并包含请求频率限制和统一 header。
 - 报价推送 API 使用 websocket，入口示例为 `wss://open-hz.yxzq.com/wss/v1`，包含 `auth`、`sub`、`unsub`、`update` 等消息。
+- 三套 API 的 base URL、签名原文、认证方式、限流和连接生命周期需要分别实现，不能共用一个 client / signer / mapper。
 
 以上只是初步抽取结果，正式设计时必须逐页校对 PDF。
 

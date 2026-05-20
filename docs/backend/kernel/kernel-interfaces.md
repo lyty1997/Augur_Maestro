@@ -923,7 +923,7 @@ class OrderManagementService(Protocol):
 规则：
 
 - `BrokerTradingAdapter` 是券商 SDK/API 适配器边界，策略、回测、FastAPI Router 和 CLI 都不能直接调用；上层只能通过 `TradingGateway` 进入交易链路。
-- miniQMT 和盈立 OpenAPI 的只读接入只能使用登录、权限检查、行情、账户、资金、持仓、订单和成交查询能力；这类测试不构成真实交易，但仍要保护账户隐私。
+- miniQMT 和盈立的只读接入必须区分 API 边界：交易开放 API 只允许登录、权限检查、账户、资金、持仓、订单和成交查询；基础报价 API / 报价推送 API 只允许行情查询和订阅。两类只读测试不构成真实交易，但仍要保护账户隐私，且不得混用网关、client、signer 或 mapper。
 - 任何会向券商提交委托、撤单、条件单、预埋单、止盈止损、触发单或其他可能改变券商侧订单状态的接口，都按真实交易接口处理。
 - `capability_mode` 默认为 `READ_ONLY`；只有显式切到 `LIVE_GUARDED` 且 `trading_enabled=true`、人工确认、交易时间、风控、OMS 和账户/标的白名单全部通过，才允许调用 `place_order` 或 `cancel_order`。
 - 不允许用真实下单、真实撤单或真实条件单接口做连通性探测、冒烟测试或权限测试。

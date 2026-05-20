@@ -6,11 +6,19 @@
 
 ## 0. 文档定位
 
-本文档面向“盈立 OpenAPI 申请材料需要源码截图”的紧急任务，定义登录、下单、改单、撤单四条链路从本地入口到券商 OpenAPI 的完整 API 设计。它补足 [broker-trading-gateway.md](../trading/broker-trading-gateway.md) 和 [usmart-openapi-call-design.md](usmart-openapi-call-design.md) 中仍停留在总体设计、缺少接口级手册的部分。
+本文档面向“盈立 OpenAPI 申请材料需要源码截图”的紧急任务，定义交易开放 API 中登录、下单、改单、撤单四条链路从本地入口到券商交易开放 API 的完整设计。它补足 [broker-trading-gateway.md](../trading/broker-trading-gateway.md) 和 [usmart-openapi-call-design.md](usmart-openapi-call-design.md) 中仍停留在总体设计、缺少接口级手册的部分。
 
 本文档只定义调用栈、模块 API、输入输出、字段映射、审计和安全边界。申请材料代码可以实现 dry-run / offline request builder 和完整调用链截图，但不得为了截图触达真实下单、改单、撤单接口。
 
 命名说明：项目文档中 `uSmart`、`盈立` 指同一 OpenAPI 接入方向；代码命名暂沿用 `usmart` 包名，文档面向券商申请时使用“盈立 OpenAPI”。
+
+盈立官方资料拆成三套不同 API。本文档只覆盖交易开放 API；基础报价 API 和报价推送 API 不在本文档实现范围内，后续应在 `quotation_kernel` 下分别设计。
+
+| API | 官方文档 | 协议 | 本文档是否覆盖 |
+|---|---|---|---|
+| 交易开放 API | `交易開放API接口文檔V1.0-20201029(繁).pdf` | HTTPS POST | 是 |
+| 基础报价 API | `基礎報價開放API(繁)_20201029.pdf` | HTTPS POST | 否 |
+| 报价推送 API | `報價推送(繁)_20201029.pdf` | WebSocket | 否 |
 
 ## 1. 现有设计缺口
 
@@ -21,7 +29,7 @@
 | 本地入口层缺失 | `src/backend`、`src/cli` 只有 README | 截图无法展示从 CLI/API 到网关的调用链 | 增加 `BrokerApplicationService`、CLI/API handler 设计和 dry-run 调用示例 |
 | 登录 DTO 不完整 | `TradingGateway.connect(account_ref)` 只有账户引用 | 无法表达手机号、区号、密码密钥引用、token 会话 | 增加 `BrokerLoginRequest`、`BrokerLoginResult`、`uSmartSession` |
 | 交易 DTO 与 PDF 字段未完全对齐 | 当前 adapter body 仍是内部字段外形 | 截图无法证明对接 `serialNo`、`entrustAmount`、`actionType` 等字段 | 增加专门的 request builder 和字段映射测试 |
-| 认证签名层缺失 | 没有 `auth.py`、`encryptor.py`、`transport.py` | 无法展示 header、签名、加密、token 传递层 | 定义 `uSmartAuthSigner`、`uSmartSensitiveFieldEncryptor`、`uSmartHttpTransport` |
+| 认证签名层缺失 | 没有 `auth.py`、`encryptor.py`、`transport.py` | 无法展示交易开放 API header、签名、加密、token 传递层 | 定义交易开放 API signer、交易敏感字段 encryptor、交易 HTTP transport |
 | 请求 ID 与流水映射缺失 | 只有 `request_id` 字符串 | 无法证明 `X-Request-Id`、`serialNo`、本地订单 ID 的关系 | 增加 `uSmartRequestIdPolicy` 和审计映射 |
 | 响应 mapper 缺失 | adapter 直接返回 `UNKNOWN` | 无法展示券商响应如何变成本地 ACK | 增加 `uSmartOrderMapper`、`uSmartErrorMapper` |
 | 安全门控不够细 | 只拦截交易动作，未细分登录/只读查询/trade-login | 只读联调和申请截图容易边界不清 | 扩展 capability：login、trade_status、account、order、trade_action |
@@ -39,8 +47,8 @@ L0 CLI / FastAPI / 本地任务
   -> L3 TradingGateway
   -> L4 BrokerTradingAdapter
   -> L5 uSmartOpenApiTradingAdapter
-  -> L6 uSmartOpenApiClient
-  -> L7 uSmartAuthSigner + uSmartSensitiveFieldEncryptor + uSmartRequestIdPolicy
+  -> L6 uSmartTradeOpenApiClient
+  -> L7 uSmartTradeAuthSigner + uSmartTradeSensitiveFieldEncryptor + uSmartRequestIdPolicy
   -> L8 uSmartHttpTransport
   -> L9 uSmart OpenAPI Server
 ```
@@ -53,8 +61,8 @@ L0 CLI / FastAPI / 本地任务
 | L3 `TradingGateway` | 统一 DTO、能力模式 | `Broker*Request` | `Broker*Ack` | 不出现 uSmart endpoint |
 | L4 基类 | 抽象接口 | 统一 DTO | 统一 DTO | 不做券商字段判断 |
 | L5 uSmart adapter | uSmart endpoint/body | 统一 DTO | 统一 ACK | 不决定是否允许真实交易 |
-| L6 client | HTTP request/response | endpoint + body | `uSmartOpenApiResponse` | 不含 OMS/风控逻辑 |
-| L7 signer/encryptor/id | header、签名、加密字段 | stable JSON + secrets ref | headers + encrypted body | 不写日志输出秘密 |
+| L6 trade client | 交易开放 API HTTP request/response | endpoint + body | `uSmartTradeOpenApiResponse` | 不含 OMS/风控逻辑；不处理基础报价或报价推送 |
+| L7 trade signer/encryptor/id | 交易开放 API header、签名、加密字段 | stable JSON + secrets ref | headers + encrypted body | 不写日志输出秘密；不复用基础报价或报价推送规则 |
 | L8 transport | HTTPS | `uSmartHttpRequest` | `uSmartHttpResponse` | 交易动作不自动重试 |
 | L9 broker server | OpenAPI 协议 | HTTP request | OpenAPI response | 不受本地代码控制 |
 
@@ -77,9 +85,9 @@ src/
       application_service.py      本地应用服务编排
       usmart/
         adapter.py                内部 DTO -> uSmart endpoint/body
-        client.py                 header、签名、transport、响应摘要
-        auth.py                   X-Sign、Authorization、X-Time、X-Request-Id
-        encryptor.py              手机号、登录密码、交易密码加密
+        client.py                 交易开放 API header、签名、transport、响应摘要
+        auth.py                   交易开放 API X-Sign、Authorization、X-Time、X-Request-Id
+        encryptor.py              交易开放 API 手机号、登录密码、交易密码加密
         transport.py              HTTPS POST / dry-run transport
         mapper.py                 响应、状态、错误映射
         endpoints.py              endpoint 常量
@@ -195,7 +203,6 @@ adapter 不直接调用 transport，而是先构造不可变请求对象：
 @dataclass(frozen=True)
 class uSmartOpenApiRequest:
     endpoint: str
-    api_group: Literal["trade", "quote_http"]
     operation_kind: Literal["readonly", "trade_action"]
     method: Literal["POST"]
     body: Mapping[str, Any]
@@ -209,7 +216,7 @@ client 输出：
 
 ```python
 @dataclass(frozen=True)
-class uSmartOpenApiResponse:
+class uSmartTradeOpenApiResponse:
     endpoint: str
     http_status: int | None
     request_id: str
@@ -238,9 +245,9 @@ CLI/FastAPI
   -> TradingGateway.connect(account_ref)
   -> uSmartOpenApiTradingAdapter.connect(account_ref)
   -> uSmartLoginRequestBuilder.build(...)
-  -> uSmartOpenApiClient.post(...)
-  -> uSmartSensitiveFieldEncryptor.encrypt_login_fields(...)
-  -> uSmartAuthSigner.build_headers(...)
+  -> uSmartTradeOpenApiClient.post(...)
+  -> uSmartTradeSensitiveFieldEncryptor.encrypt_login_fields(...)
+  -> uSmartTradeAuthSigner.build_headers(...)
   -> uSmartHttpTransport.post_json(...)
 ```
 
@@ -285,7 +292,7 @@ OMS
   -> CapabilityGuard.ensure_allowed(PLACE_ORDER)
   -> uSmartOpenApiTradingAdapter.place_order(request)
   -> uSmartOrderRequestBuilder.build_place_order(request)
-  -> uSmartOpenApiClient.post(... operation_kind="trade_action")
+  -> uSmartTradeOpenApiClient.post(... operation_kind="trade_action")
 ```
 
 `read_only` 默认模式下链路停在 `CapabilityGuard`，返回 `broker.trading_disabled`，不会进入 adapter。申请材料可以通过单独的 dry-run builder 测试展示将要发出的请求体。
@@ -336,7 +343,7 @@ OMS
   -> CapabilityGuard.ensure_allowed(MODIFY_ORDER)
   -> uSmartOpenApiTradingAdapter.modify_order(request)
   -> uSmartOrderRequestBuilder.build_modify_order(request)
-  -> uSmartOpenApiClient.post(... operation_kind="trade_action")
+  -> uSmartTradeOpenApiClient.post(... operation_kind="trade_action")
 ```
 
 ### 9.2 uSmart endpoint
@@ -380,7 +387,7 @@ OMS
   -> CapabilityGuard.ensure_allowed(CANCEL_ORDER)
   -> uSmartOpenApiTradingAdapter.cancel_order(request)
   -> uSmartOrderRequestBuilder.build_cancel_order(request)
-  -> uSmartOpenApiClient.post(... operation_kind="trade_action")
+  -> uSmartTradeOpenApiClient.post(... operation_kind="trade_action")
 ```
 
 ### 10.2 uSmart endpoint
@@ -413,16 +420,16 @@ POST /stock-order-server/open-api/modify-order
 
 ## 11. Client、Signer、Transport API
 
-### 11.1 Client
+### 11.1 交易开放 API Client
 
 ```python
-class uSmartOpenApiClient:
+class uSmartTradeOpenApiClient:
     def post(
         self,
         request: uSmartOpenApiRequest,
         *,
         token_required: bool,
-    ) -> uSmartOpenApiResponse:
+    ) -> uSmartTradeOpenApiResponse:
         ...
 ```
 
@@ -430,20 +437,19 @@ class uSmartOpenApiClient:
 
 1. 校验 endpoint 在白名单中。
 2. 稳定序列化 body。
-3. 对敏感 body 字段调用 encryptor。
-4. 调用 signer 生成 header。
+3. 对交易开放 API 敏感 body 字段调用 encryptor。
+4. 调用交易开放 API signer 生成 header。
 5. 调用 transport；`dry_run=True` 时只返回脱敏请求摘要。
 6. 解析响应，生成 `raw_hash`。
-7. 返回 `uSmartOpenApiResponse`。
+7. 返回 `uSmartTradeOpenApiResponse`。
 
-### 11.2 Signer
+### 11.2 交易开放 API Signer
 
 ```python
-class uSmartAuthSigner:
+class uSmartTradeAuthSigner:
     def build_headers(
         self,
         *,
-        api_group: Literal["trade", "quote_http"],
         endpoint: str,
         body_json: str,
         request_id: str,
@@ -463,6 +469,8 @@ class uSmartAuthSigner:
 - `X-Dt`
 - `X-Request-Id`
 - `X-Sign`
+
+基础报价 API 和报价推送 API 不使用这个 signer；后续分别实现独立的报价 HTTP signer 和报价 WS auth。
 
 ### 11.3 Transport
 
@@ -525,8 +533,8 @@ class uSmartHttpTransport:
 1. 有本地入口或应用服务方法：登录、下单、改单、撤单四个方法清晰存在。
 2. 有 `TradingGateway` 层：交易动作默认在 `read_only` 被阻断。
 3. 有 `uSmartOpenApiTradingAdapter` 层：能构造四类 endpoint 和 body。
-4. 有 `uSmartOpenApiClient` 层：能组装 request、调用 signer、调用 dry-run transport。
-5. 有 `uSmartAuthSigner` 接口：即使先用固定测试 key，也要展示 header 生成边界。
+4. 有交易开放 API client 层：能组装 request、调用交易 signer、调用 dry-run transport。
+5. 有交易开放 API signer 接口：即使先用固定测试 key，也要展示交易 header 生成边界。
 6. 有 `uSmartSensitiveFieldEncryptor` 接口：登录手机号、密码不以明文进入最终 request builder。
 7. 有 `uSmartRequestIdPolicy`：生成或校验 `X-Request-Id` 与 `serialNo`。
 8. 有离线测试：断言登录、下单、改单、撤单请求体字段完整，且 read-only 下交易动作不出网。
@@ -537,10 +545,10 @@ class uSmartHttpTransport:
 
 以下事项不能靠代码猜测，必须从 PDF 或盈立官方确认：
 
-- 交易 API base URL。
+- 交易 API base URL：当前官方手册未提供，需要 OpenAPI 申请通过后由盈立提供；实现中只能保留 `USMART_API_BASE_URL` 配置占位，默认 dry-run 不出网。
 - `X-Time` 精确格式。
 - `X-Dt`、`X-Type` 可用枚举和是否必填。
-- `X-Request-Id` 长度、重复请求返回语义。
+- `X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。
 - `X-Sign` 精确签名原文、编码和 padding 规则。
 - 手机号、登录密码、交易密码是否使用同一套 RSA 公钥。
 - token 字段名、有效期、刷新机制。
