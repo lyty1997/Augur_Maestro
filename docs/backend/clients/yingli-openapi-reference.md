@@ -42,7 +42,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源。本地 Markdow
 - 解析官方网页文档不等于启用盈立 OpenAPI 正式接入。
 - M1 可在用户明确授权后实现只读联调查询；申请材料截图仍只使用 dry-run / offline request builder，不做真实登录。
 - 不允许用真实下单、真实改单、真实撤单接口做连通性测试、截图演示或权限测试。
-- 官方网页文档已给出 UAT 测试地址；但 UAT 是否等同 sandbox / paper trading，是否保证交易动作不产生真实委托，仍需券商确认。未确认前不运行真实下单、改单、撤单。
+- 官方网页文档已给出 UAT 测试地址；用户已确认 RobustQuant 不自动把 UAT 视为可交易 sandbox。UAT 是否等同 sandbox / paper trading、是否保证交易动作不产生真实委托仍需券商确认。未确认前只允许真实登录和只读查询，不运行真实下单、改单、撤单。
 - 官方网页文档没有明确说明的 paper trading 语义、改单语义、订单状态和错误码，统一标记为 `unknown_by_official_doc`。
 - 任何未来真实交易接入都必须重新完成 OMS、风控、交易时间检查、账户/标的白名单、人工暂停和对账设计。
 
@@ -85,6 +85,6 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源。本地 Markdow
 
 ## 6. 待解析或标记为未知
 
-- UAT 测试地址是否等同 sandbox / paper trading，是否保证交易动作不产生真实委托。
+- UAT 测试地址是否等同 sandbox / paper trading、是否保证交易动作不产生真实委托仍需券商确认；项目策略已确认：未确认前交易动作继续 dry-run。
 - 普通股票委托的 `actionType` 已按官方网页文档核对；券商内部改单是否为原生 modify 仍未写明，本地 OMS 风险模型按 cancel + replace 处理。
 - 申请材料截图格式：与开发无关，不作为本项目设计阻塞项。

@@ -471,7 +471,7 @@ flowchart TB
 - DoD：
   - 明确认证方式、endpoint、签名、下单、改单、撤单参数。
   - 明确账号资金、持仓、订单状态、行情查询和实时变动推送的接口范围。
-  - 网页手册已给出 UAT 测试地址；UAT 是否等同 sandbox / paper trading、是否保证交易动作不产生真实委托，仍需券商确认。
+  - 网页手册已给出 UAT 测试地址；用户已确认不自动把 UAT 当作可交易 sandbox。UAT 是否等同 sandbox / paper trading、是否保证交易动作不产生真实委托，仍需券商确认。
   - 官方网页手册未说明的改单语义、订单状态或错误码，标记为 `unknown_by_official_doc`。
   - 不输出申请截图源码，不运行真实交易接口。
   - 文档摘录和待确认项同步更新到 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md)。
