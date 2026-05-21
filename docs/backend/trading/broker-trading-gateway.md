@@ -390,10 +390,10 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 
 - 请求使用 HTTPS。
 - Header 中包含 `X-Sign`。
-- `X-Sign` 使用 `MD5withRSA` 对 Body 内容加密或签名后，再经过 Base64 编码；网页描述为 `safeBase64` / URL-safe Base64，官方 Python demo 的交易 helper 使用标准 Base64，需做成可配置。
+- `X-Sign` 使用 `MD5withRSA` 对 Body 内容加密或签名后，再经过 Base64 编码；网页描述为 `safeBase64` / URL-safe Base64，官方 Python demo 的交易 helper 使用标准 Base64。实现默认按网页手册使用 URL-safe Base64，并保留切换到 demo 标准 Base64 的兼容配置。
 - 交易开放 API 的 `X-Sign` 签名原文只使用稳定 JSON body，不拼接 header 字段。
 - 官方 Python demo 的交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`。网页 header 表与 demo 对 `X-Time`、`X-Request-Id` 是否交易接口全量必填存在差异，第一版做成按 endpoint 可配置并保留待确认。
-- `safeBase64` 默认保留 `=` padding，并通过配置允许切换。
+- `safeBase64` 默认遵循网页手册的 URL-safe Base64，并通过配置允许控制 padding 和 demo 兼容编码。
 - `X-Time` 使用 Unix epoch milliseconds，并作为字符串写入 header。
 - `X-Dt` 默认 `"4"` 表示 Windows；`X-Type` 默认 `"1"` 表示大陆版 APP。
 - `X-Sign` 渠道签名密钥材料与手机号、登录密码、交易密码等隐私资料加密密钥材料必须分离；隐私资料加密方向和 padding 按官方最终材料配置。

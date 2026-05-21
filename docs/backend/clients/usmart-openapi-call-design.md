@@ -372,7 +372,7 @@ broker_order_id <- entrustId
 - 官方 Python demo 的交易 HTTP helper 使用 `json.dumps(params)` 作为签名原文，`MD5withRSA` 后用标准 Base64 编码为 `X-Sign`。
 - 基础报价 API 描述签名原文为 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 内容按序拼接；这是另一套 API，不在本文档的交易 signer 中实现。
 - 官方 Python demo 的基础报价 HTTP helper 使用上述 header + body 签名原文，并用 URL-safe Base64 编码；不能与交易 signer 混用。
-- 编码方式：网页文档描述为 `safeBase64` / URL-safe Base64，交易 demo 使用标准 Base64；第一版做成配置项，默认跟随官方 demo 的交易实现，保留切换到 URL-safe Base64 的能力。
+- 编码方式：网页文档描述为 `safeBase64` / URL-safe Base64，交易 demo 使用标准 Base64；第一版默认按网页手册使用 URL-safe Base64，保留切换到 demo 标准 Base64 的兼容配置。
 - 幂等字段：`X-Request-Id`。
 - 官方 Python demo 的交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`。网页 header 表与 demo 对 `X-Time`、`X-Request-Id` 是否交易接口全量必填存在差异，第一版做成按 endpoint 可配置并保留待确认。
 - 访问控制：IP 白名单。
@@ -406,7 +406,7 @@ class uSmartTradeAuthSigner:
 1. 将 body 使用稳定 JSON 序列化，保证签名前后的 body 字节一致。
 2. 生成或接收 `X-Request-Id`。
 3. 按交易开放 API 规则生成签名前原文：只使用稳定 JSON body，不拼接 header 字段。
-4. 对交易开放 API 签名结果按配置编码，写入 `X-Sign`；默认跟随官方 Python demo 交易实现使用标准 Base64，必要时可切换 URL-safe Base64。
+4. 对交易开放 API 签名结果按配置编码，写入 `X-Sign`；默认按网页手册使用 URL-safe Base64，若联调发现当前渠道跟随 Python demo，可切换为标准 Base64。
 5. 组装 `Authorization`、`X-Lang`、`X-Channel`、`X-Time`、`X-Dt`、`X-Request-Id`、`X-Sign`。
 
 隐私字段加密与签名分开处理：

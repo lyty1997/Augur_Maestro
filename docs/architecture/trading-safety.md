@@ -53,7 +53,7 @@ flowchart LR
 
 默认必须是 `read_only`。
 
-盈立 OpenAPI 申请所需源码截图属于券商申请材料事项，不作为 RobustQuant 开发交付，也不等同于上述三种运行模式。开发侧只解析官方 PDF；任何真实下单、改单、撤单请求仍必须按真实交易能力处理。
+盈立 OpenAPI 申请所需源码截图属于券商申请材料事项，不作为 RobustQuant 开发交付，也不等同于上述三种运行模式。开发侧只按 uSmart 官方网页手册和本地 Markdown 转换稿做接口设计；任何真实下单、改单、撤单请求仍必须按真实交易能力处理。
 
 即使用户配置了 `live_guarded`，真实交易仍需同时满足：
 
@@ -326,11 +326,11 @@ M1 如果做前端，只能只读展示，不提供真实交易干预入口。
 
 ## 15. 盈立 OpenAPI 官方资料边界
 
-盈立 OpenAPI 官方 PDF 解析按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 执行。`TradingGateway` 统一券商交易网关模块设计按 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md) 执行。源码截图材料与开发无关，不进入 M1 任务。
+盈立 OpenAPI 官方网页手册解析按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 执行。`TradingGateway` 统一券商交易网关模块设计按 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md) 执行。源码截图材料与开发无关，不进入 M1 任务。
 
 边界：
 
-- 可以解析官方 PDF，形成接口事实清单。
+- 可以解析官方网页手册和本地 Markdown 转换稿，形成接口事实清单。
 - 可以在官方 sandbox 中验证，前提是 sandbox 明确不会产生真实委托。
 - 没有 sandbox 时，不运行真实下单、改单、撤单。
 - 不能为了源码截图材料编写或运行真实交易代码。
@@ -346,9 +346,9 @@ M1 如果做前端，只能只读展示，不提供真实交易干预入口。
 - miniQMT 下单、撤单、查询的官方错误码和状态码。
 - 东北证券账户 API 权限范围。
 - 盈立 OpenAPI 是否申请通过。
-- 盈立 OpenAPI 官方 PDF 中认证、endpoint、签名、订单类型、盘前盘后、频率限制、错误码和订单状态码的摘录结果。
+- 盈立 OpenAPI 官方网页手册中认证、endpoint、签名、订单类型、盘前盘后、频率限制、错误码和订单状态码的确认结果。
 - 第一版实盘是否只允许限价单。
 - 第一版单笔金额、单票仓位、单日次数和单日亏损阈值。
 - 是否允许自动减仓或清仓，最大动作幅度是多少。
 - 第一批实盘宽基 ETF 白名单。
-- 盈立 OpenAPI 是否有 sandbox；PDF 未说明时标记为 `unknown_by_pdf`。
+- 盈立 OpenAPI 是否有 sandbox；官方网页手册未说明时标记为 `unknown_by_official_doc`。

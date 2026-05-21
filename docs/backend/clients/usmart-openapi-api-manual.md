@@ -568,7 +568,7 @@ class uSmartHttpTransport:
 
 - 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过 `USMART_API_BASE_URL` 配置显式选择，默认 dry-run 不出网。
 - `X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。
-- `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
+- `X-Sign` 输出编码默认按网页手册使用 URL-safe Base64，并通过配置允许控制 `=` padding 和 Python demo 标准 Base64 兼容模式；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；但它必须和 `X-Sign` 渠道签名密钥材料分离。
 - token 有效期、刷新机制。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。

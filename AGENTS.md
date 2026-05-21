@@ -41,7 +41,7 @@ Codex 执行任务时，除本文件外还必须参考 `codex-rules/`：
 - 缓存 / 任务协调：M1 暂不引入 Redis，等出现明确队列、缓存或消息协调需求后再评估。
 - 任务调度：M1 暂不引入后台任务队列，后续可评估 APScheduler、Celery 或 Dramatiq。
 - 前端：React。
-- 券商接入：miniQMT 用于东北证券等 QMT 账户；盈立证券 OpenAPI 用于港股、美股账户。
+- 券商接入：miniQMT 用于东北证券等 QMT 账户；盈立证券 OpenAPI 用于港股、美股账户。uSmart / 盈立 OpenAPI 以官方网页手册为真相源，并且交易 API、基础报价 API、报价推送 API 是三套独立 API，不能混用 signer、client、mapper 或连接生命周期。
 - AI / LLM：先作为研究辅助，不直接进入实盘交易链路。
 
 技术栈尚未最终确认时，不要过早搭建复杂工程骨架。优先完成最小交易闭环的设计：账户查询、持仓查询、下单、撤单、订单查询、成交查询、风控、日志、对账。
