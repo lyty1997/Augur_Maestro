@@ -8,9 +8,9 @@
 
 <div class="theme-default-content content__default">
 
-# <a href="#基础行情开放api" class="header-anchor">#</a> 基础行情开放API
+# 基础行情开放API
 
-## <a href="#版本说明" class="header-anchor">#</a> 版本说明
+## 版本说明
 
 | 日期       | 版本   | 说明                 |
 |:-----------|:-------|:---------------------|
@@ -18,13 +18,13 @@
 | 2019-02-24 | v1.0.1 | 基础信息接口新增字段 |
 | 2019-02-27 | v1.0.1 | 添加接口限制描述     |
 
-## <a href="#概述" class="header-anchor">#</a> 概述
+## 概述
 
 盈立智投开放平台通过HTTP接口提供大部分服务，大多数API功能都是通过简单的HTTP POST请求访问。关于基础行情的接口都通过统一接口调用。
 
-## <a href="#接口请求限制" class="header-anchor">#</a> 接口请求限制
+## 接口请求限制
 
-### <a href="#请求频率限制" class="header-anchor">#</a> 请求频率限制：
+### 请求频率限制：
 
 -   高频请求
 
@@ -43,16 +43,16 @@
 |------------------|--------------------|
 | 证券基本信息接口 | 20                 |
 
-## <a href="#统一域名" class="header-anchor">#</a> 统一域名
+## 统一域名
 
 -   正式域名： https://open-hz.yxzq.com:8443
 -   测试域名： https://open-hz-uat.yxzq.com
 
 > 如果在测试调试阶段，下面所有接口地址将`https://open-hz.yxzq.com:8443`改为`https://open-hz-uat.yxzq.com`即可。
 
-## <a href="#一、统一http头" class="header-anchor">#</a> 一、统一HTTP头
+## 一、统一HTTP头
 
-### <a href="#简要描述" class="header-anchor">#</a> 简要描述
+### 简要描述
 
 基础行情的接口，每次调用都必须携带一些必要的HTTP头，这些HTTP头及其功能如下所示：
 
@@ -66,7 +66,7 @@
 | X-Time        | 是   | string | unix 时间戳                                                                     |
 | X-Sign        | 是   | string | 签名                                                                            |
 
-### <a href="#签名说明" class="header-anchor">#</a> 签名说明
+### 签名说明
 
 X-Sign生成规则：
 
@@ -74,27 +74,27 @@ X-Sign生成规则：
 2.  使用MD5withRSA算法对rowContent进行摘要、加密生成密文cipherContent
 3.  再对密文cipherContent使用safeBase64编码生成X-Sign
 
-## <a href="#二、市场状态接口" class="header-anchor">#</a> 二、市场状态接口
+## 二、市场状态接口
 
-### <a href="#简要描述-2" class="header-anchor">#</a> 简要描述
+### 简要描述
 
 用来获取市场状态信息。
 
-### <a href="#请求url" class="header-anchor">#</a> 请求URL
+### 请求URL
 
 -   `https://open-hz.yxzq.com:8443/quotes-openservice/api/v1/marketstate`
 
-### <a href="#请求方式" class="header-anchor">#</a> 请求方式
+### 请求方式
 
 -   POST
 
-### <a href="#请求参数" class="header-anchor">#</a> 请求参数
+### 请求参数
 
 | 参数名 | 必选 | 类型   | 说明                                             |
 |:-------|:-----|:-------|--------------------------------------------------|
 | market | 是   | string | 市场标识，hk：香港，us：美国，sh：上海，sz：深圳 |
 
-### <a href="#返回结果" class="header-anchor">#</a> 返回结果
+### 返回结果
 
 | 参数名 | 类型     | 说明                                 |
 |:-------|:---------|--------------------------------------|
@@ -102,7 +102,7 @@ X-Sign生成规则：
 | msg    | string   | 消息                                 |
 | data   | 字典类型 | 数据区，具体的接口参照具体的行情接口 |
 
-### <a href="#市场状态结构说明" class="header-anchor">#</a> 市场状态结构说明
+### 市场状态结构说明
 
 | 参数名         | 类型   | 说明                                     |
 |:---------------|:-------|------------------------------------------|
@@ -111,7 +111,7 @@ X-Sign生成规则：
 | tradingDayType | int    | 当前交易日类型，参加下方的交易日类型说明 |
 | status         | int    | 当前市场状态，参见下方的市场状态说明     |
 
-### <a href="#交易日类型说明" class="header-anchor">#</a> 交易日类型说明
+### 交易日类型说明
 
 | 取值 | 说明       |
 |:-----|:-----------|
@@ -120,7 +120,7 @@ X-Sign生成规则：
 | 2    | 上半日市   |
 | 3    | 下半日市   |
 
-### <a href="#市场状态说明" class="header-anchor">#</a> 市场状态说明
+### 市场状态说明
 
 | 取值 | 说明                                                   |
 |:-----|:-------------------------------------------------------|
@@ -145,9 +145,9 @@ X-Sign生成规则：
 | 61   | 盘后撮合，A股科创版                                    |
 | 62   | 固定价格交易，A股科创版                                |
 
-### <a href="#示例" class="header-anchor">#</a> 示例
+### 示例
 
-#### <a href="#请求" class="header-anchor">#</a> 请求
+#### 请求
 
 <div class="language- extra-class">
 
@@ -160,7 +160,7 @@ Content-Type: application/json; charset=utf-8
 
 </div>
 
-#### <a href="#结果" class="header-anchor">#</a> 结果
+#### 结果
 
 <div class="language- extra-class">
 
@@ -179,27 +179,27 @@ Content-Type: application/json; charset=utf-8
 
 </div>
 
-## <a href="#三、基础信息接口" class="header-anchor">#</a> 三、基础信息接口
+## 三、基础信息接口
 
-### <a href="#简要描述-3" class="header-anchor">#</a> 简要描述
+### 简要描述
 
 获取基本信息的接口。
 
-### <a href="#请求url-2" class="header-anchor">#</a> 请求URL
+### 请求URL
 
 -   `https://open-hz.yxzq.com:8443/quotes-openservice/api/v1/basicinfo`
 
-### <a href="#请求方式-2" class="header-anchor">#</a> 请求方式
+### 请求方式
 
 -   POST
 
-### <a href="#请求参数-2" class="header-anchor">#</a> 请求参数
+### 请求参数
 
 | 参数名 | 必选 | 类型   | 说明                                             |
 |:-------|:-----|:-------|--------------------------------------------------|
 | market | 是   | string | 市场标识，hk：香港，us：美国，sh：上海，sz：深圳 |
 
-### <a href="#返回结果-2" class="header-anchor">#</a> 返回结果
+### 返回结果
 
 | 参数名 | 类型     | 说明                                                       |
 |:-------|:---------|------------------------------------------------------------|
@@ -207,14 +207,14 @@ Content-Type: application/json; charset=utf-8
 | msg    | string   | 消息                                                       |
 | data   | 字典类型 | 数据区，包含一个逐笔条目的数组，具体参照下面的逐笔条目说明 |
 
-### <a href="#data结构" class="header-anchor">#</a> data结构
+### data结构
 
 | 参数名 | 类型   | 说明                                         |
 |:-------|:-------|----------------------------------------------|
 | market | string | 证券市场，如：hk、us、sh、sz                 |
 | list   | array  | 基础信息列表，每个条目说明参见"基础信息条目" |
 
-### <a href="#基础信息条目" class="header-anchor">#</a> 基础信息条目
+### 基础信息条目
 
 | 参数名  | 类型   | 说明                       |
 |:--------|:-------|----------------------------|
@@ -225,7 +225,7 @@ Content-Type: application/json; charset=utf-8
 | type1   | int32  | 证券类型，详见下方证券类型 |
 | lotSize | int32  | 最小委托数量               |
 
-### <a href="#证券类型" class="header-anchor">#</a> 证券类型
+### 证券类型
 
 | 参数名 | 类型  | 说明     |
 |:-------|:------|----------|
@@ -240,7 +240,7 @@ Content-Type: application/json; charset=utf-8
 | 8      | int32 | 其他     |
 | 9      | int32 | 板块     |
 
-### <a href="#示例-2" class="header-anchor">#</a> 示例
+### 示例
 
 <div class="language- extra-class">
 
@@ -285,27 +285,27 @@ Content-Type: application/json; charset=utf-8
 
 </div>
 
-## <a href="#四、实时行情接口" class="header-anchor">#</a> 四、实时行情接口
+## 四、实时行情接口
 
-### <a href="#简要描述-4" class="header-anchor">#</a> 简要描述
+### 简要描述
 
 获取实时行情行情数据的接口。
 
-### <a href="#请求url-3" class="header-anchor">#</a> 请求URL
+### 请求URL
 
 -   `https://open-hz.yxzq.com:8443/quotes-openservice/api/v1/realtime`
 
-### <a href="#请求方式-3" class="header-anchor">#</a> 请求方式
+### 请求方式
 
 -   POST
 
-### <a href="#请求参数-3" class="header-anchor">#</a> 请求参数
+### 请求参数
 
 | 参数名  | 必选 | 类型  | 说明                                                                                     |
 |:--------|:-----|:------|------------------------------------------------------------------------------------------|
 | secuIds | 是   | array | 字符串数组，每个元素为证券的唯一标识，由市场标识+证券代码构成，如腾讯的唯一标识为hk00700 |
 
-### <a href="#返回结果-3" class="header-anchor">#</a> 返回结果
+### 返回结果
 
 | 参数名 | 类型     | 说明                                                           |
 |:-------|:---------|----------------------------------------------------------------|
@@ -313,7 +313,7 @@ Content-Type: application/json; charset=utf-8
 | msg    | string   | 消息                                                           |
 | data   | 字典类型 | 数据区，包含一个list字段，list中对象中的字段含义，参照下方说明 |
 
-### <a href="#list中的对象数据字段说明" class="header-anchor">#</a> list中的对象数据字段说明
+### list中的对象数据字段说明
 
 | 参数名      | 类型   | 说明                                |
 |:------------|:-------|-------------------------------------|
@@ -337,7 +337,7 @@ Content-Type: application/json; charset=utf-8
 | qtyUnit     | double | 实时价差                            |
 | trdStatus   | int32  | 证券状态,具体参见下方的证券状态说明 |
 
-### <a href="#证券状态说明" class="header-anchor">#</a> 证券状态说明
+### 证券状态说明
 
 | 取值 | 说明           |
 |:-----|:---------------|
@@ -349,7 +349,7 @@ Content-Type: application/json; charset=utf-8
 | 5    | 退市           |
 | 6    | 交易中         |
 
-### <a href="#示例-3" class="header-anchor">#</a> 示例
+### 示例
 
 <div class="language- extra-class">
 
@@ -395,28 +395,28 @@ Content-Type: application/json; charset=utf-8
 
 </div>
 
-## <a href="#五、分时接口" class="header-anchor">#</a> 五、分时接口
+## 五、分时接口
 
-### <a href="#简要描述-5" class="header-anchor">#</a> 简要描述
+### 简要描述
 
 获取分时数据的接口。
 
-### <a href="#请求url-4" class="header-anchor">#</a> 请求URL
+### 请求URL
 
 -   `https://open-hz.yxzq.com:8443/quotes-openservice/api/v1/timeline`
 
-### <a href="#请求方式-4" class="header-anchor">#</a> 请求方式
+### 请求方式
 
 -   POST
 
-### <a href="#请求参数-4" class="header-anchor">#</a> 请求参数
+### 请求参数
 
 | 参数名 | 必选 | 类型   | 说明                                                               |
 |:-------|:-----|:-------|--------------------------------------------------------------------|
 | secuId | 是   | string | 证券的唯一标识，由市场标识+证券代码构成，如腾讯的唯一标识为hk00700 |
 | type   | 是   | int    | 分时类型 0：一日分时，1：五日分时                                  |
 
-### <a href="#返回结果-4" class="header-anchor">#</a> 返回结果
+### 返回结果
 
 | 参数名 | 类型     | 说明                                                       |
 |:-------|:---------|------------------------------------------------------------|
@@ -424,7 +424,7 @@ Content-Type: application/json; charset=utf-8
 | msg    | string   | 消息                                                       |
 | data   | 字典类型 | 数据区，包含一个分时点结构的数组，具体参见下方的分时点接口 |
 
-### <a href="#分时点结构说明" class="header-anchor">#</a> 分时点结构说明
+### 分时点结构说明
 
 | 参数名     | 类型   | 说明         |
 |:-----------|:-------|--------------|
@@ -437,7 +437,7 @@ Content-Type: application/json; charset=utf-8
 | netchng    | double | 涨跌额       |
 | pctchng    | double | 涨跌幅       |
 
-### <a href="#示例-4" class="header-anchor">#</a> 示例
+### 示例
 
 <div class="language- extra-class">
 
@@ -475,21 +475,21 @@ Content-Type: application/json; charset=utf-8
 
 </div>
 
-## <a href="#六、k线接口" class="header-anchor">#</a> 六、K线接口
+## 六、K线接口
 
-### <a href="#简要描述-6" class="header-anchor">#</a> 简要描述
+### 简要描述
 
 获取K线数据的接口。
 
-### <a href="#请求url-5" class="header-anchor">#</a> 请求URL
+### 请求URL
 
 -   `https://open-hz.yxzq.com:8443/quotes-openservice/api/v1/kline`
 
-### <a href="#请求方式-5" class="header-anchor">#</a> 请求方式
+### 请求方式
 
 -   POST
 
-### <a href="#请求参数-5" class="header-anchor">#</a> 请求参数
+### 请求参数
 
 | 参数名 | 必选 | 类型   | 说明                                                               |
 |:-------|:-----|:-------|--------------------------------------------------------------------|
@@ -499,7 +499,7 @@ Content-Type: application/json; charset=utf-8
 | right  | 是   | int32  | 复权类型，0：不复权，1：前复权，2：后复权                          |
 | count  | 是   | int32  | 每页大小                                                           |
 
-### <a href="#k线类型说明" class="header-anchor">#</a> K线类型说明
+### K线类型说明
 
 | 取值 | 说明                   |
 |:-----|:-----------------------|
@@ -517,7 +517,7 @@ Content-Type: application/json; charset=utf-8
 | 11   | 6月K线                 |
 | 12   | 一年K线                |
 
-### <a href="#返回结果-5" class="header-anchor">#</a> 返回结果
+### 返回结果
 
 | 参数名 | 类型     | 说明                                 |
 |:-------|:---------|--------------------------------------|
@@ -525,7 +525,7 @@ Content-Type: application/json; charset=utf-8
 | msg    | string   | 消息                                 |
 | data   | 字典类型 | 数据区，具体的接口参照具体的行情接口 |
 
-### <a href="#k线结构说明" class="header-anchor">#</a> K线结构说明
+### K线结构说明
 
 | 参数名     | 类型   | 说明         |
 |:-----------|:-------|--------------|
@@ -538,7 +538,7 @@ Content-Type: application/json; charset=utf-8
 | high       | double | 最高价       |
 | low        | double | 最低价       |
 
-### <a href="#示例-5" class="header-anchor">#</a> 示例
+### 示例
 
 <div class="language- extra-class">
 
@@ -576,21 +576,21 @@ Content-Type: application/json; charset=utf-8
 
 </div>
 
-## <a href="#七、逐笔接口" class="header-anchor">#</a> 七、逐笔接口
+## 七、逐笔接口
 
-### <a href="#简要描述-7" class="header-anchor">#</a> 简要描述
+### 简要描述
 
 -   获取逐笔数据的接口。
 
-### <a href="#请求url-6" class="header-anchor">#</a> 请求URL
+### 请求URL
 
 -   `https://open-hz.yxzq.com:8443/quotes-openservice/api/v1/tick`
 
-### <a href="#请求方式-6" class="header-anchor">#</a> 请求方式
+### 请求方式
 
 -   POST
 
-### <a href="#请求参数-6" class="header-anchor">#</a> 请求参数
+### 请求参数
 
 | 参数名        | 必选  | 类型   | 说明                                                                            |
 |:--------------|:------|:-------|---------------------------------------------------------------------------------|
@@ -600,7 +600,7 @@ Content-Type: application/json; charset=utf-8
 | count         | int64 | string | 每页数据的大小                                                                  |
 | sortDirection | int32 | string | 排序方向，0：时间逆序，1：时间顺序                                              |
 
-### <a href="#返回结果-6" class="header-anchor">#</a> 返回结果
+### 返回结果
 
 | 参数名 | 类型     | 说明                                                       |
 |:-------|:---------|------------------------------------------------------------|
@@ -608,7 +608,7 @@ Content-Type: application/json; charset=utf-8
 | msg    | string   | 消息                                                       |
 | data   | 字典类型 | 数据区，包含一个逐笔条目的数组，具体参照下面的逐笔条目说明 |
 
-### <a href="#逐笔条目说明" class="header-anchor">#</a> 逐笔条目说明
+### 逐笔条目说明
 
 | 参数名    | 类型   | 说明                                                                               |
 |:----------|:-------|------------------------------------------------------------------------------------|
@@ -619,7 +619,7 @@ Content-Type: application/json; charset=utf-8
 | direction | double | 买卖方向， 0: 默认，1：买，2：卖                                                   |
 | trdType   | int64  | 逐笔类型，港股所特有，数值与类型之间的对应关系为：4:P 22:M 100:Y 101:X 102:D 103:U |
 
-### <a href="#示例-6" class="header-anchor">#</a> 示例
+### 示例
 
 <div class="language- extra-class">
 
@@ -658,27 +658,27 @@ Content-Type: application/json; charset=utf-8
 
 </div>
 
-## <a href="#八、买卖盘接口" class="header-anchor">#</a> 八、买卖盘接口
+## 八、买卖盘接口
 
-### <a href="#简要描述-8" class="header-anchor">#</a> 简要描述
+### 简要描述
 
 -   获取买卖盘数据的接口。
 
-### <a href="#请求url-7" class="header-anchor">#</a> 请求URL
+### 请求URL
 
 -   `https://open-hz.yxzq.com:8443/quotes-openservice/api/v1/orderbook`
 
-### <a href="#请求方式-7" class="header-anchor">#</a> 请求方式
+### 请求方式
 
 -   POST
 
-### <a href="#请求参数-7" class="header-anchor">#</a> 请求参数
+### 请求参数
 
 | 参数名 | 必选 | 类型   | 说明                                                               |
 |:-------|:-----|:-------|--------------------------------------------------------------------|
 | secuId | 是   | string | 证券的唯一标识，由市场标识+证券代码构成，如腾讯的唯一标识为hk00700 |
 
-### <a href="#返回结果-7" class="header-anchor">#</a> 返回结果
+### 返回结果
 
 | 参数名 | 类型     | 说明                                                                                           |
 |:-------|:---------|------------------------------------------------------------------------------------------------|
@@ -686,7 +686,7 @@ Content-Type: application/json; charset=utf-8
 | msg    | string   | 消息                                                                                           |
 | data   | 字典类型 | 数据区，包含一个最新行情时间（latestTime），一个买卖盘条目的数组，具体参照下面的买卖盘条目说明 |
 
-### <a href="#买卖盘条目说明" class="header-anchor">#</a> 买卖盘条目说明
+### 买卖盘条目说明
 
 | 参数名        | 类型   | 说明           |
 |:--------------|:-------|----------------|
@@ -697,7 +697,7 @@ Content-Type: application/json; charset=utf-8
 | askVolume     | int64  | 卖盘量         |
 | askOrderCount | int64  | 卖委托订单个数 |
 
-### <a href="#示例-7" class="header-anchor">#</a> 示例
+### 示例
 
 <div class="language- extra-class">
 
@@ -736,7 +736,7 @@ Content-Type: application/json; charset=utf-8
 
 </div>
 
-## <a href="#九、错误码说明" class="header-anchor">#</a> 九、错误码说明
+## 九、错误码说明
 
 | 错误码 | 含义                   |
 |:-------|:-----------------------|

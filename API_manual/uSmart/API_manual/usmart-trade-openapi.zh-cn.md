@@ -8,11 +8,11 @@
 
 <div class="theme-default-content content__default">
 
-# <a href="#交易open-api接口" class="header-anchor">#</a> 交易OPEN API接口
+# 交易OPEN API接口
 
 \[toc\]
 
-## <a href="#版本记录" class="header-anchor">#</a> 版本记录
+## 版本记录
 
 | 日期       | 版本号 | 修改说明                                                                                                                                                                                                                                                                                                                                                          |
 |------------|--------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -36,7 +36,7 @@
 | 2025-06-10 | 1.17   | 1、新增7.1 MA-下单接口。2、新增7.2 MA-撤单接口。3、新增7.3 MA-订单列表接口。4、新增7.4 MA-订单详情接口。5、新增7.5 MA-获取购买力接口。                                                                                                                                                                                                                            |
 | 2025-08-25 | 1.18   | 1、新增8.1 期权-下单接口。2、新增8.2 期权-改单接口。3、新增 期权-8.3撤单接口。4、新增8.4 期权-获取下单购买力接口。5、新增8.5 期权-获取改单购买力接口。6、新增8.6 期权-改单状态查询接口。7、新增8.7 期权-今日订单列表接口。8、新增8.8 期权-订单详情接口。                                                                                                          |
 
-## <a href="#概述" class="header-anchor">#</a> 概述
+## 概述
 
 -   开放平台可以为个人开发者和机构客户提供接口服务，投资者可以充分的利用盈立智投的交易服务、行情服务、账户服务等实现自己的投资应用。
 
@@ -127,9 +127,9 @@ x-Sign：用私钥对body内容加密后的内容
 
 </div>
 
-## <a href="#_1-登录、密码及用户信息" class="header-anchor">#</a> 1 登录、密码及用户信息
+## 1 登录、密码及用户信息
 
-### <a href="#_1-1渠道密码登录" class="header-anchor">#</a> 1.1渠道密码登录
+### 1.1渠道密码登录
 
 -   手机/邮箱+密码+渠道登录：
 
@@ -270,7 +270,7 @@ X-Sign：body 使用RSA私钥加密
 | 300705 | 该帐户未设置登录密码，请使用短信验证码登录               |
 | 300809 | 需要校验手机短信验证码                                   |
 
-### <a href="#_1-2获取手机-邮箱验证码" class="header-anchor">#</a> 1.2获取手机/邮箱验证码
+### 1.2获取手机/邮箱验证码
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/send-phone-captcha`
 
@@ -421,7 +421,7 @@ X-Sign：body 使用RSA私钥加密
 | 300705 | 该帐户未设置登录密码，请使用短信验证码登录               |
 | 300809 | 需要校验手机短信验证码                                   |
 
-### <a href="#_1-3渠道验证码登录" class="header-anchor">#</a> 1.3渠道验证码登录
+### 1.3渠道验证码登录
 
 -   手机/邮箱+验证码+渠道登录：
 
@@ -584,7 +584,7 @@ X-Sign：body 使用RSA私钥加密
 | 300705 | 该帐户未设置登录密码，请使用短信验证码登录               |
 | 300809 | 需要校验手机短信验证码                                   |
 
-### <a href="#_1-4设置交易密码" class="header-anchor">#</a> 1.4设置交易密码
+### 1.4设置交易密码
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/set-trade-password`
 
@@ -693,7 +693,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-5校验交易密码" class="header-anchor">#</a> 1.5校验交易密码
+### 1.5校验交易密码
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/check-trade-password`
 
@@ -787,7 +787,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-6重置登录密码" class="header-anchor">#</a> 1.6重置登录密码
+### 1.6重置登录密码
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/reset-login-password`
 
@@ -903,7 +903,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-7解锁交易" class="header-anchor">#</a> 1.7解锁交易
+### 1.7解锁交易
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/trade-login`
 
@@ -996,7 +996,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-8获取交易解锁状态" class="header-anchor">#</a> 1.8获取交易解锁状态
+### 1.8获取交易解锁状态
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/get-trade-status`
 
@@ -1088,7 +1088,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-9修改交易密码" class="header-anchor">#</a> 1.9修改交易密码
+### 1.9修改交易密码
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/update-trade-password`
 
@@ -1197,7 +1197,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-10重置交易密码" class="header-anchor">#</a> 1.10重置交易密码
+### 1.10重置交易密码
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/reset-trade-password`
 
@@ -1306,7 +1306,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-11修改登录密码" class="header-anchor">#</a> 1.11修改登录密码
+### 1.11修改登录密码
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/update-login-password`
 
@@ -1413,7 +1413,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-12根据市场查询账户类型" class="header-anchor">#</a> 1.12根据市场查询账户类型
+### 1.12根据市场查询账户类型
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/get-user-info-with-market-for-stock/v1`
 
@@ -1516,7 +1516,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_1-13-根据资金账号查询融资利率" class="header-anchor">#</a> 1.13 根据资金账号查询融资利率
+### 1.13 根据资金账号查询融资利率
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/user-server/open-api/get-rate-info-by-fund-account/v1`
 
@@ -1621,9 +1621,9 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-## <a href="#_2-交易及查询" class="header-anchor">#</a> **2** 交易及查询
+## **2** 交易及查询
 
-### <a href="#_2-1下单" class="header-anchor">#</a> 2.1下单
+### 2.1下单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/entrust-order`
 
@@ -1762,7 +1762,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-2委托改单-撤单" class="header-anchor">#</a> 2.2委托改单/撤单
+### 2.2委托改单/撤单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/modify-order`
 
@@ -1887,7 +1887,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-3改单范围" class="header-anchor">#</a> 2.3改单范围
+### 2.3改单范围
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/modified-range`
 
@@ -1992,7 +1992,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-4碎股下单" class="header-anchor">#</a> 2.4碎股下单
+### 2.4碎股下单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/odd-entrust`
 
@@ -2091,7 +2091,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-5碎股撤单" class="header-anchor">#</a> 2.5碎股撤单
+### 2.5碎股撤单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/odd-modify`
 
@@ -2180,7 +2180,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-6最大可买、可卖数量" class="header-anchor">#</a> 2.6最大可买、可卖数量
+### 2.6最大可买、可卖数量
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/trade-quantity`
 
@@ -2293,7 +2293,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-7今日订单-分页查询" class="header-anchor">#</a> 2.7今日订单-分页查询
+### 2.7今日订单-分页查询
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/today-entrust`
 
@@ -2445,7 +2445,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-8全部订单-分页查询" class="header-anchor">#</a> 2.8全部订单-分页查询
+### 2.8全部订单-分页查询
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/his-entrust`
 
@@ -2609,7 +2609,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-9查询订单明细" class="header-anchor">#</a> 2.9查询订单明细
+### 2.9查询订单明细
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/order-detail`
 
@@ -2867,7 +2867,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-10查询成交流水-分页查询" class="header-anchor">#</a> 2.10查询成交流水-分页查询
+### 2.10查询成交流水-分页查询
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/stock-record`
 
@@ -3023,7 +3023,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-11查询资产" class="header-anchor">#</a> 2.11查询资产
+### 2.11查询资产
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/asset-center-server/open-api/open-assetQuery/v1`
 
@@ -3696,7 +3696,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-12获取融资股数" class="header-anchor">#</a> 2.12获取融资股数
+### 2.12获取融资股数
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/trade-margin-quantity`
 
@@ -3817,7 +3817,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_2-13客户融资账户详情" class="header-anchor">#</a> 2.13客户融资账户详情
+### 2.13客户融资账户详情
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/asset-center-server/open-api/open-margin-detail/v1`
 
@@ -4005,9 +4005,9 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-## <a href="#_3-ipo认购" class="header-anchor">#</a> **3** IPO认购
+## **3** IPO认购
 
-### <a href="#_3-1获取ipo列表-分页查询" class="header-anchor">#</a> 3.1获取IPO列表-分页查询
+### 3.1获取IPO列表-分页查询
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/ipo-list`
 
@@ -4217,7 +4217,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_3-2获取新股详细信息" class="header-anchor">#</a> 3.2获取新股详细信息
+### 3.2获取新股详细信息
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/ipo-info`
 
@@ -4502,7 +4502,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_3-3ipo新股认购" class="header-anchor">#</a> 3.3ipo新股认购
+### 3.3ipo新股认购
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/apply-ipo`
 
@@ -4622,7 +4622,7 @@ X-Sign：body 使用RSA私钥加密’;
 
 </div>
 
-### <a href="#_3-4ipo改单-撤单" class="header-anchor">#</a> 3.4ipo改单/撤单
+### 3.4ipo改单/撤单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/modify-ipo`
 
@@ -4737,7 +4737,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_3-5获取客户ipo申购列表-分页查询" class="header-anchor">#</a> 3.5获取客户ipo申购列表-分页查询
+### 3.5获取客户ipo申购列表-分页查询
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/ipo-record-list`
 
@@ -4942,7 +4942,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_3-6获取客户ipo申购明细" class="header-anchor">#</a> 3.6获取客户ipo申购明细
+### 3.6获取客户ipo申购明细
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/ipo-record`
 
@@ -5140,7 +5140,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_3-7额度不足时确认现金认购数量" class="header-anchor">#</a> 3.7额度不足时确认现金认购数量
+### 3.7额度不足时确认现金认购数量
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/ipo-comfirm-qyt/v1`
 
@@ -5217,9 +5217,9 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-## <a href="#_4-资金记录" class="header-anchor">#</a> **4** 资金记录
+## **4** 资金记录
 
-### <a href="#_4-1查询汇率" class="header-anchor">#</a> 4.1查询汇率
+### 4.1查询汇率
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-capital-server/open-api/currency-exchange-info`
 
@@ -5362,7 +5362,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_4-2获取历史记录" class="header-anchor">#</a> 4.2获取历史记录
+### 4.2获取历史记录
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-capital-server/open-api/business-flow`
 
@@ -5529,7 +5529,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_4-2客户出金撤销" class="header-anchor">#</a> 4.2客户出金撤销
+### 4.2客户出金撤销
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-capital-server/open-api/app-cashOut-revoke`
 
@@ -5605,9 +5605,9 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-## <a href="#_5-数据字典" class="header-anchor">#</a> **5** 数据字典
+## **5** 数据字典
 
-### <a href="#_5-1订单状态-status" class="header-anchor">#</a> 5.1订单状态（Status）
+### 5.1订单状态（Status）
 
 | 编码 | 名称     |
 |------|----------|
@@ -5624,7 +5624,7 @@ X-Sign：body 使用RSA私钥加密
 | 11   | 等待提交 |
 | 61   | 收市撤单 |
 
-### <a href="#_5-2市场类型-exchangetype" class="header-anchor">#</a> 5.2市场类型（ExchangeType）
+### 5.2市场类型（ExchangeType）
 
 | 编码 | 名称                 |
 |------|----------------------|
@@ -5639,7 +5639,7 @@ X-Sign：body 使用RSA私钥加密
 | 67   | A股（用于查询）      |
 | 100  | 所有市场（用于查询） |
 
-### <a href="#_5-3ipo新股状态-status" class="header-anchor">#</a> 5.3IPO新股状态（Status）
+### 5.3IPO新股状态（Status）
 
 | 编码 | 名称         |
 |------|--------------|
@@ -5655,7 +5655,7 @@ X-Sign：body 使用RSA私钥加密
 | 9    | 延迟上市     |
 | 11   | 已删除       |
 
-### <a href="#_5-4ipo认购状态-status" class="header-anchor">#</a> 5.4IPO认购状态（Status）
+### 5.4IPO认购状态（Status）
 
 | 编码 | 名称       |
 |------|------------|
@@ -5674,7 +5674,7 @@ X-Sign：body 使用RSA私钥加密
 | 12   | 待系统确认 |
 | 20   | 申请额度中 |
 
-### <a href="#_5-5币种-moneytype" class="header-anchor">#</a> 5.5币种（moneyType）
+### 5.5币种（moneyType）
 
 | 编码 | 名称   |
 |------|--------|
@@ -5682,7 +5682,7 @@ X-Sign：body 使用RSA私钥加密
 | 1    | 美元   |
 | 2    | 港币   |
 
-### <a href="#_5-6设备类别-x-dt" class="header-anchor">#</a> 5.6设备类别（X-Dt）
+### 5.6设备类别（X-Dt）
 
 | 编码 | 名称    |
 |------|---------|
@@ -5692,16 +5692,16 @@ X-Sign：body 使用RSA私钥加密
 | t4   | Windows |
 | t5   | Mac     |
 
-### <a href="#_5-7账户类型-assetprop" class="header-anchor">#</a> 5.7账户类型（AssetProp）
+### 5.7账户类型（AssetProp）
 
 | 编码 | 名称     |
 |------|----------|
 | 0    | 现金账户 |
 | M    | 融资账户 |
 
-## <a href="#_6-孖展" class="header-anchor">#</a> **6** 孖展
+## **6** 孖展
 
-### <a href="#_6-1获取股票抵押比率列表" class="header-anchor">#</a> 6.1获取股票抵押比率列表
+### 6.1获取股票抵押比率列表
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/stock-order-server/open-api/mortgage-list`
 
@@ -5863,9 +5863,9 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-## <a href="#_7-ma账户交易及查询" class="header-anchor">#</a> **7** MA账户交易及查询
+## **7** MA账户交易及查询
 
-### <a href="#_7-1下单" class="header-anchor">#</a> 7.1下单
+### 7.1下单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/ams-center/open-api/ma-order-submit/v1`
 
@@ -5979,7 +5979,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_7-2撤单" class="header-anchor">#</a> 7.2撤单
+### 7.2撤单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/ams-center/open-api/ma-order-cancel/v1`
 
@@ -6075,7 +6075,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_7-3订单列表-分页查询" class="header-anchor">#</a> 7.3订单列表-分页查询
+### 7.3订单列表-分页查询
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/ams-center/open-api/ma-order-list/v1`
 
@@ -6193,7 +6193,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_7-4订单详情" class="header-anchor">#</a> 7.4订单详情
+### 7.4订单详情
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/ams-center/open-api/ma-order-detail/v1`
 
@@ -6299,7 +6299,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_7-5获取策略购买力" class="header-anchor">#</a> 7.5获取策略购买力
+### 7.5获取策略购买力
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/ams-center/open-api/get-ma-trade-account-info/v1`
 
@@ -6404,9 +6404,9 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-## <a href="#_8-期权交易和查询接口" class="header-anchor">#</a> **8** 期权交易和查询接口
+## **8** 期权交易和查询接口
 
-### <a href="#_8-1-期权-下单" class="header-anchor">#</a> 8.1 期权-下单
+### 8.1 期权-下单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/option-order-server/open-api/option-trade/v1`
 
@@ -6518,7 +6518,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_8-2-期权-改单" class="header-anchor">#</a> 8.2 期权-改单
+### 8.2 期权-改单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/option-order-server/open-api/option-replace-order/v1`
 
@@ -6618,7 +6618,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_8-3-期权-撤单" class="header-anchor">#</a> 8.3 期权-撤单
+### 8.3 期权-撤单
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/option-order-server/open-api/option-cancel-order/v1`
 
@@ -6714,7 +6714,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_8-4-期权-获取下单购买力" class="header-anchor">#</a> 8.4 期权-获取下单购买力
+### 8.4 期权-获取下单购买力
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/option-order-server/open-api/option-customer-range/v2`
 
@@ -6826,7 +6826,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_8-5-期权-获取改单购买力" class="header-anchor">#</a> 8.5 期权-获取改单购买力
+### 8.5 期权-获取改单购买力
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/option-order-server/open-api/option-customer-replace-range/v1`
 
@@ -6932,7 +6932,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_8-6-期权-改单状态查询" class="header-anchor">#</a> 8.6 期权-改单状态查询
+### 8.6 期权-改单状态查询
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/option-order-server/open-api/query-option-order-replace-status/v1`
 
@@ -7032,7 +7032,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_8-7-期权-今日订单列表接口" class="header-anchor">#</a> 8.7 期权-今日订单列表接口
+### 8.7 期权-今日订单列表接口
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/option-order-server/open-api/user-option-order-list/v1`
 
@@ -7215,7 +7215,7 @@ X-Sign：body 使用RSA私钥加密
 
 </div>
 
-### <a href="#_8-8-期权-订单详情接口" class="header-anchor">#</a> 8.8 期权-订单详情接口
+### 8.8 期权-订单详情接口
 
 -   生产环境接口地址 `https://open-jy.yxzq.com/option-order-server/open-api/user-option-order-detail/v1`
 
