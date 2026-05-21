@@ -641,6 +641,35 @@ POST /stock-order-server/open-api/entrust-order
 - 默认不启用 `forceEntrustFlag`。
 - 美股为主要交易市场；第一批只做美股盘中交易和美股碎股。港股暗盘只保留设计，当前不实现真实请求构造；当前 `read_only` 阶段只构造 dry-run 请求，不真实提交。
 
+### 8.1 美股碎股下单 API 设计
+
+OpenAPI：
+
+```text
+POST /stock-order-server/open-api/odd-entrust
+```
+
+第一版策略：
+
+- 用户已确认美股碎股买入和卖出都启用，`entrustType` 使用买入 `0`、卖出 `1`。
+- 内部订单按委托金额建模，例如 `notional_amount`；不得让策略直接提交券商碎股股数字段。
+- `entrustAmount` 是发送给券商的碎股数量，由 `notional_amount / limit_price` 换算得到，可为小数股数。
+- 金额、价格和换算出的碎股数量内部使用 `Decimal`；HTTP JSON 边界按券商接受的 number 序列化，不在核心模型里使用二进制 `float`。
+- `entrustPrice` 为限价，必须大于 0；市价碎股第一版不启用。
+- `exchangeType` 只允许 `5`，即美股；港股碎股不做。
+- 卖出碎股前必须从持仓或最大可卖查询拿到可卖碎股数量，并用换算后的 `entrustAmount` 做上限校验。
+- 只读和申请材料截图阶段仍只允许 dry-run 构造，不触达真实碎股下单接口。
+
+内部字段映射：
+
+| 内部字段 | uSmart body 字段 | 第一版规则 |
+|---|---|---|
+| `request.notional_amount` / `request.limit_price` | `entrustAmount` | 小数股数，按金额除以限价换算 |
+| `request.limit_price` | `entrustPrice` | 限价，必须大于 0 |
+| `request.side` | `entrustType` | 买入 `0`，卖出 `1` |
+| 固定值 | `exchangeType` | `5`，美股 |
+| `request.symbol` | `stockCode` | 股票代码 |
+
 ## 9. 改单 API 设计
 
 方法：
@@ -982,6 +1011,7 @@ safety:
 - 被阻断时，`uSmartTradeOpenApiClient` 不应收到调用。
 - `uSmartOpenApiTradingAdapter` 能按官方网页字段构造登录、下单、改单、撤单请求体。
 - 下单请求体必须包含 `serialNo`、`entrustAmount`、`entrustPrice`、`entrustProp`、`entrustType`、`exchangeType`、`stockCode`。
+- 美股碎股下单请求体必须包含 `entrustAmount`、`entrustPrice`、`entrustType`、`exchangeType=5`、`stockCode`，并验证 `entrustAmount` 来源于内部金额模型的 Decimal 换算。
 - 改单请求体必须包含 `actionType=1`、`entrustAmount`、`entrustId`、`entrustPrice`。
 - 撤单请求体必须包含 `actionType=0`、`entrustAmount=0`、`entrustId`、`entrustPrice=0`。
 - 只读查询 DTO 能映射 `stock-asset`、`stock-holding`、`today-entrust`、`his-entrust`、`order-detail`、`stock-record` 的脱敏响应。
@@ -1022,7 +1052,7 @@ safety:
 - 订单明细 `orderStatus` 历史节点的完整枚举。
 - 错误码完整枚举。
 - `finalStateFlag` 的完整枚举和是否可作为 OMS 订单终态判断依据。
-- 美股碎股 `/odd-entrust` 的价格、数量、订单状态和撤单细节；港股暗盘相关规则保留为后续设计项。
+- 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节；港股暗盘相关规则保留为后续设计项。
 - 频率限制、IP 白名单生效规则。
 
 ## 17. 后续实现顺序

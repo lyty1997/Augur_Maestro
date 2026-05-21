@@ -260,10 +260,20 @@ paths:
       summary: Place an odd-lot order.
       x-robustquant-first-live-scope: us_odd_lot_only
       x-robustquant-blocked-in-read-only: true
+      x-user-confirmed: "2026-05-21: first version enables US odd-lot buy and sell."
+      x-robustquant-first-live-order-profile:
+        market: US
+        exchangeType: 5
+        sides:
+          buy: 0
+          sell: 1
+        internal_model: amount_based
+        broker_entrustAmount: notional_amount / entrustPrice
+        numeric_policy: Use Decimal internally; serialize to uSmart JSON number at the HTTP boundary.
+        reject_when_mapping_uncertain: true
       x-pending-confirmation: >
-        Official manual lists odd-lot entrustType as 1 sell. Confirm with
-        uSmart whether US odd-lot buy is supported by this endpoint before
-        enabling buy-side odd-lot trading.
+        Minimum notional amount, minimum fractional-share quantity, quantity
+        precision, order status flow, and cancellation details.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
         - $ref: "#/components/parameters/HeaderContentType"
@@ -768,20 +778,37 @@ components:
       type: object
       additionalProperties: false
       required: [entrustAmount, entrustPrice, entrustType, exchangeType, stockCode]
+      description: >
+        uSmart odd-lot request. RobustQuant first version models the internal
+        user intent by notional amount, then derives broker entrustAmount as
+        notional_amount / entrustPrice. Use Decimal internally and serialize to
+        JSON number only at the HTTP boundary.
+      x-robustquant-internal-model:
+        notional_amount: required
+        quantity_formula: entrustAmount = notional_amount / entrustPrice
+        numeric_policy: Decimal internally; no binary float in domain or audit records.
       properties:
         entrustAmount:
-          $ref: "#/components/schemas/DecimalNumber"
+          allOf:
+            - $ref: "#/components/schemas/DecimalNumber"
+          description: Fractional-share quantity derived from internal notional amount divided by entrustPrice.
+          x-robustquant-derived-from: notional_amount / entrustPrice
+          x-pending-confirmation: Minimum fractional quantity and decimal precision.
         entrustPrice:
-          $ref: "#/components/schemas/DecimalNumber"
+          allOf:
+            - $ref: "#/components/schemas/DecimalNumber"
+          description: Limit price used to derive odd-lot fractional quantity. Must be greater than zero.
+          x-robustquant-constraint: positive_decimal
         entrustType:
           type: integer
           enum: [0, 1]
-          description: 0 buy, 1 sell. Official web documentation lists 1 sell; user confirmed odd-lot buy uses 0.
-          x-user-confirmed: "2026-05-21: odd-lot /odd-entrust uses entrustType=0 for buy."
+          description: 0 buy, 1 sell.
+          x-user-confirmed: "2026-05-21: odd-lot /odd-entrust enables buy=0 and sell=1."
         exchangeType:
           type: integer
           enum: [0, 5]
           x-robustquant-first-live-allowed: [5]
+          x-robustquant-rejects: [0]
         stockCode:
           type: string
     OddLotCancelRequest:

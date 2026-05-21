@@ -350,6 +350,28 @@ POST /stock-order-server/open-api/entrust-order
 
 ### 8.4 输出映射
 
+### 8.4 美股碎股输入映射
+
+碎股使用专用 endpoint：
+
+```text
+POST /stock-order-server/open-api/odd-entrust
+```
+
+第一版启用美股碎股买入和卖出；内部按金额建模，不让策略直接提交券商碎股数量。
+
+| 内部字段 | uSmart body 字段 | 第一版规则 |
+|---|---|---|
+| `request.notional_amount / request.limit_price` | `entrustAmount` | 小数股数，按委托金额除以限价换算；内部使用 `Decimal`，HTTP JSON 边界序列化为券商接受的 number |
+| `request.limit_price` | `entrustPrice` | 限价，必须大于 0 |
+| `request.side` | `entrustType` | `buy -> 0`，`sell -> 1` |
+| 固定值 | `exchangeType` | `5`，美股 |
+| `request.symbol` | `stockCode` | 股票代码 |
+
+卖出碎股前必须校验持仓或最大可卖返回的可卖碎股数量，不能只按目标金额发单。最小金额、最小股数和数量精度按后续联调结果配置。
+
+### 8.5 输出映射
+
 | uSmart 响应 | 内部字段 | 处理 |
 |---|---|---|
 | `code` | `broker_response_code` | `0` 才可能业务成功 |
@@ -588,4 +610,4 @@ class uSmartHttpTransport:
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举。
 - 错误码完整枚举。
-- 美股碎股使用 `/stock-order-server/open-api/odd-entrust` 专用接口，不通过普通下单 `entrustProp` 建模；碎股价格、数量、订单状态和撤单细节仍需后续按网页手册和 demo 继续细化。
+- 美股碎股使用 `/stock-order-server/open-api/odd-entrust` 专用接口，不通过普通下单 `entrustProp` 建模；第一版内部按金额建模，发送给券商的 `entrustAmount` 为金额除以限价换算出的小数股数。最小金额、最小股数、数量精度、订单状态和撤单细节仍需后续按网页手册和 demo 继续细化。

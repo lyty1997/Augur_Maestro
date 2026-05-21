@@ -311,7 +311,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 | 普通下单 | `/stock-order-server/open-api/entrust-order` | 禁用，需 `live_guarded` |
 | 委托改单/撤单 | `/stock-order-server/open-api/modify-order` | 禁用；普通股票委托 `actionType=1` 为改单、`actionType=0` 为撤单 |
 | 改单范围 | `/stock-order-server/open-api/modified-range` | 只读查询，可用于改单前校验 |
-| 碎股下单 | `/stock-order-server/open-api/odd-entrust` | 默认禁止；未来受控实盘仅启用美股碎股能力 |
+| 碎股下单 | `/stock-order-server/open-api/odd-entrust` | 默认禁止；未来受控实盘仅启用美股碎股买入和卖出 |
 | 碎股撤单 | `/stock-order-server/open-api/odd-modify` | 默认禁止；未来受控实盘仅启用美股碎股能力 |
 | 最大可买可卖 | `/stock-order-server/open-api/trade-quantity` | 只读风控辅助 |
 | 今日订单 | `/stock-order-server/open-api/today-entrust` | 只读对账 |
@@ -678,7 +678,7 @@ safety:
 ### Phase 5：受控实盘
 
 - 前提：风控阈值确认、量化研究 Agent 输出交易白名单、人工暂停和对账可用。
-- 第一批只允许小额、低频、美股盘中限价和美股碎股。普通下单白名单固定为 `exchangeType=5`、`order_type=LIMIT`、`entrustProp=0`、`entrustType` 买 `0` / 卖 `1`、`entrustPrice>0`、`sessionType=0` 或不传；任何字段映射不确定时阻断真实交易。
+- 第一批只允许小额、低频、美股盘中限价和美股碎股。普通下单白名单固定为 `exchangeType=5`、`order_type=LIMIT`、`entrustProp=0`、`entrustType` 买 `0` / 卖 `1`、`entrustPrice>0`、`sessionType=0` 或不传；碎股买卖使用 `/odd-entrust`，内部按金额建模，券商 `entrustAmount` 由金额除以限价换算为小数股数。任何字段映射不确定时阻断真实交易。
 - 港股新股暗盘只保留设计，港股碎股和 IPO 申购接口排除。
 
 ## 15. 验收标准

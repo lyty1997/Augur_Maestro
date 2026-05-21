@@ -408,6 +408,7 @@
 - 用户确认第一批只读联调接口为真实登录、资产查询、持仓查询、今日订单、历史订单、订单明细和成交流水。
 - 用户确认未来交易范围以美股为主；第一批真实交易只做美股盘中交易和美股碎股；港股新股暗盘仅保留设计，港股碎股不做；IPO 申购和 IPO 改单排除。
 - 用户确认第一版美股盘中普通单只允许限价单：`exchangeType=5`，`entrustType` 买入 `0`、卖出 `1`，`entrustProp` 只开放网页手册明确支持的美股限价枚举 `0`，`sessionType` 使用正常盘中默认值 `0` 或不传；字段不确定时阻断真实交易。
+- 用户确认第一版启用美股碎股买入和卖出；内部按委托金额建模，发送给 `/odd-entrust` 的 `entrustAmount` 由委托金额除以限价换算为小数股数。金额、价格和换算数量内部使用 `Decimal`，只在 HTTP JSON 边界序列化为券商接受的 number。
 - 用户确认交易白名单先不固定，等待量化研究 Agent 输出候选标的。
 
 待确认：
@@ -419,7 +420,7 @@
 - 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段；网页文档描述 `safeBase64` / URL-safe Base64，Python demo 交易 helper 使用标准 Base64。用户已确认第一版默认跟随官方 Python demo 使用标准 Base64，并保留 URL-safe Base64 配置。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。
 - 登录手机号、登录密码、交易密码使用官方 Python demo 的 `rsa_encrypt` transform：RSA `PKCS1_v1_5` 加密后 URL-safe Base64；仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系。
-- 美股碎股 `/odd-entrust` 的价格、数量、订单状态和撤单细节；港股暗盘后置。
+- 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节；港股暗盘后置。
 - 错误码、订单明细 `orderStatus` 历史节点、`finalStateFlag` 和状态流转完整枚举。
 - token `expiration` 的精确格式、时区和服务端刷新接口语义；同一账户在其他客户端登录时的冲突语义；HTTP 频率限制、WebSocket 订阅上限和 IP 白名单生效规则。
 
