@@ -88,7 +88,7 @@ src/
       usmart/
         adapter.py                内部 DTO -> uSmart endpoint/body
         client.py                 交易开放 API header、签名、transport、响应摘要
-        auth.py                   交易开放 API X-Sign、Authorization、X-Time、X-Request-Id
+        auth.py                   交易开放 API X-Sign、Authorization、端点级 header profile
         encryptor.py              交易开放 API 手机号、登录密码、交易密码加密
         transport.py              HTTPS POST / dry-run transport
         mapper.py                 响应、状态、错误映射
@@ -144,7 +144,7 @@ class BrokerLoginRequest:
 | `account_ref` | 本地配置 | 脱敏账户引用，不是完整账号 |
 | `method` | 入口参数 | `password` 为渠道密码登录；`captcha` 为手机验证码登录 |
 | `login_profile_ref` | 本地密钥配置 | 指向区号、手机号、登录密码 secret 的引用 |
-| `request_id` | L1/L3 | 用于 `X-Request-Id` |
+| `request_id` | L1/L3 | 本地审计 ID；仅在端点 header profile 要求时外发为 `X-Request-Id` |
 | `allow_real_http` | 运行配置 | 默认 `False`；申请截图代码必须使用 dry-run，不做真实登录 |
 
 登录输出：
@@ -177,7 +177,7 @@ class BrokerLoginResult:
 | `price_type` | 是 | 第一版只允许安全映射后的限价类型 |
 | `quantity` | 是 | 委托数量 |
 | `limit_price` | 限价必填 | 委托价格 |
-| `request_id` | 是 | 本地请求 ID，映射到 header |
+| `request_id` | 是 | 本地请求 ID；用于审计和派生券商流水，是否映射到 header 由端点 profile 决定 |
 | `risk_check_id` | 是 | 风控结果 ID |
 | `manual_confirm_id` | 受控实盘必填 | 人工确认 ID |
 
@@ -278,7 +278,7 @@ POST /user-server/open-api/loginCaptcha
 | `login_profile.password` | `password` | 使用隐私资料加密密钥材料处理后写入 body，默认按公钥加密 |
 | 固定值 | `type` | 仅用于 `/send-phone-captcha`，`106` 表示短信登录验证码 |
 | 用户输入 / 人工流程 | `captcha` | 仅用于 `/loginCaptcha`，不写日志 |
-| `request.request_id` | `X-Request-Id` | header |
+| `request.request_id` | 内部审计 ID / 可选 `X-Request-Id` | 始终保留本地审计；只有端点 header profile 要求时外发为 header |
 | channel 配置 | `X-Channel` | header |
 | signer | `X-Sign` | header |
 
@@ -327,7 +327,7 @@ POST /stock-order-server/open-api/entrust-order
 
 | 内部字段 | uSmart body 字段 | 第一版规则 |
 |---|---|---|
-| `request.request_id` 派生 | `serialNo` | 最长 19 位；与 `X-Request-Id` 建立审计映射 |
+| `request.request_id` 派生 | `serialNo` | 最长 19 位；与本地 `broker_request_id` 建立审计映射，普通下单不强制外发 header `X-Request-Id` |
 | `request.quantity` | `entrustAmount` | 按数字写入 JSON body |
 | `request.limit_price` | `entrustPrice` | 限价必填；市价第一版拒绝 |
 | `request.price_type` + `market` | `entrustProp` | 只允许明确白名单映射 |
@@ -479,17 +479,20 @@ class uSmartTradeAuthSigner:
         ...
 ```
 
-输出 header 至少包含：
+输出 header 按端点 profile 生成。交易 API 第一版跟随官方 Python demo，默认交易 helper 至少包含：
 
 - `Content-Type`
 - `Authorization`，登录接口可为空
 - `X-Lang`
 - `X-Channel`
-- `X-Time`，Unix epoch milliseconds 字符串
-- `X-Dt`，设备类型数字字符串，默认 `"4"` 表示 Windows
-- `X-Type`，APP 类别数字字符串，默认 `"1"` 表示大陆版
-- `X-Request-Id`
 - `X-Sign`
+
+端点 profile 可额外启用：
+
+- `X-Time`，Unix epoch milliseconds 字符串；交易 demo 默认 helper 未携带，不作为全局必填。
+- `X-Dt`，设备类型数字字符串，默认 `"4"` 表示 Windows。
+- `X-Type`，APP 类别数字字符串，默认 `"1"` 表示大陆版。
+- `X-Request-Id`，官方 demo 在 `modify-order` 示例显式携带；`entrust-order` 不强制携带，依赖 body `serialNo` 和内部审计映射。
 
 基础报价 API 和报价推送 API 不使用这个 signer；后续分别实现独立的报价 HTTP signer 和报价 WS auth。
 
@@ -557,7 +560,7 @@ class uSmartHttpTransport:
 4. 有交易开放 API client 层：能组装 request、调用交易 signer、调用 dry-run transport。
 5. 有交易开放 API signer 接口：即使先用固定测试 key，也要展示交易 header 生成边界。
 6. 有 `uSmartSensitiveFieldEncryptor` 接口：登录手机号、密码不以明文进入最终 request builder。
-7. 有 `uSmartRequestIdPolicy`：生成或校验 `X-Request-Id` 与 `serialNo`。
+7. 有 `uSmartRequestIdPolicy`：生成或校验内部 `broker_request_id`、端点级 `X-Request-Id` 与 `serialNo`。
 8. 有离线测试：断言登录、下单、改单、撤单请求体字段完整，且 read-only 下交易动作不出网。
 9. 有脱敏测试：日志或 response summary 不包含 token、密码、手机号、私钥。
 10. 默认配置不出网；真实 HTTP transport 必须显式配置才可启用。
@@ -568,7 +571,7 @@ class uSmartHttpTransport:
 
 - 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过 `USMART_API_BASE_URL` 配置显式选择，默认 dry-run 不出网。
 - 用户已确认项目策略：UAT 测试地址不自动等同 sandbox / paper trading；是否保证下单、改单、撤单不产生真实委托仍需券商确认，确认前交易动作继续 dry-run。
-- `X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。
+- 用户已确认第一版交易 API header 跟随官方 Python demo：`X-Time` 和 `X-Request-Id` 不作为全局必填；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和内部审计映射。`X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。
 - `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和控制 `=` padding；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64；仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系。它必须和 `X-Sign` 渠道签名密钥材料分离。
 - token 有效期、刷新机制。

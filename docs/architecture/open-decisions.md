@@ -412,7 +412,7 @@
 
 - 交易 API base URL 已由网页版文档给出：生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`。
 - 用户已确认项目策略：测试地址 `http://open-jy-uat.yxzq.com` 不自动等同 sandbox / paper trading。是否保证交易动作不产生真实委托仍需券商确认；未确认前不运行真实下单、改单、撤单。
-- `X-Request-Id` 长度、有效期和重复请求语义；当前官方资料存在 19 位和 30 位两种描述，Python demo 只在部分交易接口显式传入 `X-Request-Id`。
+- 用户已确认第一版交易 API header 跟随官方 Python demo：`X-Time` 和 `X-Request-Id` 不作为全局必填；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和内部审计映射。`X-Request-Id` 长度、有效期和重复请求语义仍需官方确认；当前官方资料存在 19 位和 30 位两种描述。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的关系；Python demo 生成 19 位字符串，第一版按用户确认可使用数字 JSON，必要时切换字符串。
 - 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段；网页文档描述 `safeBase64` / URL-safe Base64，Python demo 交易 helper 使用标准 Base64。用户已确认第一版默认跟随官方 Python demo 使用标准 Base64，并保留 URL-safe Base64 配置。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。

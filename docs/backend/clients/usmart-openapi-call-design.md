@@ -63,7 +63,7 @@ sequenceDiagram
     else 允许的只读动作或未来受控实盘动作
         TG->>AD: 调用适配器方法
         AD->>CL: 构造 endpoint + body
-        CL->>SG: 生成 Authorization / X-Sign / X-Request-Id 等 header
+        CL->>SG: 按端点 profile 生成 Authorization / X-Sign 等 header
         CL->>HTTP: POST JSON 请求
         HTTP->>API: HTTPS 调用交易开放 API
         API-->>HTTP: 交易开放 API 响应
@@ -94,7 +94,7 @@ sequenceDiagram
 | L5 | `BrokerTradingAdapter` | 统一券商适配器基类 | 否 | 否 |
 | L6 | `uSmartOpenApiTradingAdapter` | 内部 DTO 与交易开放 API endpoint/body 字段转换 | 是 | 否 |
 | L7 | 交易开放 API client | 生成 JSON、调用交易 API signer、调用 HTTP transport、解析响应 | 是 | 否 |
-| L8 | 交易开放 API signer | 生成交易 API 的 `X-Sign`、`X-Request-Id`、认证 header | 是 | 否 |
+| L8 | 交易开放 API signer | 生成交易 API 的 `X-Sign` 和端点级认证 header | 是 | 否 |
 | L9 | `uSmartHttpTransport` | 真实 HTTPS POST，处理 HTTP 状态和 timeout | 是 | 否 |
 | L10 | uSmart / 盈立交易开放 API Server | 券商服务端，处理登录、查询、委托、改单、撤单 | 是 | 券商侧执行 |
 
@@ -226,7 +226,7 @@ src/
 | `TradingGateway` | 检查能力模式、交易开关、调用来源，决定是否允许触达适配器 | 不拼接 uSmart 字段，不保存 token |
 | `uSmartOpenApiTradingAdapter` | 将内部 DTO 转为交易开放 API endpoint 和 body | 不绕过 `TradingGateway`，不自行决定真实交易是否允许 |
 | 交易开放 API client | 组织交易 API header、签名、HTTP POST、响应解析 | 不包含策略、风控、OMS 逻辑；不处理基础报价或报价推送 |
-| 交易开放 API signer | 生成交易 API 的 `X-Sign`、`X-Request-Id`、时间戳、认证 header | 不把私钥、密码、token 写入日志；不复用基础报价签名规则 |
+| 交易开放 API signer | 生成交易 API 的 `X-Sign` 和端点级 header profile | 不把私钥、密码、token 写入日志；不复用基础报价签名规则 |
 | `uSmartHttpTransport` | 发起 HTTPS 请求、处理 timeout 和 HTTP 状态 | 不对下单/改单/撤单做自动重试 |
 | `uSmartMapper` | 映射状态码、错误码、订单号和响应字段 | 不猜测官方网页未说明的状态 |
 
@@ -290,7 +290,7 @@ src/
 
 ## 4. 交易开放 API 请求 header 设计
 
-根据交易开放 API 网页文档和官方 Python demo 核对，交易接口请求 header 包含：
+根据交易开放 API 网页文档和官方 Python demo 核对，交易接口 header 采用端点级 profile。公共候选字段如下：
 
 | Header | 来源 | 说明 |
 |---|---|---|
@@ -298,18 +298,19 @@ src/
 | `Content-Type` | 固定 | `application/json; charset=utf-8` |
 | `X-Lang` | 配置 | 语言类别，例如 `1` 表示简体 |
 | `X-Channel` | uSmart 分配 | 渠道 ID |
-| `X-Time` | 本地生成 | Unix epoch milliseconds，作为字符串写入 header |
+| `X-Time` | 本地生成 | Unix epoch milliseconds 字符串；交易 demo 默认 helper 未携带，只有端点 profile 要求时外发 |
 | `X-Dt` | 配置 | 设备类型数字字符串，默认 `"4"` 表示 Windows |
 | `X-Type` | 配置 | APP 类别，默认 `"1"` 表示大陆版 |
-| `X-Request-Id` | 本地生成 | 幂等防重 ID |
+| `X-Request-Id` | 本地生成 | 幂等防重 ID；官方 demo 只在部分交易端点显式携带 |
 | `X-Sign` | 交易开放 API signer 生成 | 对 body 内容签名/加密后的值 |
 
 设计规则：
 
-- `X-Request-Id` 必须由本地生成并写入订单审计记录。
+- 每次券商调用都必须生成内部 `request_id` / `broker_request_id` 并写入审计记录；是否外发为 `X-Request-Id` 由端点 header profile 决定。
+- 第一版交易 API header profile 跟随官方 Python demo：默认交易 helper 发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 不强制外发 header `X-Request-Id`，使用 body `serialNo` 和本地审计映射。
 - `X-Sign` 只由交易开放 API signer 生成，其他模块不接触私钥。
 - `Authorization` token 只保存在内存会话中，默认不落库。
-- 日志只记录 header key 列表、`X-Request-Id` 和脱敏 token 摘要，不记录完整 token 或签名。
+- 日志只记录 header key 列表、内部 `request_id`、必要时记录外发 `X-Request-Id` 和脱敏 token 摘要，不记录完整 token 或签名。
 - `X-Type` 按官方说明为 APP 类别，`"1"` 表示大陆版、`"2"` 表示港版；本项目默认大陆版。
 - `Content-Type` 统一由 client 注入，调用方不允许手工传入，避免签名 body 和实际 body 不一致。
 - 同一请求的 header、body_json、endpoint 和 request_id 必须作为不可变对象进入签名流程，签名后不得再修改 body。
@@ -337,11 +338,11 @@ src/
 
 ### 4.1 请求 ID 策略
 
-官方资料中存在长度描述不一致：概述中 `X-Request-Id` 描述为 19 位数字，部分接口章节又出现 30 位描述；下单 body 的 `serialNo` 明确为最长 19 位。官方 Python demo 生成的 `serialNo` 是 19 位字符串。当前实现结论：`X-Request-Id` 按 30 位可配置字符串处理，不硬编码；下单 body 的 `serialNo` 按最长 19 位处理，第一版可按用户确认使用数字 JSON，若联调被拒绝再切换为字符串序列化。
+官方资料中存在长度描述不一致：概述中 `X-Request-Id` 描述为 19 位数字，部分接口章节又出现 30 位描述；下单 body 的 `serialNo` 明确为最长 19 位。官方 Python demo 生成的 `serialNo` 是 19 位字符串。当前实现结论：内部 `broker_request_id` 始终生成并审计；外发 `X-Request-Id` 按端点 profile 决定，长度按 30 位可配置字符串处理，不硬编码；下单 body 的 `serialNo` 按最长 19 位处理，第一版可按用户确认使用数字 JSON，若联调被拒绝再切换为字符串序列化。
 
 | 场景 | 字段 | 设计策略 |
 |---|---|---|
-| HTTP header 幂等 | `X-Request-Id` | 由 `RequestIdGenerator` 生成，按 30 位可配置字符串校验 |
+| HTTP header 幂等 | `X-Request-Id` | 由端点 header profile 决定是否外发；外发时由 `RequestIdGenerator` 生成，按 30 位可配置字符串校验 |
 | 下单 body 流水 | `serialNo` | 与本地 `broker_request_id` 建立映射，按官方网页最长 19 位约束处理；demo 生成字符串，第一版按数字可配置 |
 | 本地 OMS 订单 | `order_id` | RobustQuant 内部 ID，不直接暴露给券商 |
 | 链路追踪 | `trace_id` | 可为 UUID/ULID，不参与券商幂等 |
@@ -349,7 +350,7 @@ src/
 映射关系：
 
 ```text
-order_id -> broker_request_id -> X-Request-Id
+order_id -> broker_request_id -> X-Request-Id (only when endpoint profile sends it)
 broker_request_id -> serialNo
 broker_order_id <- entrustId
 ```
@@ -373,8 +374,8 @@ broker_order_id <- entrustId
 - 基础报价 API 描述签名原文为 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 内容按序拼接；这是另一套 API，不在本文档的交易 signer 中实现。
 - 官方 Python demo 的基础报价 HTTP helper 使用上述 header + body 签名原文，并用 URL-safe Base64 编码；不能与交易 signer 混用。
 - 编码方式：网页文档描述为 `safeBase64` / URL-safe Base64，交易 demo 使用标准 Base64；用户已确认交易 API 第一版默认跟随官方 Python demo 使用标准 Base64，保留切换到 URL-safe Base64 的配置。
-- 幂等字段：`X-Request-Id`。
-- 官方 Python demo 的交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`。网页 header 表与 demo 对 `X-Time`、`X-Request-Id` 是否交易接口全量必填存在差异，第一版做成按 endpoint 可配置并保留待确认。
+- 幂等字段：外发 `X-Request-Id` 由端点 header profile 决定；本地 `broker_request_id` 始终存在。
+- 用户已确认第一版跟随官方 Python demo：交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和本地审计映射，不强制外发 header `X-Request-Id`；`X-Time` 不作为交易 API 全局必填 header。
 - 访问控制：IP 白名单。
 
 因此第一版不能把交易开放 API、基础报价 API 和报价推送 API 硬编码成同一个 signer。本文档只定义交易开放 API signer：
@@ -404,10 +405,10 @@ class uSmartTradeAuthSigner:
 处理步骤：
 
 1. 将 body 使用稳定 JSON 序列化，保证签名前后的 body 字节一致。
-2. 生成或接收 `X-Request-Id`。
+2. 生成或接收内部 `request_id` / `broker_request_id`。
 3. 按交易开放 API 规则生成签名前原文：只使用稳定 JSON body，不拼接 header 字段。
 4. 对交易开放 API 签名结果按配置编码，写入 `X-Sign`；默认跟随官方 Python demo 使用标准 Base64，若盈立明确要求网页手册的 URL-safe Base64，可通过配置切换。
-5. 组装 `Authorization`、`X-Lang`、`X-Channel`、`X-Time`、`X-Dt`、`X-Request-Id`、`X-Sign`。
+5. 按端点 header profile 组装 `Authorization`、`X-Lang`、`X-Channel`、`X-Sign` 等 header；`X-Time`、`X-Dt`、`X-Type`、`X-Request-Id` 只有在 profile 要求或配置开启时外发。
 
 隐私字段加密与签名分开处理：
 

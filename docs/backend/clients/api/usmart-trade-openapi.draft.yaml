@@ -38,11 +38,12 @@ info:
         - X-Channel
         - X-Sign
         - Authorization
-      pending_confirmation: >
-        Web documentation header tables and the Python demo differ on whether
-        X-Time and X-Request-Id are always required for trade HTTP endpoints.
-        RobustQuant keeps these headers configurable and records the
-        endpoint-specific observed behavior.
+      user_confirmed_policy: >
+        First implementation follows the official Python demo. X-Time and
+        X-Request-Id are not global required headers for trade HTTP endpoints.
+        modify-order carries X-Request-Id because the demo explicitly adds it;
+        entrust-order relies on body serialNo plus RobustQuant internal
+        request audit instead of forcing header X-Request-Id.
     quote_http:
       sign_input: Authorization + X-Channel + X-Lang + X-Request-Id + X-Time + json body string
       sign_algorithm: MD5withRSA
@@ -175,6 +176,7 @@ paths:
       x-robustquant-first-live-scope: us_regular_hours_limit_order
       x-robustquant-blocked-in-read-only: true
       x-robustquant-dry-run-for-application: true
+      x-robustquant-header-profile: trade_demo_default
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
         - $ref: "#/components/parameters/HeaderContentType"
@@ -209,6 +211,7 @@ paths:
         IPO modification/cancellation uses different enums and is excluded.
       x-robustquant-blocked-in-read-only: true
       x-robustquant-dry-run-for-application: true
+      x-robustquant-header-profile: trade_demo_modify_order
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
         - $ref: "#/components/parameters/HeaderContentType"
@@ -501,13 +504,14 @@ components:
     HeaderTime:
       name: X-Time
       in: header
-      required: true
+      required: false
       schema:
         type: string
       description: Unix epoch milliseconds represented as a string.
       x-demo-observed: >
         Official Python demo uses X-Time on quote HTTP signing. Trade HTTP demo
         does not add X-Time in the shared trade request helper.
+      x-robustquant-required-when: Endpoint header profile or uSmart final integration requires it.
     HeaderDeviceType:
       name: X-Dt
       in: header
@@ -536,15 +540,17 @@ components:
     HeaderRequestId:
       name: X-Request-Id
       in: header
-      required: true
+      required: false
       schema:
         type: string
         minLength: 1
         maxLength: 30
-      x-pending-confirmation: >
-        Effective length, lifetime, and duplicate semantics. Official Python
-        demo adds X-Request-Id to modify-order but not to the shared trade
-        request helper used by entrust-order.
+      description: >
+        Endpoint-level request id header. RobustQuant always keeps an internal
+        broker_request_id for audit, but only sends this header when the
+        endpoint header profile requires it.
+      x-robustquant-required-when: modify-order profile, or another endpoint profile explicitly enables it.
+      x-pending-confirmation: Effective lifetime and duplicate semantics.
     HeaderSign:
       name: X-Sign
       in: header

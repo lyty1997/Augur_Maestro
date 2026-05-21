@@ -392,14 +392,14 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - Header 中包含 `X-Sign`。
 - `X-Sign` 使用 `MD5withRSA` 对 Body 内容加密或签名后，再经过 Base64 编码；网页描述为 `safeBase64` / URL-safe Base64，官方 Python demo 的交易 helper 使用标准 Base64。用户已确认交易 API 默认跟随官方 Python demo 使用标准 Base64，并保留切换到 URL-safe Base64 的配置。
 - 交易开放 API 的 `X-Sign` 签名原文只使用稳定 JSON body，不拼接 header 字段。
-- 官方 Python demo 的交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`。网页 header 表与 demo 对 `X-Time`、`X-Request-Id` 是否交易接口全量必填存在差异，第一版做成按 endpoint 可配置并保留待确认。
+- 用户已确认第一版跟随官方 Python demo：交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`；`entrust-order` 不强制外发 header `X-Request-Id`，使用 body `serialNo` 和本地审计映射。
 - 交易 API 默认使用官方 Python demo 的标准 Base64；URL-safe Base64 和 padding 通过配置控制，用于兼容网页手册或券商最终要求。
-- `X-Time` 使用 Unix epoch milliseconds，并作为字符串写入 header。
+- `X-Time` 使用 Unix epoch milliseconds 字符串；交易 demo 默认 helper 未携带，第一版不作为交易 API 全局必填 header，只在端点 profile 或配置要求时外发。
 - `X-Dt` 默认 `"4"` 表示 Windows；`X-Type` 默认 `"1"` 表示大陆版 APP。
 - `X-Sign` 渠道签名密钥材料与手机号、登录密码、交易密码等隐私资料加密密钥材料必须分离；隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现，即 RSA `PKCS1_v1_5` 加密后 URL-safe Base64。券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系需要显式配置并用离线测试验证。
 - 基础报价 API 网页文档和官方 demo 进一步说明其签名原文包含 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 的有序拼接；这属于另一套 API，不应用交易开放 API 的 signer 承接。
-- `X-Request-Id` 用于确保唯一和防重。
-- 官方资料对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；官方 Python demo 生成的 `serialNo` 是 19 位字符串。当前实现按 `X-Request-Id` 30 位可配置字符串、`serialNo` 最长 19 位处理，第一版 `serialNo` 可按用户确认使用数字 JSON，必要时切换字符串。
+- `X-Request-Id` 用于确保唯一和防重，但是否外发由端点 header profile 决定。
+- 官方资料对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；官方 Python demo 生成的 `serialNo` 是 19 位字符串。当前实现按内部 `broker_request_id` 始终审计、外发 `X-Request-Id` 30 位可配置字符串、`serialNo` 最长 19 位处理，第一版 `serialNo` 可按用户确认使用数字 JSON，必要时切换字符串。
 - 接入涉及 IP 白名单。
 
 设计规则：
@@ -429,16 +429,17 @@ broker.rate_limited
 建议关系：
 
 ```text
-order_id -> broker_request_id -> X-Request-Id -> broker_order_id
+order_id -> broker_request_id -> X-Request-Id (only when endpoint profile sends it)
+broker_request_id -> serialNo -> broker_order_id
 ```
 
 规则：
 
 - 每次向券商提交请求前，由 OMS 创建本地 `order_id`。
-- 网关为每一次券商 HTTP 请求生成 `broker_request_id`，并映射到 `X-Request-Id`。
+- 网关为每一次券商 HTTP 请求生成 `broker_request_id`；是否映射并外发为 `X-Request-Id` 由端点 header profile 决定。
 - 下单 body 的 `serialNo` 也必须和 `broker_request_id` 建立映射；不得直接使用用户输入。
-- `X-Request-Id` 必须持久化到本地订单审计表。
-- 下单超时后，不得用同一个或新的 `X-Request-Id` 自动重发下单。
+- 内部 `broker_request_id` 必须持久化到本地订单审计表；如果端点外发 `X-Request-Id`，外发值也必须持久化。
+- 下单超时后，不得用同一个或新的 `broker_request_id` / `serialNo` 自动重发下单。
 - 撤单超时后，不得自动重复撤单。
 - 查询接口可以按限流策略重试；交易接口不自动重试。
 
@@ -627,7 +628,7 @@ safety:
 - 对日志脱敏必须有测试，防止未来把 token 或账户打出来。
 - 对盈立官方网页字段映射必须有契约测试：下单 `serialNo/entrustAmount/entrustPrice/entrustProp/entrustType/exchangeType/stockCode`，普通股票委托改单 `actionType=1`，普通股票委托撤单 `actionType=0`。
 - 对只读 DTO 映射必须有契约测试：资产、持仓、订单、成交、最大可买可卖、改单范围。
-- 对 `X-Request-Id` 与 `serialNo` 的生成、长度校验和审计映射必须有单元测试。
+- 对内部 `broker_request_id`、端点级 `X-Request-Id` 与 `serialNo` 的生成、长度校验和审计映射必须有单元测试。
 
 ## 14. 开发阶段划分
 
