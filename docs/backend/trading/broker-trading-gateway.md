@@ -396,7 +396,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - `safeBase64` 默认遵循网页手册的 URL-safe Base64，并通过配置允许控制 padding 和 demo 兼容编码。
 - `X-Time` 使用 Unix epoch milliseconds，并作为字符串写入 header。
 - `X-Dt` 默认 `"4"` 表示 Windows；`X-Type` 默认 `"1"` 表示大陆版 APP。
-- `X-Sign` 渠道签名密钥材料与手机号、登录密码、交易密码等隐私资料加密密钥材料必须分离；隐私资料加密方向和 padding 按官方最终材料配置。
+- `X-Sign` 渠道签名密钥材料与手机号、登录密码、交易密码等隐私资料加密密钥材料必须分离；隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现，即 RSA `PKCS1_v1_5` 加密后 URL-safe Base64。券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系需要显式配置并用离线测试验证。
 - 基础报价 API 网页文档和官方 demo 进一步说明其签名原文包含 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 的有序拼接；这属于另一套 API，不应用交易开放 API 的 signer 承接。
 - `X-Request-Id` 用于确保唯一和防重。
 - 官方资料对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；官方 Python demo 生成的 `serialNo` 是 19 位字符串。当前实现按 `X-Request-Id` 30 位可配置字符串、`serialNo` 最长 19 位处理，第一版 `serialNo` 可按用户确认使用数字 JSON，必要时切换字符串。
@@ -714,7 +714,7 @@ safety:
 - `X-Request-Id` 的有效期和重复请求返回语义。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的官方关系；当前实现只保留本地审计映射，不假设两者相同。
 - 交易开放 API 的 `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
-- 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式。
+- 隐私资料加密密钥材料与官方 Python demo `public_key` / `private_key` 配置槽位的最终对应关系；加密 transform 已按 demo 确认为 RSA `PKCS1_v1_5` + URL-safe Base64。
 - token 有效期、刷新方式和多会话冲突规则。
 - HTTP 频率限制和 WebSocket 订阅上限。
 

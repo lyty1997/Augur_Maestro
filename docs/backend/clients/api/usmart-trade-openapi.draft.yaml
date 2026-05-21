@@ -559,6 +559,14 @@ components:
         the default and keeps demo encoding as a configurable compatibility
         fallback. Quote HTTP uses a different header+body signing string and
         URL-safe Base64.
+    SensitiveFieldEncryption:
+      description: >
+        Official Python demo EncryptUtil.rsa_encrypt uses RSA PKCS1_v1_5
+        encryption and URL-safe Base64 encoding for phoneNumber, login
+        password, and trade password fields. Demo variable names and PEM
+        wrapping for public_key/private_key are unusual, so RobustQuant binds
+        final broker-provided key material to explicit config slots and verifies
+        the transform in offline tests instead of inferring semantics from names.
   schemas:
     PasswordLoginRequest:
       type: object
@@ -571,12 +579,14 @@ components:
           type: string
           description: Encrypted phone number.
           x-sensitive: true
-          x-pending-confirmation: RSA public key and padding mode.
+          x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
+          x-pending-confirmation: Final broker key material to demo config slot mapping.
         password:
           type: string
           description: Encrypted login password.
           x-sensitive: true
-          x-pending-confirmation: RSA public key and padding mode.
+          x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
+          x-pending-confirmation: Final broker key material to demo config slot mapping.
     SendPhoneCaptchaRequest:
       type: object
       additionalProperties: false
@@ -588,7 +598,8 @@ components:
           type: string
           description: Encrypted phone number.
           x-sensitive: true
-          x-pending-confirmation: RSA public key and padding mode.
+          x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
+          x-pending-confirmation: Final broker key material to demo config slot mapping.
         type:
           type: integer
           const: 106
@@ -603,7 +614,8 @@ components:
           type: string
           description: Encrypted phone number.
           x-sensitive: true
-          x-pending-confirmation: RSA public key and padding mode.
+          x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
+          x-pending-confirmation: Final broker key material to demo config slot mapping.
         captcha:
           type: string
           x-sensitive: true

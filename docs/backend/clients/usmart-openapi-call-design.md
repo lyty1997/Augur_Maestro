@@ -413,7 +413,8 @@ class uSmartTradeAuthSigner:
 
 - 官方手册同时出现“验签测试公开密钥”和“隐私资料加密测试公开密钥”，说明 `X-Sign` 渠道签名密钥材料与隐私资料加密密钥材料是两套，不得混用。
 - 登录手机号、登录密码、交易密码等字段使用官方文档所说的“隐私资料加密”密钥材料，与 `X-Sign` 渠道签名私钥不是同一件事。
-- 手册对隐私资料加密方向存在“公开密钥”和“私密金钥”两种表述；实现中必须把 key role 和 padding/transform 做成配置。默认按常见模式使用隐私资料加密公钥加密，若盈立最终要求私钥变换，可通过配置切换。
+- 官方 Python demo 的 `common/utils.py` 已给出隐私字段加密实现：`rsa_encrypt(data)` 使用 `Crypto.Cipher.PKCS1_v1_5` 做 RSA 加密，再用 `base64.urlsafe_b64encode(...)` 输出字符串。实现按这个 transform 建模。
+- demo 中 `EncryptUtil.__init__(pub_key_str, pri_key_str)` 的变量名和 PEM header 包装存在反常处：`pub_key_str` 被包成 `BEGIN PRIVATE KEY` 后用于 `rsa_encrypt`，`pri_key_str` 被包成 `BEGIN PUBLIC KEY` 后用于 `md5_with_rsa`。RobustQuant 不按变量名猜测密钥语义，配置中按 demo 参数槽位和券商最终分配的密钥材料显式绑定，并在离线测试中验证加密/签名可用。
 - `uSmartTradeSensitiveFieldEncryptor` 负责加密 `phoneNumber`、`password`、交易密码等交易开放 API 字段。
 - `uSmartTradeAuthSigner` 只负责交易开放 API 请求签名，不接收明文密码和手机号。
 - 明文敏感字段只能从本地密钥管理层读出后在内存中短暂存在，禁止进入 DTO、日志、异常消息和测试 fixture。
@@ -421,7 +422,7 @@ class uSmartTradeAuthSigner:
 待确认项：
 
 - `X-Request-Id` 重复请求返回语义。
-- 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式。
+- 券商最终下发的密钥材料如何对应 demo 的 `public_key` / `private_key` 配置槽位。
 - 用户已确认：UAT 测试地址不自动等同 sandbox / paper trading；是否保证交易动作不产生真实委托仍需券商确认。
 
 ## 6. 交易开放 API Client 设计
@@ -1007,7 +1008,7 @@ safety:
 - 用户已确认项目策略：UAT 测试地址不自动等同 sandbox / paper trading；是否保证下单、改单、撤单不产生真实委托仍需券商确认。
 - `X-Request-Id` 重复请求返回语义。
 - `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
-- 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
+- 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64。仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
 - token 有效期、刷新方式、多会话冲突语义。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是券商侧 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
