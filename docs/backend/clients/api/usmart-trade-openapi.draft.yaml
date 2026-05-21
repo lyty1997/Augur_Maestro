@@ -18,9 +18,10 @@ info:
       - basic_quote_openapi
       - quote_push_websocket_api
 servers:
-  - url: https://pending-usmart-trade-api-base-url.invalid
-    description: Pending uSmart trade API base URL.
-    x-pending-confirmation: Trade API base URL is not provided before approval.
+  - url: https://open-jy.yxzq.com
+    description: uSmart trade OpenAPI production environment from official web documentation.
+  - url: http://open-jy-uat.yxzq.com
+    description: uSmart trade OpenAPI test environment from official web documentation.
 tags:
   - name: auth
     description: Login and captcha endpoints.
@@ -580,11 +581,12 @@ components:
           $ref: "#/components/schemas/DecimalNumber"
         entrustProp:
           type: string
-          enum: ["0", "d", "e", "g"]
+          enum: ["0", "d", "e", "g", "w"]
           x-robustquant-first-live-allowed: ["0"]
           x-pending-confirmation: >
             Precise applicability for US regular-hours limit order must be
-            confirmed. HK grey-market rules are design-only. Odd-lot orders use
+            confirmed. Web documentation adds w-market order; RobustQuant first
+            live scope still rejects market orders. HK grey-market rules are design-only. Odd-lot orders use
             /stock-order-server/open-api/odd-entrust and do not send entrustProp
             according to the current manual.
         entrustType:
@@ -610,9 +612,24 @@ components:
           x-robustquant-default: false
         sessionType:
           type: integer
-          enum: [0, 1, 2, 3]
+          enum: [0, 1, 2, 3, 12]
           x-robustquant-first-live-allowed: [0]
-          x-pending-confirmation: Default omission behavior.
+          x-pending-confirmation: Web documentation adds 12-fund order; RobustQuant first live scope only allows 0.
+        orderType:
+          type: integer
+          enum: [0, 1]
+          description: Web documentation field; 0 AMO, 1 LOO.
+          x-robustquant-first-live-allowed: []
+          x-pending-confirmation: Not supported by RobustQuant first implementation.
+        validDate:
+          type: string
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          description: Web documentation field for valid date.
+          x-pending-confirmation: Not supported by RobustQuant first implementation.
+        exchange:
+          type: string
+          description: Web documentation field, e.g. SMART or fixed exchange.
+          x-pending-confirmation: Not supported by RobustQuant first implementation.
     ModifyOrderRequest:
       type: object
       additionalProperties: false
@@ -669,9 +686,9 @@ components:
           $ref: "#/components/schemas/DecimalNumber"
         entrustType:
           type: integer
-          enum: [1]
-          description: Official manual lists 1 sell for odd-lot order.
-          x-pending-confirmation: Whether buy-side US odd-lot trading is supported.
+          enum: [0, 1]
+          description: 0 buy, 1 sell. Official web documentation lists 1 sell; user confirmed odd-lot buy uses 0.
+          x-user-confirmed: "2026-05-21: odd-lot /odd-entrust uses entrustType=0 for buy."
         exchangeType:
           type: integer
           enum: [0, 5]

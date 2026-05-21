@@ -704,7 +704,7 @@ safety:
 必须从 PDF 或盈立官方确认：
 
 - 盈立是否提供 sandbox 或 paper trading 环境。
-- 交易 API base URL：当前官方手册未提供，需要 OpenAPI 申请通过后由盈立提供；当前代码只能保留配置占位并默认 dry-run。
+- 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；当前代码仍必须保留配置占位并默认 dry-run，不因文档存在 base URL 自动出网。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举和状态流转。

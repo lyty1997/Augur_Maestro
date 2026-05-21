@@ -29,6 +29,15 @@
 
 三套 API 的 base URL、签名原文、认证 header、限流、连接生命周期和错误处理都不能混用。
 
+网页版交易开放 API 文档（`https://api-doc.usmart8.com/trade.html`）比当前 PDF 更新，版本历史已到 2025-08-25 v1.18。后续字段和 endpoint 以网页版为优先事实源；PDF/MinerU Markdown 继续作为离线核对材料。
+
+网页版交易开放 API base URL：
+
+| 环境 | base URL |
+|---|---|
+| 生产 | `https://open-jy.yxzq.com` |
+| 测试 | `http://open-jy-uat.yxzq.com` |
+
 登录、下单、改单、撤单四条链路的接口级 API 手册、输入输出、上下调用层和当前设计缺口见 [usmart-openapi-api-manual.md](usmart-openapi-api-manual.md)。
 
 ## 1. 调用链路
@@ -583,6 +592,7 @@ POST /stock-order-server/open-api/entrust-order
 | `d` | 竞价单 | 默认不启用 |
 | `e` | 增强限价单 | 第一批不启用；后续港股普通交易候选 |
 | `g` | 竞价限价单 | 默认不启用 |
+| `w` | 市价单 | 网页版文档新增；第一批不启用 |
 
 `h`、`j` 出现在今日订单、历史订单或订单明细等查询响应字段说明中，不在普通下单请求字段表中。`u` 出现在最大可买可卖数量接口的 `entrustProp` 参数说明中，不在碎股下单 `/stock-order-server/open-api/odd-entrust` 的请求体中。第一版 request builder 不得把 `h`、`j`、`u` 发送到普通下单接口。
 
@@ -594,8 +604,11 @@ POST /stock-order-server/open-api/entrust-order
 | `1` | 盘前交易 | 不进第一批实现 |
 | `2` | 盘后交易 | 不进第一批实现 |
 | `3` | 暗盘交易 | 港股新股暗盘仅保留设计，不进第一批实现 |
+| `12` | 基金订单 | 网页版文档新增；不进第一批实现 |
 
 `OrderType.MARKET`、`forceEntrustFlag=true`、未建模的高级订单默认拒绝。第一批交易实现目标是美股盘中限价和美股碎股；美股碎股使用碎股专用 endpoint，不通过普通下单 `entrustProp=u` 建模。港股新股暗盘只保留设计，不实现真实请求构造。
+
+网页版普通下单还包含 `orderType`、`validDate`、`exchange` 可选字段；第一批 request builder 不发送这些字段，后续如支持 AMO/LOO 或指定交易所再单独建模。
 
 响应处理目标：
 

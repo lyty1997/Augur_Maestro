@@ -393,6 +393,7 @@
 - 源码截图属于券商申请材料事项，不作为 RobustQuant 开发交付。
 - 不允许用真实下单、改单、撤单接口做连通性测试或截图演示。
 - 已拿到盈立繁体中文 PDF 官方文档，位置为 `API_manual/uSmart/API_manual/`；MinerU 重新转换的 Markdown 位于 `API_manual/uSmart/API_manual/markdown/`。
+- 已核对盈立网页版交易开放 API 文档 `https://api-doc.usmart8.com/trade.html`；网页版版本更新至 2025-08-25 v1.18，后续字段和 endpoint 以网页版为优先事实源，PDF 作为离线核对材料。
 - 盈立官方资料实际包含三套 API：交易开放 API、基础报价 API、报价推送 API。三套 API 的协议、base URL、签名/认证、限流、连接生命周期和错误处理不能混用。
 - 交易开放 API PDF 是 `交易開放API接口文檔V1.0-20201029(繁).pdf`，基础报价 API PDF 是 `基礎報價開放API(繁)_20201029.pdf`，报价推送 API PDF 是 `報價推送(繁)_20201029.pdf`。
 - 交易 PDF 初步摘录显示普通下单 endpoint 为 `/stock-order-server/open-api/entrust-order`，改单/撤单共用 `/stock-order-server/open-api/modify-order`。
@@ -410,7 +411,7 @@
 待确认：
 
 - 盈立是否提供 sandbox。
-- 交易 API base URL。
+- 交易 API base URL 已由网页版文档给出：生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；真实出网仍需申请通过、IP 白名单、渠道号和密钥配置。
 - `X-Request-Id` 长度、有效期和重复请求语义；当前 PDF 摘录存在 19 位和 30 位两种描述。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的关系。
 - 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
