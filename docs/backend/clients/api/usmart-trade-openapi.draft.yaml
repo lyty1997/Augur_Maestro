@@ -31,7 +31,7 @@ info:
     trade_http:
       sign_input: json body string only
       sign_algorithm: MD5withRSA
-      sign_encoding: URL-safe Base64 per web documentation; demo observed standard Base64
+      sign_encoding: standard Base64 by user decision, following official Python demo
       observed_headers:
         - Content-type
         - X-Lang
@@ -554,11 +554,11 @@ components:
       description: Signature over stable JSON body using trade OpenAPI key material.
       x-demo-observed: >
         Official Python demo signs json.dumps(params) with MD5withRSA and
-        encodes trade X-Sign with standard Base64, while web documentation
-        describes URL-safe Base64. RobustQuant treats the web documentation as
-        the default and keeps demo encoding as a configurable compatibility
-        fallback. Quote HTTP uses a different header+body signing string and
-        URL-safe Base64.
+        encodes trade X-Sign with standard Base64. User confirmed RobustQuant
+        should follow the official Python demo for trade X-Sign encoding and
+        keep URL-safe Base64 as a configurable fallback if uSmart requires it.
+        Quote HTTP uses a different header+body signing string and URL-safe
+        Base64.
     SensitiveFieldEncryption:
       description: >
         Official Python demo EncryptUtil.rsa_encrypt uses RSA PKCS1_v1_5

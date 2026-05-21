@@ -372,7 +372,7 @@ broker_order_id <- entrustId
 - 官方 Python demo 的交易 HTTP helper 使用 `json.dumps(params)` 作为签名原文，`MD5withRSA` 后用标准 Base64 编码为 `X-Sign`。
 - 基础报价 API 描述签名原文为 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 内容按序拼接；这是另一套 API，不在本文档的交易 signer 中实现。
 - 官方 Python demo 的基础报价 HTTP helper 使用上述 header + body 签名原文，并用 URL-safe Base64 编码；不能与交易 signer 混用。
-- 编码方式：网页文档描述为 `safeBase64` / URL-safe Base64，交易 demo 使用标准 Base64；第一版默认按网页手册使用 URL-safe Base64，保留切换到 demo 标准 Base64 的兼容配置。
+- 编码方式：网页文档描述为 `safeBase64` / URL-safe Base64，交易 demo 使用标准 Base64；用户已确认交易 API 第一版默认跟随官方 Python demo 使用标准 Base64，保留切换到 URL-safe Base64 的配置。
 - 幂等字段：`X-Request-Id`。
 - 官方 Python demo 的交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`。网页 header 表与 demo 对 `X-Time`、`X-Request-Id` 是否交易接口全量必填存在差异，第一版做成按 endpoint 可配置并保留待确认。
 - 访问控制：IP 白名单。
@@ -406,7 +406,7 @@ class uSmartTradeAuthSigner:
 1. 将 body 使用稳定 JSON 序列化，保证签名前后的 body 字节一致。
 2. 生成或接收 `X-Request-Id`。
 3. 按交易开放 API 规则生成签名前原文：只使用稳定 JSON body，不拼接 header 字段。
-4. 对交易开放 API 签名结果按配置编码，写入 `X-Sign`；默认按网页手册使用 URL-safe Base64，若联调发现当前渠道跟随 Python demo，可切换为标准 Base64。
+4. 对交易开放 API 签名结果按配置编码，写入 `X-Sign`；默认跟随官方 Python demo 使用标准 Base64，若盈立明确要求网页手册的 URL-safe Base64，可通过配置切换。
 5. 组装 `Authorization`、`X-Lang`、`X-Channel`、`X-Time`、`X-Dt`、`X-Request-Id`、`X-Sign`。
 
 隐私字段加密与签名分开处理：
@@ -1007,7 +1007,7 @@ safety:
 - 交易 API base URL：官方网页和 Python demo 给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过 `USMART_API_BASE_URL` 配置显式选择，默认 dry-run 不出网，真实出网需申请通过、IP 白名单、渠道号和密钥配置。
 - 用户已确认项目策略：UAT 测试地址不自动等同 sandbox / paper trading；是否保证下单、改单、撤单不产生真实委托仍需券商确认。
 - `X-Request-Id` 重复请求返回语义。
-- `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
+- `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和 padding；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64。仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
 - token 有效期、刷新方式、多会话冲突语义。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
