@@ -407,7 +407,8 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - 密钥只从环境变量、加密配置或后续密钥管理服务读取，不进入代码库。
 - `uSmartTradeAuthSigner` 只返回交易开放 API 请求头，不向日志暴露私钥、密码、token、明文手机号。
 - token 存在内存会话中，默认不落库；如必须持久化，需要加密保存并记录过期时间。
-- 登录态过期时，只读查询可以重新登录；交易动作不能在下单过程中隐式刷新登录后继续提交，必须让 OMS 重新进入可审计状态。
+- 第一版只维护单账户单 session；真实登录成功会替换该账户现有内存 session，并记录脱敏 token 指纹和过期时间。
+- 登录态过期时，只读查询可以显式重新登录并使用新的 `request_id` 重新发起查询；交易动作不能在下单、改单、撤单过程中隐式刷新登录后继续提交，必须让 OMS 重新进入可审计状态。
 - 签名失败、验签失败、401、权限不足必须归一化为明确错误码。
 
 建议错误码：
@@ -716,7 +717,7 @@ safety:
 - 下单 body `serialNo` 与 header `X-Request-Id` 的官方关系；当前实现只保留本地审计映射，不假设两者相同。
 - 交易开放 API 的 `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和 padding；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密密钥材料与官方 Python demo `public_key` / `private_key` 配置槽位的最终对应关系；加密 transform 已按 demo 确认为 RSA `PKCS1_v1_5` + URL-safe Base64。
-- token 有效期、刷新方式和多会话冲突规则。
+- token `expiration` 的精确格式、时区和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
 - HTTP 频率限制和 WebSocket 订阅上限。
 
 需要用户确认：

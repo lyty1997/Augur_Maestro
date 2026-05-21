@@ -27,6 +27,12 @@ info:
     excludes:
       - basic_quote_openapi
       - quote_push_websocket_api
+  x-robustquant-session-policy:
+    storage: in_memory_only
+    account_scope: single_account_single_session_first_version
+    readonly_expired_token: explicit_relogin_allowed_with_new_request_id
+    trade_action_expired_token: fail_without_implicit_refresh
+    pending_confirmation: expiration format, timezone, official refresh API semantics, and same-account multi-client conflict behavior.
   x-robustquant-demo-reference:
     trade_http:
       sign_input: json body string only
@@ -787,10 +793,11 @@ components:
         token:
           type: string
           x-sensitive: true
-          description: Top-level token, stored only in memory.
+          description: Top-level token. RobustQuant first version stores it only in process memory and never logs it in full.
         expiration:
           type: string
           x-pending-confirmation: Expiration format and timezone.
+          x-robustquant-policy: Parse into expires_at when possible; do not assume a long-lived session if parsing fails.
         tradePassword:
           x-pending-confirmation: Official scalar type.
         openedAccount:

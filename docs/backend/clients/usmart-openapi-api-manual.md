@@ -300,6 +300,13 @@ POST /user-server/open-api/loginCaptcha
 
 登录成功只表示已建立只读会话，不表示允许交易。
 
+会话策略：
+
+- 第一版只维护单账户单 session，token 只保存在进程内存，默认不落库。
+- `expiration` 解析为 `expires_at`，但官方精确格式和时区仍需联调确认；解析失败时不得假设长期有效。
+- 只读查询遇到 token 过期或 401 时，可以显式重新登录后用新的 `request_id` 重新发起查询。
+- 下单、改单、撤单过程中遇到 token 过期、401 或权限错误时，不允许隐式刷新 token 后继续提交，必须返回认证错误并让 OMS 重新进入可审计流程。
+
 ## 8. 下单调用栈 API
 
 ### 8.1 上下层关系
@@ -574,7 +581,7 @@ class uSmartHttpTransport:
 - 用户已确认第一版交易 API header 跟随官方 Python demo：`X-Time` 和 `X-Request-Id` 不作为全局必填；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和内部审计映射。`X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。
 - `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和控制 `=` padding；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64；仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系。它必须和 `X-Sign` 渠道签名密钥材料分离。
-- token 有效期、刷新机制。
+- token `expiration` 的精确格式、时区和官方刷新接口语义；第一版项目策略已确认：内存 session、只读可显式重登、交易动作不隐式刷新、单账户单 session。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举。

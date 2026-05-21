@@ -532,6 +532,9 @@ POST /user-server/open-api/login
 - 从顶层字段读取 token 过期时间 `expiration`，但不记录 token 原文。
 - 读取 `tradePassword`、`openedAccount`、`extendStatusBit` 作为权限和账户状态摘要；仅保存脱敏布尔值或摘要，不保存完整用户资料。
 - token 存入内存 `uSmartSession`。
+- 第一版只维护单账户单 session；后续多账户、多设备或跨进程会话缓存必须单独设计。
+- 只读查询发现 token 过期或 401 时，可以停止当前请求并触发显式重新登录后再发起新的只读查询。
+- 下单、改单、撤单过程中发现 token 过期、401 或权限错误时，不允许隐式重新登录后继续提交；必须返回 `broker.auth_expired` / `broker.auth_failed`，由 OMS 重新进入可审计流程。
 - 返回 `BrokerSession`，其中只包含脱敏 `session_id_masked`。
 - 日志不记录手机号、密码、token 原文。
 
@@ -794,6 +797,9 @@ POST /stock-order-server/open-api/modify-order
 - 申请材料截图不做真实登录；截图只展示 dry-run 请求构造、签名边界、脱敏和交易阻断。
 - 只读联调启用前必须显式配置 `allow_real_http_readonly=true`、base URL、IP 白名单、渠道号和密钥路径；缺任一项只能 dry-run。
 - 真实登录 token 只保存在进程内存；除非后续单独设计加密会话缓存，不落盘。
+- 第一版只维护单账户单 session；真实登录成功会替换该账户现有内存 session，并记录脱敏 token 指纹和过期时间。
+- 只读查询遇到登录态过期可以显式重新登录；重新登录后的查询必须使用新的 `request_id`，不能复用失败请求的审计 ID。
+- 交易动作遇到登录态过期、401 或权限错误时立即停止，不隐式刷新 token，不自动续发下单、改单或撤单。
 - 查询结果可以在控制台显示整理后的完整结果，例如自然语言账户摘要、持仓表、订单表和成交表；禁止直接输出券商原始 JSON。
 - 普通日志可以保留相对完整的结构化字段：endpoint、request_id、trace_id、账户引用、查询类型、分页参数、响应 code、耗时、字段名、整理后结果摘要和 `raw_hash`；不得记录 token、密码、私钥、完整手机号或券商原始 JSON。
 - 程序查询存储可以保留券商返回的原始结构化字段，用于后续 mapper、对账和问题定位；存储记录必须标记账户引用、endpoint、request_id、schema_version 和 `raw_hash`。
@@ -1010,7 +1016,7 @@ safety:
 - `X-Request-Id` 重复请求返回语义。
 - `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和 padding；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64。仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
-- token 有效期、刷新方式、多会话冲突语义。
+- token `expiration` 的精确格式、时区和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是券商侧 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举。
