@@ -23,13 +23,13 @@
 
 | API | 官方文档 | 协议 | RobustQuant 边界 |
 |---|---|---|---|
-| 交易开放 API | `交易開放API接口文檔V1.0-20201029(繁).pdf` | HTTPS POST | `TradingGateway`、`BrokerTradingAdapter`、uSmart 交易适配器 |
-| 基础报价 API | `基礎報價開放API(繁)_20201029.pdf` | HTTPS POST | `QuotationDataGateway` 后续 HTTP 行情适配器 |
-| 报价推送 API | `報價推送(繁)_20201029.pdf` | WebSocket | `QuotationDataGateway` 后续 WS 行情适配器 |
+| 交易开放 API | `https://api-doc.usmart8.com/zh-cn/trade.html` | HTTPS POST | `TradingGateway`、`BrokerTradingAdapter`、uSmart 交易适配器 |
+| 基础报价 API | `https://api-doc.usmart8.com/zh-cn/quote-base.html` | HTTPS POST | `QuotationDataGateway` 后续 HTTP 行情适配器 |
+| 报价推送 API | `https://api-doc.usmart8.com/zh-cn/quote-push.html` | WebSocket | `QuotationDataGateway` 后续 WS 行情适配器 |
 
 三套 API 的 base URL、签名原文、认证 header、限流、连接生命周期和错误处理都不能混用。
 
-网页版交易开放 API 文档（`https://api-doc.usmart8.com/trade.html`）比当前 PDF 更新，版本历史已到 2025-08-25 v1.18。后续字段和 endpoint 以网页版为优先事实源；PDF/MinerU Markdown 继续作为离线核对材料。
+uSmart / 盈立 OpenAPI 当前以官方网页文档为字段、endpoint、枚举和版本真相源。本地转换稿保存于 `API_manual/uSmart/API_manual/`。官方 Python demo 位于 `API_manual/uSmart/openapi-demo-py/`，只作为签名、加密、序列化和 WebSocket 连接流程参考，不替代网页字段表；不得提交或复制 demo 中的账号、密码、token、私钥或配置。
 
 网页版交易开放 API base URL：
 
@@ -77,7 +77,7 @@ sequenceDiagram
 当前实现阶段：
 
 - `TradingGateway` 已实现默认 `read_only` 交易阻断。
-- `uSmartOpenApiTradingAdapter` 已保留登录、下单、改单、撤单方法外形；当前代码里的请求体仍是 dry-run 骨架，尚未按 PDF 字段完整映射。
+- `uSmartOpenApiTradingAdapter` 已保留登录、下单、改单、撤单方法外形；当前代码里的请求体仍是 dry-run 骨架，尚未按官方网页字段完整映射。
 - 交易开放 API client 当前为 dry-run 外壳，不发真实 HTTP。
 - 交易开放 API signer、真实 HTTP transport、token 生命周期管理尚未实现。
 - 本文 2026-05-19 后续章节补全的是目标设计，不代表当前代码已经具备真实 OpenAPI 出网能力。
@@ -228,11 +228,11 @@ src/
 | 交易开放 API client | 组织交易 API header、签名、HTTP POST、响应解析 | 不包含策略、风控、OMS 逻辑；不处理基础报价或报价推送 |
 | 交易开放 API signer | 生成交易 API 的 `X-Sign`、`X-Request-Id`、时间戳、认证 header | 不把私钥、密码、token 写入日志；不复用基础报价签名规则 |
 | `uSmartHttpTransport` | 发起 HTTPS 请求、处理 timeout 和 HTTP 状态 | 不对下单/改单/撤单做自动重试 |
-| `uSmartMapper` | 映射状态码、错误码、订单号和响应字段 | 不猜测 PDF 未说明的状态 |
+| `uSmartMapper` | 映射状态码、错误码、订单号和响应字段 | 不猜测官方网页未说明的状态 |
 
 ## 3. Endpoint 范围
 
-第一版只覆盖券商申请、只读联调、对账和交易网关最小闭环需要的接口。申请材料截图只使用 dry-run / offline request builder，不做真实登录；只读联调可在用户显式授权后触达登录和查询接口，但不允许下单、改单、撤单。字段以官方 PDF 为准；本文只记录当前设计映射。
+第一版只覆盖券商申请、只读联调、对账和交易网关最小闭环需要的接口。申请材料截图只使用 dry-run / offline request builder，不做真实登录；只读联调可在用户显式授权后触达登录和查询接口，但不允许下单、改单、撤单。字段以官方网页文档为准；本文只记录当前设计映射。
 
 ### 3.1 交易 API endpoint 分组
 
@@ -290,7 +290,7 @@ src/
 
 ## 4. 交易开放 API 请求 header 设计
 
-根据交易开放 API PDF 初步解析，交易接口请求 header 包含：
+根据交易开放 API 网页文档和官方 Python demo 核对，交易接口请求 header 包含：
 
 | Header | 来源 | 说明 |
 |---|---|---|
@@ -337,12 +337,12 @@ src/
 
 ### 4.1 请求 ID 策略
 
-PDF 中存在长度描述不一致：概述中 `X-Request-Id` 描述为 19 位数字，登录等接口章节又出现 30 位描述；下单 body 的 `serialNo` 明确为最长 19 位。当前实现结论：`X-Request-Id` 按 30 位可配置字符串处理，不硬编码；下单 body 的 `serialNo` 严格按最长 19 位处理。
+官方资料中存在长度描述不一致：概述中 `X-Request-Id` 描述为 19 位数字，部分接口章节又出现 30 位描述；下单 body 的 `serialNo` 明确为最长 19 位。官方 Python demo 生成的 `serialNo` 是 19 位字符串。当前实现结论：`X-Request-Id` 按 30 位可配置字符串处理，不硬编码；下单 body 的 `serialNo` 按最长 19 位处理，第一版可按用户确认使用数字 JSON，若联调被拒绝再切换为字符串序列化。
 
 | 场景 | 字段 | 设计策略 |
 |---|---|---|
 | HTTP header 幂等 | `X-Request-Id` | 由 `RequestIdGenerator` 生成，按 30 位可配置字符串校验 |
-| 下单 body 流水 | `serialNo` | 与本地 `broker_request_id` 建立映射，按 PDF 的最长 19 位约束处理 |
+| 下单 body 流水 | `serialNo` | 与本地 `broker_request_id` 建立映射，按官方网页最长 19 位约束处理；demo 生成字符串，第一版按数字可配置 |
 | 本地 OMS 订单 | `order_id` | RobustQuant 内部 ID，不直接暴露给券商 |
 | 链路追踪 | `trace_id` | 可为 UUID/ULID，不参与券商幂等 |
 
@@ -359,19 +359,22 @@ broker_order_id <- entrustId
 - `broker_request_id` 必须在调用券商前持久化到审计记录；如果持久化失败，不允许触达 OpenAPI。
 - 只读查询也要携带 `request_id`，但查询 request_id 不得复用交易 request_id。
 - 交易请求超时后，不自动复用同一个 request_id 重发，也不生成新 request_id 补发。
-- 如果券商对重复 `X-Request-Id` 的返回语义不清楚，统一标记为 `unknown_by_pdf`，不能依赖它做自动补偿。
+- 如果券商对重复 `X-Request-Id` 的返回语义不清楚，统一标记为 `unknown_by_official_doc`，不能依赖它做自动补偿。
 
 ## 5. 交易开放 API 签名与认证设计
 
-交易开放 API PDF 初步信息：
+交易开放 API 网页文档与官方 Python demo 核对信息：
 
 - 协议：HTTPS。
 - 签名 header：`X-Sign`。
 - 签名算法描述：`MD5withRSA`。
 - 交易开放 API 概述描述签名内容为 Body 内容。
+- 官方 Python demo 的交易 HTTP helper 使用 `json.dumps(params)` 作为签名原文，`MD5withRSA` 后用标准 Base64 编码为 `X-Sign`。
 - 基础报价 API 描述签名原文为 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 内容按序拼接；这是另一套 API，不在本文档的交易 signer 中实现。
-- 编码方式：`safeBase64` / URL-safe Base64；默认保留 `=` padding，并通过配置允许切换。
+- 官方 Python demo 的基础报价 HTTP helper 使用上述 header + body 签名原文，并用 URL-safe Base64 编码；不能与交易 signer 混用。
+- 编码方式：网页文档描述为 `safeBase64` / URL-safe Base64，交易 demo 使用标准 Base64；第一版做成配置项，默认跟随官方 demo 的交易实现，保留切换到 URL-safe Base64 的能力。
 - 幂等字段：`X-Request-Id`。
+- 官方 Python demo 的交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`。网页 header 表与 demo 对 `X-Time`、`X-Request-Id` 是否交易接口全量必填存在差异，第一版做成按 endpoint 可配置并保留待确认。
 - 访问控制：IP 白名单。
 
 因此第一版不能把交易开放 API、基础报价 API 和报价推送 API 硬编码成同一个 signer。本文档只定义交易开放 API signer：
@@ -379,8 +382,8 @@ broker_order_id <- entrustId
 | 签名器 | 适用范围 | 输入 |
 |---|---|---|
 | `uSmartTradeAuthSigner` | 交易开放 API | 稳定 JSON body，不拼接 header |
-| `uSmartQuoteHttpAuthSigner` | 基础报价 API | 不在本文档实现；后续按基础报价 PDF 独立设计 |
-| `uSmartQuoteWsAuthSigner` | 报价推送 API | 不在本文档实现；后续按报价推送 PDF 独立设计 |
+| `uSmartQuoteHttpAuthSigner` | 基础报价 API | 不在本文档实现；后续按基础报价网页文档独立设计 |
+| `uSmartQuoteWsAuthSigner` | 报价推送 API | 不在本文档实现；后续按报价推送网页文档独立设计 |
 
 目标接口：
 
@@ -403,13 +406,13 @@ class uSmartTradeAuthSigner:
 1. 将 body 使用稳定 JSON 序列化，保证签名前后的 body 字节一致。
 2. 生成或接收 `X-Request-Id`。
 3. 按交易开放 API 规则生成签名前原文：只使用稳定 JSON body，不拼接 header 字段。
-4. 对交易开放 API 签名结果做 URL-safe Base64 编码，写入 `X-Sign`。
+4. 对交易开放 API 签名结果按配置编码，写入 `X-Sign`；默认跟随官方 Python demo 交易实现使用标准 Base64，必要时可切换 URL-safe Base64。
 5. 组装 `Authorization`、`X-Lang`、`X-Channel`、`X-Time`、`X-Dt`、`X-Request-Id`、`X-Sign`。
 
 隐私字段加密与签名分开处理：
 
 - 官方手册同时出现“验签测试公开密钥”和“隐私资料加密测试公开密钥”，说明 `X-Sign` 渠道签名密钥材料与隐私资料加密密钥材料是两套，不得混用。
-- 登录手机号、登录密码、交易密码等字段使用 PDF 所说的“隐私资料加密”密钥材料，与 `X-Sign` 渠道签名私钥不是同一件事。
+- 登录手机号、登录密码、交易密码等字段使用官方文档所说的“隐私资料加密”密钥材料，与 `X-Sign` 渠道签名私钥不是同一件事。
 - 手册对隐私资料加密方向存在“公开密钥”和“私密金钥”两种表述；实现中必须把 key role 和 padding/transform 做成配置。默认按常见模式使用隐私资料加密公钥加密，若盈立最终要求私钥变换，可通过配置切换。
 - `uSmartTradeSensitiveFieldEncryptor` 负责加密 `phoneNumber`、`password`、交易密码等交易开放 API 字段。
 - `uSmartTradeAuthSigner` 只负责交易开放 API 请求签名，不接收明文密码和手机号。
@@ -496,7 +499,7 @@ POST /user-server/open-api/login
 | 字段 | 来源 | 说明 |
 |---|---|---|
 | `areaCode` | 配置 | 区号 |
-| `phoneNumber` | 本地密钥配置 | PDF 登录接口字段，需使用隐私资料加密密钥材料处理，默认按公钥加密 |
+| `phoneNumber` | 本地密钥配置 | 官方网页登录接口字段，需使用隐私资料加密密钥材料处理，默认按公钥加密 |
 | `password` | 本地密钥配置 | RSA 加密后的登录密码 |
 
 登录手机号字段名确认使用 `phoneNumber`，不使用 `mobile`、`phone` 或 `telephone`。
@@ -586,7 +589,7 @@ POST /stock-order-server/open-api/entrust-order
 
 普通下单请求里的委托属性映射：
 
-| `entrustProp` | PDF 含义 | 第一版策略 |
+| `entrustProp` | 官方含义 | 第一版策略 |
 |---|---|---|
 | `0` | 美股限价单 / 暗盘委托 limit order | 美股主要限价类型候选；港股暗盘仅保留设计 |
 | `d` | 竞价单 | 默认不启用 |
@@ -598,7 +601,7 @@ POST /stock-order-server/open-api/entrust-order
 
 交易阶段 `sessionType`：
 
-| `sessionType` | PDF 含义 | 第一版策略 |
+| `sessionType` | 官方含义 | 第一版策略 |
 |---|---|---|
 | `0` / 不传 | 正常订单交易，默认值 | 第一批美股盘中交易候选 |
 | `1` | 盘前交易 | 不进第一批实现 |
@@ -616,7 +619,7 @@ POST /stock-order-server/open-api/entrust-order
 |---|---|---|
 | `code` | `broker_response_code` | 业务状态码 |
 | `msg` | `broker_message` | 脱敏后消息 |
-| `data.entrustId` | `broker_order_id` | PDF 说明可用于查询订单、修改订单、取消订单 |
+| `data.entrustId` | `broker_order_id` | 官方网页说明可用于查询订单、修改订单、取消订单 |
 | `data.status` | `broker_status_raw` | 普通订单状态码，枚举见 12.1 |
 | `data.statusName` | `broker_status_name_raw` | 状态名摘要，日志需脱敏 |
 
@@ -648,7 +651,7 @@ OpenAPI：
 POST /stock-order-server/open-api/modify-order
 ```
 
-MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=1` 表示改单。IPO 改撤单接口的 `actionType` 枚举不同，不能复用这里的映射。
+官方网页交易 API 手册确认普通股票委托 `actionType=1` 表示改单。IPO 改撤单接口的 `actionType` 枚举不同，不能复用这里的映射。
 
 内部字段映射：
 
@@ -667,7 +670,7 @@ MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=1
 |---|---|---|
 | `code` | `broker_response_code` | 业务状态码 |
 | `msg` | `broker_message` | 脱敏后消息 |
-| `data.entrustId` | `broker_apply_id` | PDF 回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
+| `data.entrustId` | `broker_apply_id` | 官方网页回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
 | `data.status` | `broker_status_raw` | 普通订单状态码，`5` 表示等待改单 |
 | `data.statusName` | `broker_status_name_raw` | 状态名摘要 |
 
@@ -700,7 +703,7 @@ OpenAPI：
 POST /stock-order-server/open-api/modify-order
 ```
 
-MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=0` 表示撤单。IPO 改撤单接口的 `actionType` 枚举不同，不能复用这里的映射。
+官方网页交易 API 手册确认普通股票委托 `actionType=0` 表示撤单。IPO 改撤单接口的 `actionType` 枚举不同，不能复用这里的映射。
 
 内部字段映射：
 
@@ -718,7 +721,7 @@ MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=0
 |---|---|---|
 | `code` | `broker_response_code` | 业务状态码 |
 | `msg` | `broker_message` | 脱敏后消息 |
-| `data.entrustId` | `broker_apply_id` | PDF 回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
+| `data.entrustId` | `broker_apply_id` | 官方网页回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
 | `data.status` | `broker_status_raw` | 普通订单状态码，撤单申请后通常需查询确认最终状态 |
 | `data.statusName` | `broker_status_name_raw` | 状态名摘要 |
 
@@ -755,7 +758,7 @@ MinerU 重新转换后的交易 API 手册确认普通股票委托 `actionType=0
 | `BrokerOrderSnapshot` | `broker_order_id`、`market`、`symbol`、`side`、`quantity`、`filled_quantity`、`limit_price`、`avg_fill_price`、`status`、`broker_status_raw`、`final_state_flag` | 订单快照 |
 | `BrokerTradeSnapshot` | `broker_trade_id`、`broker_order_id`、`market`、`symbol`、`side`、`quantity`、`price`、`amount`、`business_status`、`business_time` | 成交快照 |
 
-PDF 字段映射：
+官方网页字段映射：
 
 | uSmart 字段 | 内部字段 | 来源 |
 |---|---|---|
@@ -811,7 +814,7 @@ PDF 字段映射：
 | `auth_error` | token 失效、签名失败、IP 白名单拒绝 | 停止交易动作，提示人工检查 |
 | `rate_limited` | 频率限制 | 查询退避重试，交易不自动补偿 |
 | `business_reject` | 资金不足、数量错误、市场规则拒绝 | 映射为 `broker_rejected` |
-| `unknown_response` | 缺少订单号、状态码未知、响应结构不匹配 | 进入 `unknown_by_pdf` 或 `unknown` |
+| `unknown_response` | 缺少订单号、状态码未知、响应结构不匹配 | 进入 `unknown_by_official_doc` 或 `unknown` |
 
 交易动作统一原则：
 
@@ -821,9 +824,9 @@ PDF 字段映射：
 
 ### 12.1 状态映射初稿
 
-普通订单 `status` 已在交易 API 手册资料字典 `5.1 訂單狀態（Status）` 中给出。没有列出的状态码一律映射为 `unknown_by_pdf`，并保留原始状态摘要供人工确认。
+普通订单 `status` 已在交易 API 手册资料字典 `5.1 訂單狀態（Status）` 中给出。没有列出的状态码一律映射为 `unknown_by_official_doc`，并保留原始状态摘要供人工确认。
 
-| 来源字段 | PDF 值 | PDF 状态名 | 内部建议状态 | 说明 |
+| 来源字段 | 官方值 | 官方状态名 | 内部建议状态 | 说明 |
 |---|---|---|---|---|
 | 普通订单 `status` | `-1` | 失败 | `broker_rejected` | 失败原因取 `msg` 或后续查询 |
 | 普通订单 `status` | `0` | 全部成交 | `filled` | 订单终态候选，仍需结合成交和对账 |
@@ -968,14 +971,14 @@ safety:
 
 - `TradingGateway` 在 `read_only` 模式下阻断下单、改单、撤单。
 - 被阻断时，`uSmartTradeOpenApiClient` 不应收到调用。
-- `uSmartOpenApiTradingAdapter` 能按 PDF 字段构造登录、下单、改单、撤单请求体。
+- `uSmartOpenApiTradingAdapter` 能按官方网页字段构造登录、下单、改单、撤单请求体。
 - 下单请求体必须包含 `serialNo`、`entrustAmount`、`entrustPrice`、`entrustProp`、`entrustType`、`exchangeType`、`stockCode`。
 - 改单请求体必须包含 `actionType=1`、`entrustAmount`、`entrustId`、`entrustPrice`。
 - 撤单请求体必须包含 `actionType=0`、`entrustAmount=0`、`entrustId`、`entrustPrice=0`。
 - 只读查询 DTO 能映射 `stock-asset`、`stock-holding`、`today-entrust`、`his-entrust`、`order-detail`、`stock-record` 的脱敏响应。
 - `uSmartTradeAuthSigner` 使用固定测试 key 生成可重复签名。
 - 日志脱敏测试确认不输出 token、密码、私钥、完整账号。
-- 对 PDF 示例状态 `1`、`5`、`11`、`21`、`0` 建立 mapper 单元测试；未识别状态必须进入 `unknown_by_pdf`。
+- 对官方示例状态 `1`、`5`、`11`、`21`、`0` 建立 mapper 单元测试；未识别状态必须进入 `unknown_by_official_doc`。
 - 对 `X-Request-Id` 和 `serialNo` 生成、长度校验、审计映射建立单元测试。
 
 只读联调测试：
@@ -996,9 +999,9 @@ safety:
 
 ## 16. 待确认问题
 
-需要从 PDF 或 uSmart 官方确认：
+需要从官方网页文档或 uSmart 官方确认：
 
-- 交易 API base URL：当前官方手册未提供，需要 OpenAPI 申请通过后由盈立提供；实现中只能保留 `USMART_API_BASE_URL` 配置占位，默认 dry-run 不出网。
+- 交易 API base URL：官方网页和 Python demo 给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过 `USMART_API_BASE_URL` 配置显式选择，默认 dry-run 不出网，真实出网需申请通过、IP 白名单、渠道号和密钥配置。
 - `X-Request-Id` 重复请求返回语义。
 - `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
@@ -1019,8 +1022,8 @@ safety:
 1. 补齐交易开放 API 离线 DTO、枚举和 mapper：账户、资金、持仓、订单、成交、错误响应、状态响应。行情 DTO 属于 `quotation_kernel`，不在本文档实现。
 2. 补齐 `CapabilityGuard` 的交易开放 API 只读能力判断：登录、交易状态查询、账户查询、持仓查询、订单查询、成交查询独立开关；`trade-login`、下单、改单、撤单仍默认阻断。
 3. 实现 `uSmartRequestIdPolicy`、`uSmartTradeSensitiveFieldEncryptor`、`uSmartTradeAuthSigner` 的离线单元测试，不接真实账号。
-4. 实现 dry-run adapter 的 PDF 字段请求体构造，契约测试只断言字段和脱敏，不出网。
-5. 实现 `uSmartMapper`，用 PDF 示例和人工脱敏 fixture 覆盖成功、业务拒绝、未知状态、缺失字段。
+4. 实现 dry-run adapter 的官方网页字段请求体构造，契约测试只断言字段和脱敏，不出网。
+5. 实现 `uSmartMapper`，用官方示例和人工脱敏 fixture 覆盖成功、业务拒绝、未知状态、缺失字段。
 6. 实现真实 HTTP transport，但默认配置仍为 `dry_run=true` 或 `mode=read_only`；没有用户明确配置时不能出网。
 7. 用户已确认允许只读查询联调；实现时只开放真实登录、资产查询、持仓查询、今日订单、历史订单、订单明细、成交流水和行情查询，禁止 `trade-login` 和所有交易动作。申请材料截图仍不做真实登录。
 8. 只有官方 sandbox 明确存在且不会产生真实委托时，才进入下单、改单、撤单链路验证；否则停在离线契约测试和只读联调。

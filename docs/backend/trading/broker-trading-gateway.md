@@ -285,7 +285,7 @@ class QuotationDataGateway:
 
 ## 6. 盈立交易开放 API 能力映射
 
-盈立官方 PDF 已使用 MinerU 转换为 Markdown，位置为 `API_manual/uSmart/API_manual/markdown/`。以下只映射交易开放 API；基础报价 API 和报价推送 API 不属于 `TradingGateway`，不得把三套 API 的 endpoint、签名和连接生命周期混用。字段和状态码仍需逐页核对 PDF。
+uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdown 转换稿位于 `API_manual/uSmart/API_manual/`。官方 Python demo `API_manual/uSmart/openapi-demo-py/` 仅用于核对签名、加密、序列化和 WebSocket 连接流程。以下只映射交易开放 API；基础报价 API 和报价推送 API 不属于 `TradingGateway`，不得把三套 API 的 endpoint、签名和连接生命周期混用。
 
 ### 6.1 认证与登录
 
@@ -363,7 +363,7 @@ class QuotationDataGateway:
 
 - 接入地址：`wss://open-hz.yxzq.com/wss/v1`
 - 消息类型：`auth`、`sub`、`unsub`、`update`、`ping`、`pong`
-- 推送订阅限制按 PDF 初步摘录为每秒最多订阅 10 个 topic、最大订阅 topic 数 10、每秒最多取消订阅 10 个 topic；正式实现前需再次核对 PDF。
+- 推送订阅限制按官方网页文档摘录为每秒最多订阅 10 个 topic、最大订阅 topic 数 10、每秒最多取消订阅 10 个 topic；正式实现前需再次核对官方网页文档。
 
 规则：
 
@@ -378,7 +378,7 @@ class QuotationDataGateway:
 - 设置、重置、修改交易密码。
 - IPO 申购和 IPO 改单。
 - 条件单、止盈止损或触发单。
-- 任何 PDF 未明确解释语义的高级订单。
+- 任何官方网页文档未明确解释语义的高级订单。
 
 不进入第一版的是 IPO 申购接口本身；港股新股暗盘若通过普通下单接口和 `sessionType=3` 交易，按港股暗盘交易能力保留设计，不进入第一批实现，也不使用 IPO endpoint。
 
@@ -386,19 +386,20 @@ class QuotationDataGateway:
 
 以下只描述交易开放 API。基础报价 API、报价推送 API 有各自独立的认证、签名和连接规则，不能复用交易开放 API 的 signer。
 
-已知交易开放 API PDF 信息：
+已知交易开放 API 网页文档与官方 Python demo 信息：
 
 - 请求使用 HTTPS。
 - Header 中包含 `X-Sign`。
-- `X-Sign` 使用 `MD5withRSA` 对 Body 内容加密或签名后，再经过 `safeBase64` 编码。
+- `X-Sign` 使用 `MD5withRSA` 对 Body 内容加密或签名后，再经过 Base64 编码；网页描述为 `safeBase64` / URL-safe Base64，官方 Python demo 的交易 helper 使用标准 Base64，需做成可配置。
 - 交易开放 API 的 `X-Sign` 签名原文只使用稳定 JSON body，不拼接 header 字段。
+- 官方 Python demo 的交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`。网页 header 表与 demo 对 `X-Time`、`X-Request-Id` 是否交易接口全量必填存在差异，第一版做成按 endpoint 可配置并保留待确认。
 - `safeBase64` 默认保留 `=` padding，并通过配置允许切换。
 - `X-Time` 使用 Unix epoch milliseconds，并作为字符串写入 header。
 - `X-Dt` 默认 `"4"` 表示 Windows；`X-Type` 默认 `"1"` 表示大陆版 APP。
 - `X-Sign` 渠道签名密钥材料与手机号、登录密码、交易密码等隐私资料加密密钥材料必须分离；隐私资料加密方向和 padding 按官方最终材料配置。
-- 基础报价 API PDF 进一步说明其签名原文包含 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 的有序拼接；这属于另一套 API，不应用交易开放 API 的 signer 承接。
+- 基础报价 API 网页文档和官方 demo 进一步说明其签名原文包含 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 的有序拼接；这属于另一套 API，不应用交易开放 API 的 signer 承接。
 - `X-Request-Id` 用于确保唯一和防重。
-- PDF 对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；当前实现按 `X-Request-Id` 30 位可配置字符串、`serialNo` 最长 19 位处理。
+- 官方资料对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；官方 Python demo 生成的 `serialNo` 是 19 位字符串。当前实现按 `X-Request-Id` 30 位可配置字符串、`serialNo` 最长 19 位处理，第一版 `serialNo` 可按用户确认使用数字 JSON，必要时切换字符串。
 - 接入涉及 IP 白名单。
 
 设计规则：
@@ -423,7 +424,7 @@ broker.rate_limited
 
 ## 8. 幂等和请求 ID
 
-盈立 PDF 提到 `X-Request-Id` 用于防重。RobustQuant 内部还需要自己的幂等关系。
+盈立官方网页文档提到 `X-Request-Id` 用于防重。RobustQuant 内部还需要自己的幂等关系。
 
 建议关系：
 
@@ -475,8 +476,8 @@ unknown
 
 映射规则：
 
-- PDF 已明确状态码时，写入 `uSmartOrderStatusMapper`。
-- PDF 未明确的状态码不得猜测，只能映射为 `unknown_by_pdf`。
+- 官方网页文档已明确状态码时，写入 `uSmartOrderStatusMapper`。
+- 官方网页文档未明确的状态码不得猜测，只能映射为 `unknown_by_official_doc`。
 - 无法判断是否已到达券商的请求，必须进入 `unknown`。
 - `unknown` 只能通过订单查询、成交查询、对账或人工确认转出。
 
@@ -624,7 +625,7 @@ safety:
 - 测试 fixture 不得包含真实账号、token、真实资金和真实持仓。
 - 对 `unknown`、超时、401、限流、字段缺失必须有单元测试。
 - 对日志脱敏必须有测试，防止未来把 token 或账户打出来。
-- 对盈立 PDF 字段映射必须有契约测试：下单 `serialNo/entrustAmount/entrustPrice/entrustProp/entrustType/exchangeType/stockCode`，普通股票委托改单 `actionType=1`，普通股票委托撤单 `actionType=0`。
+- 对盈立官方网页字段映射必须有契约测试：下单 `serialNo/entrustAmount/entrustPrice/entrustProp/entrustType/exchangeType/stockCode`，普通股票委托改单 `actionType=1`，普通股票委托撤单 `actionType=0`。
 - 对只读 DTO 映射必须有契约测试：资产、持仓、订单、成交、最大可买可卖、改单范围。
 - 对 `X-Request-Id` 与 `serialNo` 的生成、长度校验和审计映射必须有单元测试。
 
@@ -632,8 +633,8 @@ safety:
 
 ### Phase 0：文档和接口事实摘录
 
-- 从 PDF/Markdown 提取 endpoint、字段、状态码、错误码、订单类型。
-- 标记 `confirmed_by_pdf` 和 `unknown_by_pdf`。
+- 从官方网页文档和本地转换 Markdown 提取 endpoint、字段、状态码、错误码、订单类型。
+- 标记 `confirmed_by_official_doc` 和 `unknown_by_official_doc`。
 - 完成网关设计并经用户确认。
 
 ### Phase 1：纯离线骨架
@@ -685,7 +686,7 @@ safety:
 - 网关职责与 OMS、风控、策略边界清楚。
 - 盈立 endpoint 已按认证、交易、账户、行情、推送分组。
 - 交易接口默认禁用规则明确。
-- 未确认行为全部列为 `unknown_by_pdf`。
+- 未确认行为全部列为 `unknown_by_official_doc`。
 - 日志和审计不泄露敏感信息。
 - 下单、改单、撤单失败不自动重试。
 
@@ -701,7 +702,7 @@ safety:
 
 ## 16. 待确认问题
 
-必须从 PDF 或盈立官方确认：
+必须从官方网页文档或盈立官方确认：
 
 - 盈立是否提供 sandbox 或 paper trading 环境。
 - 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；当前代码仍必须保留配置占位并默认 dry-run，不因文档存在 base URL 自动出网。

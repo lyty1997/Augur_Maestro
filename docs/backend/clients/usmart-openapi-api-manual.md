@@ -16,9 +16,11 @@
 
 | API | 官方文档 | 协议 | 本文档是否覆盖 |
 |---|---|---|---|
-| 交易开放 API | `交易開放API接口文檔V1.0-20201029(繁).pdf` | HTTPS POST | 是 |
-| 基础报价 API | `基礎報價開放API(繁)_20201029.pdf` | HTTPS POST | 否 |
-| 报价推送 API | `報價推送(繁)_20201029.pdf` | WebSocket | 否 |
+| 交易开放 API | `https://api-doc.usmart8.com/zh-cn/trade.html` | HTTPS POST | 是 |
+| 基础报价 API | `https://api-doc.usmart8.com/zh-cn/quote-base.html` | HTTPS POST | 否 |
+| 报价推送 API | `https://api-doc.usmart8.com/zh-cn/quote-push.html` | WebSocket | 否 |
+
+本地网页转换稿保存于 `API_manual/uSmart/API_manual/`。官方 Python demo `API_manual/uSmart/openapi-demo-py/` 只作为签名、加密、序列化和连接流程参考，不替代网页字段表；不得提交或复制 demo 中的账号、密码、token、私钥或配置。
 
 ## 1. 现有设计缺口
 
@@ -28,7 +30,7 @@
 |---|---|---|---|
 | 本地入口层缺失 | `src/backend`、`src/cli` 只有 README | 截图无法展示从 CLI/API 到网关的调用链 | 增加 `BrokerApplicationService`、CLI/API handler 设计和 dry-run 调用示例 |
 | 登录 DTO 不完整 | `TradingGateway.connect(account_ref)` 只有账户引用 | 无法表达手机号、区号、密码密钥引用、token 会话 | 增加 `BrokerLoginRequest`、`BrokerLoginResult`、`uSmartSession` |
-| 交易 DTO 与 PDF 字段未完全对齐 | 当前 adapter body 仍是内部字段外形 | 截图无法证明对接 `serialNo`、`entrustAmount`、`actionType` 等字段 | 增加专门的 request builder 和字段映射测试 |
+| 交易 DTO 与官方网页字段未完全对齐 | 当前 adapter body 仍是内部字段外形 | 截图无法证明对接 `serialNo`、`entrustAmount`、`actionType` 等字段 | 增加专门的 request builder 和字段映射测试 |
 | 认证签名层缺失 | 没有 `auth.py`、`encryptor.py`、`transport.py` | 无法展示交易开放 API header、签名、加密、token 传递层 | 定义交易开放 API signer、交易敏感字段 encryptor、交易 HTTP transport |
 | 请求 ID 与流水映射缺失 | 只有 `request_id` 字符串 | 无法证明 `X-Request-Id`、`serialNo`、本地订单 ID 的关系 | 增加 `uSmartRequestIdPolicy` 和审计映射 |
 | 响应 mapper 缺失 | adapter 直接返回 `UNKNOWN` | 无法展示券商响应如何变成本地 ACK | 增加 `uSmartOrderMapper`、`uSmartErrorMapper` |
@@ -333,7 +335,7 @@ POST /stock-order-server/open-api/entrust-order
 | `request.market` | `exchangeType` | `US -> 5` 为主要交易市场和第一批真实交易范围；`HK -> 0` 仅保留港股暗盘设计；沪深港通先禁用真实交易 |
 | `request.symbol` | `stockCode` | 股票代码 |
 | 可选名称 | `stockName` | 非主键，可不传 |
-| 交易密码 secret | `password` | 若 PDF 要求，则加密后传 |
+| 交易密码 secret | `password` | 若官方网页要求，则加密后传 |
 | 固定安全默认 | `forceEntrustFlag` | 默认不启用 |
 | `request.session` | `sessionType` | 第一批只做正常盘中交易 `0` / 不传；港股暗盘候选为 `3` 但仅保留设计；美股盘前盘后不进第一批 |
 
@@ -375,10 +377,10 @@ POST /stock-order-server/open-api/modify-order
 | 内部字段 | uSmart body 字段 | 第一版规则 |
 |---|---|---|
 | 固定值 | `actionType` | 普通股票委托 `1` 表示改单；IPO 改撤单接口枚举不同，不得复用 |
-| `request.new_quantity` | `entrustAmount` | 未改数量时按 PDF 要求处理；不能猜默认 |
+| `request.new_quantity` | `entrustAmount` | 未改数量时按官方网页要求处理；不能猜默认 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
-| `request.new_limit_price` | `entrustPrice` | 未改价格时按 PDF 要求处理；不能猜默认 |
-| 交易密码 secret | `password` | 若 PDF 要求，则加密后传 |
+| `request.new_limit_price` | `entrustPrice` | 未改价格时按官方网页要求处理；不能猜默认 |
+| 交易密码 secret | `password` | 若官方网页要求，则加密后传 |
 | 固定安全默认 | `forceEntrustFlag` | 默认不启用 |
 
 ### 9.4 输出映射
@@ -387,7 +389,7 @@ POST /stock-order-server/open-api/modify-order
 |---|---|---|
 | `code` | `broker_response_code` | 业务返回码 |
 | `msg` | `broker_message` | 脱敏 |
-| `data.entrustId` | `broker_apply_id` | PDF 回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
+| `data.entrustId` | `broker_apply_id` | 官方网页回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
 | `data.status` | `broker_status_raw` | 不能单独判断终态 |
 | `data.statusName` | `broker_status_name_raw` | 审计辅助 |
 
@@ -422,7 +424,7 @@ POST /stock-order-server/open-api/modify-order
 | 固定值 | `entrustAmount` | `0` |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | 固定值 | `entrustPrice` | `0` |
-| 交易密码 secret | `password` | 若 PDF 要求，则加密后传 |
+| 交易密码 secret | `password` | 若官方网页要求，则加密后传 |
 
 ### 10.4 输出映射
 
@@ -430,7 +432,7 @@ POST /stock-order-server/open-api/modify-order
 |---|---|---|
 | `code` | `broker_response_code` | 业务返回码 |
 | `msg` | `broker_message` | 脱敏 |
-| `data.entrustId` | `broker_apply_id` | PDF 回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
+| `data.entrustId` | `broker_apply_id` | 官方网页回应参数说明为“申请编号”；不得覆盖原始 `broker_order_id` |
 | `data.status` | `broker_status_raw` | 不能单独判断终态 |
 | `data.statusName` | `broker_status_name_raw` | 审计辅助 |
 
@@ -562,7 +564,7 @@ class uSmartHttpTransport:
 
 ## 14. 待官方确认项
 
-以下事项不能靠代码猜测，必须从 PDF 或盈立官方确认：
+以下事项不能靠代码猜测，必须从官方网页文档或盈立官方确认：
 
 - 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过 `USMART_API_BASE_URL` 配置显式选择，默认 dry-run 不出网。
 - `X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。

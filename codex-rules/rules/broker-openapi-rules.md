@@ -8,7 +8,12 @@
 
 设计盈立 OpenAPI 时，优先参考：
 
-- `券商API/盈立/API文档/交易開放API接口文檔V1.0-20201029(繁).pdf`
+- uSmart 官方网页文档：
+  - `https://api-doc.usmart8.com/zh-cn/trade.html`
+  - `https://api-doc.usmart8.com/zh-cn/quote-base.html`
+  - `https://api-doc.usmart8.com/zh-cn/quote-push.html`
+- 本地网页转换稿：`API_manual/uSmart/API_manual/`
+- 官方 Python demo：`API_manual/uSmart/openapi-demo-py/`，只作为签名、加密、序列化和连接流程参考，不作为字段枚举真相源；不得提交或复制 demo 中的账号、密码、token、私钥或配置。
 - `docs/backend/trading/broker-trading-gateway.md`
 - `docs/backend/clients/usmart-openapi-call-design.md`
 - `docs/architecture/open-decisions.md`
@@ -48,7 +53,7 @@
 
 字段映射必须有文档来源。对盈立 OpenAPI：
 
-- 下单、改单、撤单字段应与 PDF 中的 `serialNo`、`entrustAmount`、`entrustPrice`、`entrustProp`、`entrustType`、`exchangeType`、`stockCode`、`actionType` 等保持可追踪映射。
+- 下单、改单、撤单字段应与官方网页文档中的 `serialNo`、`entrustAmount`、`entrustPrice`、`entrustProp`、`entrustType`、`exchangeType`、`stockCode`、`actionType` 等保持可追踪映射。
 - 交易签名、行情签名、WebSocket 认证应分开建模，不能用一个签名函数硬套全部场景。
 - `X-Request-Id`、`X-Type`、`entrustId` 语义等未确认项必须继续记录在 open decisions 中。
 

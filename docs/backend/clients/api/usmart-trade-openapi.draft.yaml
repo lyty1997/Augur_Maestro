@@ -6,9 +6,19 @@ info:
   description: >
     This draft covers only the uSmart trade OpenAPI. It does not include the
     basic quote OpenAPI or quote push WebSocket API. Fields marked with
-    x-pending-confirmation must be verified against the official PDF or uSmart
-    before implementation is treated as final.
+    x-pending-confirmation must be verified against the official web
+    documentation or uSmart before implementation is treated as final. The
+    official Python demo is an implementation reference for signing,
+    encryption, serialization, and WebSocket flow only.
   x-robustquant-source-docs:
+    - ../../../../API_manual/uSmart/API_manual/usmart-trade-openapi.zh-cn.md
+    - ../../../../API_manual/uSmart/API_manual/usmart-quote-base-openapi.zh-cn.md
+    - ../../../../API_manual/uSmart/API_manual/usmart-quote-push-openapi.zh-cn.md
+    - ../../../../API_manual/uSmart/openapi-demo-py/api/trade.py
+    - ../../../../API_manual/uSmart/openapi-demo-py/common/req_util.py
+    - ../../../../API_manual/uSmart/openapi-demo-py/common/utils.py
+    - ../../../../API_manual/uSmart/openapi-demo-py/api/quote_push.py
+    - ../../../../API_manual/uSmart/openapi-demo-py/common/ws_util.py
     - ../usmart-openapi-call-design.md
     - ../usmart-openapi-api-manual.md
     - ../../trading/broker-trading-gateway.md
@@ -17,6 +27,32 @@ info:
     excludes:
       - basic_quote_openapi
       - quote_push_websocket_api
+  x-robustquant-demo-reference:
+    trade_http:
+      sign_input: json body string only
+      sign_algorithm: MD5withRSA
+      sign_encoding: standard Base64 in demo
+      observed_headers:
+        - Content-type
+        - X-Lang
+        - X-Channel
+        - X-Sign
+        - Authorization
+      pending_confirmation: >
+        Web documentation header tables and the Python demo differ on whether
+        X-Time and X-Request-Id are always required for trade HTTP endpoints.
+        RobustQuant keeps these headers configurable and records the
+        endpoint-specific observed behavior.
+    quote_http:
+      sign_input: Authorization + X-Channel + X-Lang + X-Request-Id + X-Time + json body string
+      sign_algorithm: MD5withRSA
+      sign_encoding: URL-safe Base64 in demo
+      note: Separate API family; do not reuse the trade signer.
+    quote_push_websocket:
+      auth_message: '{"op":"auth","accessToken":"<token>"}'
+      subscribe_message: '{"op":"sub","topiclist":["<topic>"]}'
+      data_payload: base64 decoded update data in the demo
+      note: Separate API family; do not mount under TradingGateway.
 servers:
   - url: https://open-jy.yxzq.com
     description: uSmart trade OpenAPI production environment from official web documentation.
@@ -469,6 +505,9 @@ components:
       schema:
         type: string
       description: Unix epoch milliseconds represented as a string.
+      x-demo-observed: >
+        Official Python demo uses X-Time on quote HTTP signing. Trade HTTP demo
+        does not add X-Time in the shared trade request helper.
     HeaderDeviceType:
       name: X-Dt
       in: header
@@ -502,7 +541,10 @@ components:
         type: string
         minLength: 1
         maxLength: 30
-      x-pending-confirmation: Effective length, lifetime, and duplicate semantics.
+      x-pending-confirmation: >
+        Effective length, lifetime, and duplicate semantics. Official Python
+        demo adds X-Request-Id to modify-order but not to the shared trade
+        request helper used by entrust-order.
     HeaderSign:
       name: X-Sign
       in: header
@@ -510,6 +552,10 @@ components:
       schema:
         type: string
       description: Signature over stable JSON body using trade OpenAPI key material.
+      x-demo-observed: >
+        Official Python demo signs json.dumps(params) with MD5withRSA and
+        encodes trade X-Sign with standard Base64. Quote HTTP uses a different
+        header+body signing string and URL-safe Base64.
   schemas:
     PasswordLoginRequest:
       type: object
@@ -574,7 +620,11 @@ components:
           type: integer
           format: int64
           description: Body serial number mapped from local broker_request_id.
-          x-pending-confirmation: Manual field table says int64; one body example serializes it as a string.
+          x-pending-confirmation: >
+            Web documentation field table says int64; examples and the official
+            Python demo generate a 19-digit string. User confirmed first draft
+            may keep numeric serialization, but implementation should keep this
+            as a configurable serializer if uSmart rejects numeric JSON.
         entrustAmount:
           $ref: "#/components/schemas/DecimalNumber"
         entrustPrice:

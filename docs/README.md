@@ -68,7 +68,7 @@ docs/
 
 ### 客户端
 
-- [yingli-openapi-reference.md](backend/clients/yingli-openapi-reference.md)：盈立 OpenAPI 官方文档解析说明，记录官方 PDF、接口能力和后续正式接入前的安全边界。
+- [yingli-openapi-reference.md](backend/clients/yingli-openapi-reference.md)：盈立 OpenAPI 官方网页文档解析说明，记录三套官方网页文档、本地 Markdown 转换稿、接口能力和后续正式接入前的安全边界。
 - [usmart-openapi-call-design.md](backend/clients/usmart-openapi-call-design.md)：uSmart OpenAPI 调用栈全链路设计，定义从本地入口到券商 server 的完整调用层、签名认证、登录、下单、改单、撤单、只读查询和错误处理。
 - [usmart-openapi-api-manual.md](backend/clients/usmart-openapi-api-manual.md)：盈立 OpenAPI 申请材料优先实现手册，定义登录、下单、改单、撤单的接口、输入输出、上下调用层和设计缺口。
 
@@ -95,7 +95,7 @@ docs/
 | 申请盈立 OpenAPI 的登录、下单、改单、撤单代码截图要覆盖哪些接口 | [usmart-openapi-api-manual.md](backend/clients/usmart-openapi-api-manual.md) |
 | 日志、审计、trace_id、敏感信息怎么处理 | [observability-audit.md](backend/observability-audit.md) |
 | React 控制台能做什么、不能做什么 | [console-spec.md](frontend/console-spec.md) |
-| 盈立 OpenAPI 官方 PDF 怎么解析和使用 | [yingli-openapi-reference.md](backend/clients/yingli-openapi-reference.md) |
+| 盈立 OpenAPI 官方网页文档怎么解析和使用 | [yingli-openapi-reference.md](backend/clients/yingli-openapi-reference.md) |
 | 当前还有哪些待决策问题 | [open-decisions.md](architecture/open-decisions.md) |
 
 ## 设计原则

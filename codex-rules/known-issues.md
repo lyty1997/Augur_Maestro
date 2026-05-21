@@ -16,12 +16,14 @@ Get-Content -Encoding UTF8 docs/README.md
 - 如果 `rg` 不可用，再使用 PowerShell 的 `Get-ChildItem`、`Select-String`。
 - 不要把大量无关文件一次性读入上下文；先通过目录和关键词定位。
 
-## 券商 PDF 与提取文本
+## 券商官方资料与提取文本
 
-券商 PDF、Markdown 转写文本、OCR 文本可能存在表格错位、字段遗漏或繁简混杂。设计中引用券商行为时：
+券商网页、PDF、Markdown 转写文本、OCR 文本可能存在表格错位、字段遗漏、版本差异或繁简混杂。设计中引用券商行为时：
 
-- 以官方 PDF 原文为最终依据。
-- 无法从 PDF 确认的行为必须标记为 `待确认` 或 `unknown_by_pdf`。
+- 以当前指定的官方真相源为最终依据。
+- uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地转换稿位于 `API_manual/uSmart/API_manual/`；历史 PDF/MinerU 转换稿不再作为当前依据。
+- 官方 Python demo 只用于核对签名、加密、序列化和连接流程，不替代网页字段表；demo 配置中的账号、密码、token、私钥不得进入仓库提交。
+- 无法从官方真相源确认的行为必须标记为 `待确认` 或 `unknown_by_official_doc`。
 - 不得用猜测补齐签名、状态机、错误码、交易规则或真实接口地址。
 
 ## 盈立 OpenAPI 待确认项

@@ -22,14 +22,14 @@
 - 东北证券 miniQMT 是否已具备交易权限和 API 权限。
 - 第一条实盘闭环后续是否优先接 miniQMT；需等待 miniQMT 权限、运行环境和接口能力确认。
 - 盈立 OpenAPI 若后续申请通过，再根据官方 API 手册确认港股、美股行情和交易权限。
-- 盈立是否提供 sandbox；如果 PDF 未说明，按 `unknown_by_pdf` 处理，不运行真实下单、改单、撤单。
+- 盈立是否提供 sandbox；如果官方网页文档未说明，按 `unknown_by_official_doc` 处理，不运行真实下单、改单、撤单。
 
 建议：
 
 - A 股研究闭环先只依赖数据网关和回测引擎，不依赖真实下单能力。
 - 券商 API 先保留适配器抽象，不急着实现具体交易接口。
-- 盈立官方 PDF 解析按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 执行；源码截图材料不进入开发任务。
-- `TradingGateway` 统一券商交易网关设计见 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md)；正式实现前先确认能力模式、只读联调边界和盈立 `unknown_by_pdf` 项。
+- 盈立官方网页文档解析按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 执行；源码截图材料不进入开发任务。
+- `TradingGateway` 统一券商交易网关设计见 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md)；正式实现前先确认能力模式、只读联调边界和盈立 `unknown_by_official_doc` 项。
 - 等“查询账户、查询持仓、下单、撤单、查询成交、对账、日志、告警”跑通后，再扩展第二个券商。
 
 ## 2. miniQMT 运行环境
@@ -385,20 +385,20 @@
 - 单日最大亏损阈值。
 - 快速风险退出最大允许减仓比例。
 
-### 12.7 盈立 OpenAPI 官方 PDF 解析
+### 12.7 盈立 OpenAPI 官方网页文档解析
 
 已确认：
 
 - 盈立反馈 OpenAPI 申请需要登录、下单、改单、撤单源码截图。
 - 源码截图属于券商申请材料事项，不作为 RobustQuant 开发交付。
 - 不允许用真实下单、改单、撤单接口做连通性测试或截图演示。
-- 已拿到盈立繁体中文 PDF 官方文档，位置为 `API_manual/uSmart/API_manual/`；MinerU 重新转换的 Markdown 位于 `API_manual/uSmart/API_manual/markdown/`。
-- 已核对盈立网页版交易开放 API 文档 `https://api-doc.usmart8.com/trade.html`；网页版版本更新至 2025-08-25 v1.18，后续字段和 endpoint 以网页版为优先事实源，PDF 作为离线核对材料。
+- uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdown 转换稿位于 `API_manual/uSmart/API_manual/`。
+- 已同步官方网页文档：交易开放 API `https://api-doc.usmart8.com/zh-cn/trade.html`、基础报价 API `https://api-doc.usmart8.com/zh-cn/quote-base.html`、报价推送 API `https://api-doc.usmart8.com/zh-cn/quote-push.html`。
+- 官方 Python demo 位于 `API_manual/uSmart/openapi-demo-py/`，只用于核对签名、加密、序列化和连接流程；demo 配置中的账号、密码、token、私钥不得进入提交。
 - 盈立官方资料实际包含三套 API：交易开放 API、基础报价 API、报价推送 API。三套 API 的协议、base URL、签名/认证、限流、连接生命周期和错误处理不能混用。
-- 交易开放 API PDF 是 `交易開放API接口文檔V1.0-20201029(繁).pdf`，基础报价 API PDF 是 `基礎報價開放API(繁)_20201029.pdf`，报价推送 API PDF 是 `報價推送(繁)_20201029.pdf`。
-- 交易 PDF 初步摘录显示普通下单 endpoint 为 `/stock-order-server/open-api/entrust-order`，改单/撤单共用 `/stock-order-server/open-api/modify-order`。
-- MinerU 重新转换后的交易 API 手册确认普通股票委托 `modify-order` 通过 `actionType=1` 表示改单、`actionType=0` 表示撤单；IPO 改撤单接口的 `actionType` 枚举不同，不能混用。
-- MinerU 重新转换后的交易 API 手册确认普通下单响应 `data.entrustId` 为订单 id，可用于查询订单、修改订单和取消订单；改单/撤单响应里的 `data.entrustId` 为申请编号，不覆盖原委托 ID。
+- 官方网页文档确认普通下单 endpoint 为 `/stock-order-server/open-api/entrust-order`，改单/撤单共用 `/stock-order-server/open-api/modify-order`。
+- 官方网页文档确认普通股票委托 `modify-order` 通过 `actionType=1` 表示改单、`actionType=0` 表示撤单；IPO 改撤单接口的 `actionType` 枚举不同，不能混用。
+- 官方网页文档确认普通下单响应 `data.entrustId` 为订单 id，可用于查询订单、修改订单和取消订单；改单/撤单响应里的 `data.entrustId` 为申请编号，不覆盖原委托 ID。
 - 交易 API 手册资料字典确认普通订单 `status`：`-1` 失败、`0` 全部成交、`1` 等待提交、`2` 待成交、`3` 部分成交、`4` 等待撤单、`5` 等待改单、`6` 已撤单、`7` 部成撤单、`8` 废单。
 - 申请材料源码截图只展示 dry-run / offline request builder，不做真实登录。
 - 用户确认允许后续只读联调真实登录和查询资产、持仓、今日订单、历史订单、订单明细、成交流水，但不允许下单、改单、撤单。
@@ -412,9 +412,9 @@
 
 - 盈立是否提供 sandbox。
 - 交易 API base URL 已由网页版文档给出：生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；真实出网仍需申请通过、IP 白名单、渠道号和密钥配置。
-- `X-Request-Id` 长度、有效期和重复请求语义；当前 PDF 摘录存在 19 位和 30 位两种描述。
-- 下单 body `serialNo` 与 header `X-Request-Id` 的关系。
-- 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
+- `X-Request-Id` 长度、有效期和重复请求语义；当前官方资料存在 19 位和 30 位两种描述，Python demo 只在部分交易接口显式传入 `X-Request-Id`。
+- 下单 body `serialNo` 与 header `X-Request-Id` 的关系；Python demo 生成 19 位字符串，第一版按用户确认可使用数字 JSON，必要时切换字符串。
+- 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段；Python demo 交易 helper 使用标准 Base64，网页文档描述 `safeBase64`，第一版做成可配置。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。
 - 登录手机号、登录密码、交易密码使用的 RSA 公钥和字段名。
 - `entrustProp`、`exchangeType`、`sessionType` 在美股盘中和美股碎股上的精确适用规则；港股暗盘后置。
@@ -423,6 +423,6 @@
 
 建议：
 
-- 只解析 PDF，为未来正式接入做设计依据。
-- PDF 中找不到的 sandbox 和改单语义，标记为 `unknown_by_pdf`；不把券商申请截图格式作为当前开发阻塞项。
+- 只解析官方网页文档和本地转换稿，为未来正式接入做设计依据；Python demo 仅用于实现细节校验。
+- 官方网页文档中找不到的 sandbox 和改单语义，标记为 `unknown_by_official_doc`；不把券商申请截图格式作为当前开发阻塞项。
 - 具体调用栈、字段映射、只读查询 DTO 和签名策略按 [usmart-openapi-call-design.md](../backend/clients/usmart-openapi-call-design.md) 继续维护；统一网关能力模式和安全边界按 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md) 维护。
