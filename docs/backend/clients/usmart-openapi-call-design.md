@@ -566,10 +566,10 @@ POST /stock-order-server/open-api/entrust-order
 |---|---|---|
 | `request.request_id` 派生的 19 位流水 | `serialNo` | 下单 body 流水号，最长 19 位；与 `X-Request-Id` 的关系需记录审计映射 |
 | `request.quantity` | `entrustAmount` | 委托数量 |
-| `request.limit_price` | `entrustPrice` | 委托价格，竞价单传 0 |
+| `request.limit_price` | `entrustPrice` | 委托价格；第一版美股盘中普通单只允许限价，必须大于 0 |
 | `request.price_type` + `market` | `entrustProp` | 委托属性，枚举见下表 |
 | `request.side` | `entrustType` | 0 买，1 卖 |
-| `request.market` | `exchangeType` | 0 港股，5 美股，6 沪港通，7 深港通 |
+| `request.market` | `exchangeType` | 0 港股，5 美股，6 沪港通，7 深港通；第一版真实普通单只允许 `5` |
 | `request.symbol` | `stockCode` | 股票代码 |
 | `request.name` | `stockName` | 可选 |
 | 交易密码 | `password` | 可选，是否需要以官方要求为准 |
@@ -580,8 +580,8 @@ POST /stock-order-server/open-api/entrust-order
 
 | 内部市场 | `exchangeType` | 第一版策略 |
 |---|---|---|
-| `HK` | `0` | 可作为港股只读和未来受控交易候选 |
-| `US` | `5` | 主要交易市场，可作为美股只读和未来受控交易候选 |
+| `HK` | `0` | 可作为港股只读候选；港股新股暗盘仅保留设计，不进入第一版真实交易 |
+| `US` | `5` | 主要交易市场；第一版普通真实交易只允许美股盘中限价单 |
 | `SH_HK_CONNECT` | `6` | 第一版不启用真实交易 |
 | `SZ_HK_CONNECT` | `7` | 第一版不启用真实交易 |
 | `ALL` | `100` | 仅查询接口使用，不允许下单 |
@@ -597,7 +597,7 @@ POST /stock-order-server/open-api/entrust-order
 
 | `entrustProp` | 官方含义 | 第一版策略 |
 |---|---|---|
-| `0` | 美股限价单 / 暗盘委托 limit order | 美股主要限价类型候选；港股暗盘仅保留设计 |
+| `0` | 美股限价单 / 暗盘委托 limit order | 用户已确认第一版只作为美股盘中普通限价单启用；港股暗盘仅保留设计 |
 | `d` | 竞价单 | 默认不启用 |
 | `e` | 增强限价单 | 第一批不启用；后续港股普通交易候选 |
 | `g` | 竞价限价单 | 默认不启用 |
@@ -609,13 +609,13 @@ POST /stock-order-server/open-api/entrust-order
 
 | `sessionType` | 官方含义 | 第一版策略 |
 |---|---|---|
-| `0` / 不传 | 正常订单交易，默认值 | 第一批美股盘中交易候选 |
+| `0` / 不传 | 正常订单交易，默认值 | 用户已确认第一版用于美股盘中普通限价单；request builder 可按官方要求传 `0` 或省略 |
 | `1` | 盘前交易 | 不进第一批实现 |
 | `2` | 盘后交易 | 不进第一批实现 |
 | `3` | 暗盘交易 | 港股新股暗盘仅保留设计，不进第一批实现 |
 | `12` | 基金订单 | 网页版文档新增；不进第一批实现 |
 
-`OrderType.MARKET`、`forceEntrustFlag=true`、未建模的高级订单默认拒绝。第一批交易实现目标是美股盘中限价和美股碎股；美股碎股使用碎股专用 endpoint，不通过普通下单 `entrustProp=u` 建模。港股新股暗盘只保留设计，不实现真实请求构造。
+`OrderType.MARKET`、`forceEntrustFlag=true`、未建模的高级订单默认拒绝。第一批普通真实下单只允许美股盘中限价单：`exchangeType=5`、`entrustProp=0`、`entrustType` 买入 `0` / 卖出 `1`、`entrustPrice>0`、`sessionType=0` 或不传。任一字段映射不确定时，真实交易必须阻断为 `broker.unsupported_order_type` 或 `unknown_by_official_doc`。第一批交易实现目标还包含美股碎股；美股碎股使用碎股专用 endpoint，不通过普通下单 `entrustProp=u` 建模。港股新股暗盘只保留设计，不实现真实请求构造。
 
 网页版普通下单还包含 `orderType`、`validDate`、`exchange` 可选字段；第一批 request builder 不发送这些字段，后续如支持 AMO/LOO 或指定交易所再单独建模。
 
@@ -1022,8 +1022,7 @@ safety:
 - 订单明细 `orderStatus` 历史节点的完整枚举。
 - 错误码完整枚举。
 - `finalStateFlag` 的完整枚举和是否可作为 OMS 订单终态判断依据。
-- `entrustProp` 中 `0` 对美股限价的精确适用规则；港股暗盘相关规则保留为后续设计项。
-- `sessionType=0` 在美股盘中交易中的精确适用规则；盘前、盘后和港股暗盘后置。
+- 美股碎股 `/odd-entrust` 的价格、数量、订单状态和撤单细节；港股暗盘相关规则保留为后续设计项。
 - 频率限制、IP 白名单生效规则。
 
 ## 17. 后续实现顺序

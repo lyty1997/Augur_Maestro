@@ -183,6 +183,15 @@ paths:
       x-robustquant-blocked-in-read-only: true
       x-robustquant-dry-run-for-application: true
       x-robustquant-header-profile: trade_demo_default
+      x-robustquant-first-live-order-profile:
+        market: US
+        exchangeType: 5
+        order_type: LIMIT
+        entrustProp: "0"
+        entrustType: [0, 1]
+        entrustPrice: positive_decimal
+        sessionType: 0_or_omitted
+        reject_when_mapping_uncertain: true
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
         - $ref: "#/components/parameters/HeaderContentType"
@@ -660,12 +669,14 @@ components:
           type: string
           enum: ["0", "d", "e", "g", "w"]
           x-robustquant-first-live-allowed: ["0"]
-          x-pending-confirmation: >
-            Precise applicability for US regular-hours limit order must be
-            confirmed. Web documentation adds w-market order; RobustQuant first
-            live scope still rejects market orders. HK grey-market rules are design-only. Odd-lot orders use
-            /stock-order-server/open-api/odd-entrust and do not send entrustProp
-            according to the current manual.
+          x-user-confirmed: "2026-05-21: first live normal-order profile only enables 0 for US regular-hours limit orders."
+          x-robustquant-rejects: ["d", "e", "g", "w"]
+          description: >
+            First implementation enables only 0 for US regular-hours limit
+            orders. Web documentation adds w-market order; RobustQuant first
+            live scope rejects market orders. HK grey-market rules are
+            design-only. Odd-lot orders use /stock-order-server/open-api/odd-entrust
+            and do not send entrustProp according to the current manual.
         entrustType:
           type: integer
           enum: [0, 1]
@@ -674,7 +685,7 @@ components:
           type: integer
           enum: [0, 5, 6, 7]
           x-robustquant-first-live-allowed: [5]
-          x-pending-confirmation: Interface-specific enum.
+          x-user-confirmed: "2026-05-21: first live normal-order profile only enables US exchangeType=5."
         stockCode:
           type: string
         stockName:
@@ -691,7 +702,8 @@ components:
           type: integer
           enum: [0, 1, 2, 3, 12]
           x-robustquant-first-live-allowed: [0]
-          x-pending-confirmation: Web documentation adds 12-fund order; RobustQuant first live scope only allows 0.
+          x-user-confirmed: "2026-05-21: first live normal-order profile uses regular-hours sessionType=0 or omits the field if accepted by uSmart."
+          description: Web documentation adds 12-fund order; RobustQuant first live scope only allows regular-hours 0 or omitted.
         orderType:
           type: integer
           enum: [0, 1]
