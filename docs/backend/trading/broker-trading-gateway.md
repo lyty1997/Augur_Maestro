@@ -616,11 +616,11 @@ safety:
 | 单元测试 | 签名、字段映射、脱敏、错误分类、状态映射 | 不允许 |
 | 契约测试 | 用录制或人工构造的脱敏响应验证 DTO 映射 | 不允许 |
 | 交易开放 API 只读集成测试 | 登录、账户、持仓、订单查询 | 仅在用户明确配置只读环境后允许 |
-| 受控实盘前演练 | 下单、改单、撤单链路演练 | 需要 sandbox；无 sandbox 不执行 |
+| 受控实盘前演练 | 下单、改单、撤单链路演练 | 需要确认 UAT / sandbox 不产生真实委托；未确认不执行 |
 
 重要规则：
 
-- 没有官方 sandbox 时，不运行真实下单、改单、撤单测试。
+- UAT 测试地址已由网页手册给出，但未确认 UAT 交易动作安全语义前，不运行真实下单、改单、撤单测试。
 - 交易接口截图或演示代码不作为 RobustQuant 开发验收标准。
 - 测试 fixture 不得包含真实账号、token、真实资金和真实持仓。
 - 对 `unknown`、超时、401、限流、字段缺失必须有单元测试。
@@ -667,9 +667,9 @@ safety:
 - 验证交易意图、风控、OMS 状态机和对账流程。
 - 不调用券商交易接口。
 
-### Phase 4：sandbox 交易验证
+### Phase 4：UAT / sandbox 交易验证
 
-- 前提：官方明确提供 sandbox，且确认不会产生真实委托。
+- 前提：官方明确 UAT / sandbox 不会产生真实委托。
 - 验证下单、改单、撤单、查询、成交回报。
 - 仍然经过 OMS、风控、交易时间检查和审计。
 
@@ -704,7 +704,7 @@ safety:
 
 必须从官方网页文档或盈立官方确认：
 
-- 盈立是否提供 sandbox 或 paper trading 环境。
+- UAT 测试地址 `http://open-jy-uat.yxzq.com` 是否等同 sandbox / paper trading，是否保证交易动作不产生真实委托。
 - 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；当前代码仍必须保留配置占位并默认 dry-run，不因文档存在 base URL 自动出网。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。

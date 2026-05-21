@@ -422,6 +422,7 @@ class uSmartTradeAuthSigner:
 
 - `X-Request-Id` 重复请求返回语义。
 - 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式。
+- UAT 测试地址是否等同 sandbox / paper trading，是否保证交易动作不产生真实委托。
 
 ## 6. 交易开放 API Client 设计
 
@@ -993,8 +994,9 @@ safety:
 
 受控实盘前测试：
 
-- 必须先确认 sandbox 或 paper trading 环境。
-- 没有 sandbox 时，不执行真实下单、改单、撤单测试。
+- 网页手册已给出 UAT 测试地址 `http://open-jy-uat.yxzq.com`。
+- 必须先确认 UAT 是否等同 sandbox / paper trading，且确认不会产生真实委托。
+- 未确认 UAT 交易动作安全语义前，不执行真实下单、改单、撤单测试。
 - 交易接口必须经过 OMS、风控、交易时间、白名单和人工确认。
 
 ## 16. 待确认问题
@@ -1002,6 +1004,7 @@ safety:
 需要从官方网页文档或 uSmart 官方确认：
 
 - 交易 API base URL：官方网页和 Python demo 给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过 `USMART_API_BASE_URL` 配置显式选择，默认 dry-run 不出网，真实出网需申请通过、IP 白名单、渠道号和密钥配置。
+- UAT 测试地址是否等同 sandbox / paper trading，是否保证下单、改单、撤单不产生真实委托。
 - `X-Request-Id` 重复请求返回语义。
 - `X-Sign` 输出编码默认保留 `=` padding，并通过配置允许切换；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密最终使用公钥加密还是私钥变换，以及 padding 模式；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
@@ -1026,4 +1029,4 @@ safety:
 5. 实现 `uSmartMapper`，用官方示例和人工脱敏 fixture 覆盖成功、业务拒绝、未知状态、缺失字段。
 6. 实现真实 HTTP transport，但默认配置仍为 `dry_run=true` 或 `mode=read_only`；没有用户明确配置时不能出网。
 7. 用户已确认允许只读查询联调；实现时只开放真实登录、资产查询、持仓查询、今日订单、历史订单、订单明细、成交流水和行情查询，禁止 `trade-login` 和所有交易动作。申请材料截图仍不做真实登录。
-8. 只有官方 sandbox 明确存在且不会产生真实委托时，才进入下单、改单、撤单链路验证；否则停在离线契约测试和只读联调。
+8. 只有 UAT / sandbox 明确不会产生真实委托时，才进入下单、改单、撤单链路验证；否则停在离线契约测试和只读联调。

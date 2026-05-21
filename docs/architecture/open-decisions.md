@@ -22,7 +22,7 @@
 - 东北证券 miniQMT 是否已具备交易权限和 API 权限。
 - 第一条实盘闭环后续是否优先接 miniQMT；需等待 miniQMT 权限、运行环境和接口能力确认。
 - 盈立 OpenAPI 若后续申请通过，再根据 uSmart 官方网页手册确认港股、美股行情和交易权限。
-- 盈立是否提供 sandbox；如果官方网页文档未说明，按 `unknown_by_official_doc` 处理，不运行真实下单、改单、撤单。
+- uSmart 网页手册已提供 UAT 测试地址；仍需确认该 UAT 是否等同 sandbox / paper trading，是否保证下单、改单、撤单不会产生真实委托。
 
 建议：
 
@@ -410,8 +410,8 @@
 
 待确认：
 
-- 盈立是否提供 sandbox。
-- 交易 API base URL 已由网页版文档给出：生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；真实出网仍需申请通过、IP 白名单、渠道号和密钥配置。
+- 交易 API base URL 已由网页版文档给出：生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`。
+- 测试地址 `http://open-jy-uat.yxzq.com` 是否等同 sandbox / paper trading，是否保证交易动作不产生真实委托，仍需券商确认；未确认前不运行真实下单、改单、撤单。
 - `X-Request-Id` 长度、有效期和重复请求语义；当前官方资料存在 19 位和 30 位两种描述，Python demo 只在部分交易接口显式传入 `X-Request-Id`。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的关系；Python demo 生成 19 位字符串，第一版按用户确认可使用数字 JSON，必要时切换字符串。
 - 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段；网页文档描述 `safeBase64` / URL-safe Base64，Python demo 交易 helper 使用标准 Base64。第一版默认按网页手册实现，并保留 demo 兼容配置。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
@@ -424,5 +424,5 @@
 建议：
 
 - 只解析官方网页文档和本地转换稿，为未来正式接入做设计依据；Python demo 仅用于实现细节校验。
-- 官方网页文档中找不到的 sandbox 和改单语义，标记为 `unknown_by_official_doc`；不把券商申请截图格式作为当前开发阻塞项。
+- 官方网页文档已给出 UAT 地址，但未明确 UAT 交易动作安全语义；未确认前不把它当作可下单 sandbox。不把券商申请截图格式作为当前开发阻塞项。
 - 具体调用栈、字段映射、只读查询 DTO 和签名策略按 [usmart-openapi-call-design.md](../backend/clients/usmart-openapi-call-design.md) 继续维护；统一网关能力模式和安全边界按 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md) 维护。
