@@ -413,6 +413,7 @@
 - 用户确认分页规则按官方手册：`pageNum` 当前页从 1 开始，默认 1；`pageSize` 每页结果数默认 10，最大 20。
 - 用户确认错误处理必须包含所有券商错误码，同时 RobustQuant gateway 要有自己的错误码层。
 - 用户确认配置和设计变量名必须区分登录密码和交易密码：登录密码使用 `login_password_secret_ref` / `loginPasswordEncrypted`，交易密码使用 `trade_password_secret_ref` / `tradePasswordEncrypted`；只有最终映射到盈立官方 request body 时才使用官方字段名 `password`。
+- 用户确认第一版 `trade_password_required=false`：保留交易密码字段抽象和加密能力，但默认不读取 `trade_password_secret_ref`，也不写入下单、改单、撤单 body。
 - 用户确认交易白名单先不固定，等待量化研究 Agent 输出候选标的。
 
 待确认：

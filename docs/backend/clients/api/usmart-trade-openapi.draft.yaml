@@ -604,6 +604,7 @@ components:
         loginPasswordEncrypted: Encrypted login password mapped to official login body field password.
         trade_password_secret_ref: Trading password secret used only for trade-action body password fields.
         tradePasswordEncrypted: Encrypted trading password mapped to official trade-action body field password.
+        trade_password_required_default: false
   schemas:
     PasswordLoginRequest:
       type: object

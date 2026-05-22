@@ -582,8 +582,8 @@ POST /stock-order-server/open-api/entrust-order
 | `request.market` | `exchangeType` | 0 港股，5 美股，6 沪港通，7 深港通；第一版真实普通单只允许 `5` |
 | `request.symbol` | `stockCode` | 股票代码 |
 | `request.name` | `stockName` | 可选 |
-| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；默认不读取 |
-| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；启用时映射到盈立官方 body 字段 `password` |
+| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；第一版 `trade_password_required=false`，默认不读取 |
+| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；仅 `trade_password_required=true` 时映射到盈立官方 body 字段 `password` |
 | 是否强制委托 | `forceEntrustFlag` | 默认不启用 |
 | 交易阶段 | `sessionType` | 默认不传或正常交易 |
 
@@ -707,8 +707,8 @@ POST /stock-order-server/open-api/modify-order
 | `request.new_quantity` | `entrustAmount` | 新委托数量 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | `request.new_limit_price` | `entrustPrice` | 新委托价格 |
-| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；默认不读取 |
-| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；启用时映射到盈立官方 body 字段 `password` |
+| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；第一版 `trade_password_required=false`，默认不读取 |
+| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；仅 `trade_password_required=true` 时映射到盈立官方 body 字段 `password` |
 | 是否强制委托 | `forceEntrustFlag` | 默认不启用 |
 
 响应处理目标：
@@ -760,8 +760,8 @@ POST /stock-order-server/open-api/modify-order
 | 固定值 | `entrustAmount=0` | 撤单时传 0 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | 固定值 | `entrustPrice=0` | 撤单时传 0 |
-| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；默认不读取 |
-| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；启用时映射到盈立官方 body 字段 `password` |
+| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；第一版 `trade_password_required=false`，默认不读取 |
+| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；仅 `trade_password_required=true` 时映射到盈立官方 body 字段 `password` |
 
 响应处理目标：
 
