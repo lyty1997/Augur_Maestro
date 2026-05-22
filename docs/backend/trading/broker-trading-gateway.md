@@ -411,7 +411,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - 登录态过期时，只读查询可以显式重新登录并使用新的 `request_id` 重新发起查询；交易动作不能在下单、改单、撤单过程中隐式刷新登录后继续提交，必须让 OMS 重新进入可审计状态。
 - 签名失败、验签失败、401、权限不足必须归一化为明确错误码。
 
-Gateway 错误码是 RobustQuant 自己的稳定错误层；券商返回的所有 raw code/msg 必须完整保留在券商错误码 catalog 中，再映射到 gateway 错误码。第一批 gateway 错误码包括：
+Gateway 错误码是 RobustQuant 自己的稳定错误层；券商返回的 raw code/msg 必须按 endpoint 保留在券商响应状态 catalog 中，再映射到 gateway 错误码。实现时只能根据当前调用 endpoint 查找对应 `response_statuses`，不能把不同接口的状态码混用。第一批 gateway 错误码包括：
 
 ```text
 broker.auth_missing
@@ -640,7 +640,7 @@ safety:
 - 对只读 DTO 映射必须有契约测试：资产、持仓、订单、成交、最大可买可卖、改单范围。
 - 对内部 `broker_request_id`、端点级 `X-Request-Id` 与 `serialNo` 的生成、长度校验和审计映射必须有单元测试。
 - 对分页请求必须有契约测试：`pageNum` 从 1 开始、默认 1；`pageSize` 默认 10、最大 20。
-- 对券商错误码必须有 catalog 生成或校验测试：官方网页手册中的业务错误码全部进入 raw code catalog，并映射到 gateway 错误码或 `broker.unclassified`。
+- 对券商错误码必须有 catalog 生成或校验测试：官方网页手册中的响应状态按 endpoint 分组进入 raw code catalog，并映射到 gateway 错误码或 `broker.unclassified`。
 
 ## 14. 开发阶段划分
 
@@ -722,7 +722,7 @@ safety:
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举和状态流转；已确认必须进入 OMS mapper。
-- 券商错误码完整枚举提取；项目策略已确认保留完整券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
+- 券商响应状态完整枚举提取；项目策略已确认按 endpoint 分组保留券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
 - 订单类型、价格类型、市场、币种、盘前盘后规则。
 - `X-Request-Id` 的有效期和重复请求返回语义。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的官方关系；当前实现只保留本地审计映射，不假设两者相同。

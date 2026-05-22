@@ -893,8 +893,11 @@ components:
     BusinessCode:
       type: integer
       description: uSmart business response code. code=0 may indicate business success.
-      x-robustquant-policy: Store every official broker raw code in a catalog and map it to a stable gateway error code.
-      x-pending-confirmation: Complete enum extraction from the official web manual.
+      x-robustquant-policy: >
+        Look up raw codes by current endpoint in usmart-trade-error-codes.draft.yaml.
+        Do not treat codes from another endpoint as valid for this operation.
+        Map endpoint-specific raw codes to stable gateway error codes.
+      x-pending-confirmation: Complete endpoint-specific enum extraction from the official web manual.
     OrderStatusRaw:
       type: integer
       enum: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]

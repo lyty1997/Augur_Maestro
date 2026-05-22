@@ -17,7 +17,7 @@
 
 本文档是 [broker-trading-gateway.md](../trading/broker-trading-gateway.md) 的下层专项设计。`TradingGateway` 是统一交易安全门面；本文档描述从本地入口、应用服务、`TradingGateway`、`uSmartOpenApiTradingAdapter`、交易开放 API client、交易开放 API signer、HTTP transport 到 uSmart / 盈立交易开放 API server 的完整调用栈。
 
-机器可读 OpenAPI 对接草案见 [api/usmart-trade-openapi.draft.yaml](api/usmart-trade-openapi.draft.yaml)。交易错误码 catalog 见 [api/usmart-trade-error-codes.draft.yaml](api/usmart-trade-error-codes.draft.yaml)，由 `src/scripts/docs/extract_usmart_trade_error_codes.py` 从官方网页转换稿生成。草案只用于字段对齐、契约测试和后续代码生成准备；其中 `x-pending-confirmation` 标记的字段不得视为已确认接口事实。
+机器可读 OpenAPI 对接草案见 [api/usmart-trade-openapi.draft.yaml](api/usmart-trade-openapi.draft.yaml)。交易响应状态 catalog 见 [api/usmart-trade-error-codes.draft.yaml](api/usmart-trade-error-codes.draft.yaml)，由 `src/scripts/docs/extract_usmart_trade_error_codes.py` 从官方网页转换稿生成，并按 `endpoint` / 手册章节分组；调用方必须按当前接口读取对应 `response_statuses`，不能把不同接口的状态码混成全局处理表。草案只用于字段对齐、契约测试和后续代码生成准备；其中 `x-pending-confirmation` 标记的字段不得视为已确认接口事实。
 
 盈立官方资料实际拆成三套 API，本文档只覆盖第一套：
 
@@ -986,7 +986,7 @@ safety:
 
 错误码分两层处理：
 
-- 券商 raw code catalog：从官方网页手册完整提取所有业务错误码，保留原始 `code`、`msg`、endpoint、接口族和手册来源，用于排查、对账和后续精细分类。
+- 券商 raw code catalog：从官方网页手册按接口提取响应状态，保留原始 `code`、`msg`、endpoint、接口族和手册来源；每个接口只处理自己 `response_statuses` 下列出的状态码。
 - Gateway error code：RobustQuant 自己的稳定错误码，供 OMS、风控、CLI/API 调用方使用；不能把券商 raw code 直接泄露成内部控制流。
 
 禁止记录：
@@ -1028,7 +1028,7 @@ safety:
 - 对官方示例状态 `1`、`5`、`11`、`21`、`0` 建立 mapper 单元测试；未识别状态必须进入 `unknown_by_official_doc`。
 - 对 `X-Request-Id` 和 `serialNo` 生成、长度校验、审计映射建立单元测试。
 - 对分页请求建立契约测试：默认 `pageNum=1`、默认 `pageSize=10`、最大 `pageSize=20`。
-- 对券商错误码建立 catalog 生成或校验测试：官方网页手册中的业务错误码必须全部进入 raw code catalog，并映射到 gateway 错误码或 `broker.unclassified`。
+- 对券商错误码建立 catalog 生成或校验测试：官方网页手册中的响应状态必须按 endpoint 分组进入 raw code catalog，并映射到 gateway 错误码或 `broker.unclassified`。
 
 只读联调测试：
 

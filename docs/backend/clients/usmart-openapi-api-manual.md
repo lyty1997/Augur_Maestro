@@ -20,7 +20,7 @@
 | 基础报价 API | `https://api-doc.usmart8.com/zh-cn/quote-base.html` | HTTPS POST | 否 |
 | 报价推送 API | `https://api-doc.usmart8.com/zh-cn/quote-push.html` | WebSocket | 否 |
 
-本地网页转换稿保存于 `API_manual/uSmart/API_manual/`。官方 Python demo `API_manual/uSmart/openapi-demo-py/` 只作为签名、加密、序列化和连接流程参考，不替代网页字段表；不得提交或复制 demo 中的账号、密码、token、私钥或配置。交易错误码 catalog 由 `src/scripts/docs/extract_usmart_trade_error_codes.py` 从本地网页转换稿生成到 `docs/backend/clients/api/usmart-trade-error-codes.draft.yaml`。
+本地网页转换稿保存于 `API_manual/uSmart/API_manual/`。官方 Python demo `API_manual/uSmart/openapi-demo-py/` 只作为签名、加密、序列化和连接流程参考，不替代网页字段表；不得提交或复制 demo 中的账号、密码、token、私钥或配置。交易响应状态 catalog 由 `src/scripts/docs/extract_usmart_trade_error_codes.py` 从本地网页转换稿生成到 `docs/backend/clients/api/usmart-trade-error-codes.draft.yaml`，并按 `endpoint` / 手册章节分组，接口实现只能读取当前 endpoint 对应的响应状态。
 
 ## 1. 现有设计缺口
 
@@ -610,5 +610,5 @@ class uSmartHttpTransport:
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举；已确认 `status` / `orderStatus` 和 `finalStateFlag` 都必须进入 OMS mapper，未知或冲突状态进入 `unknown_by_official_doc`。
-- 券商错误码完整枚举提取；项目策略已确认必须有完整券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
+- 券商响应状态完整提取；项目策略已确认必须按 endpoint 分组保留券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
 - 美股碎股使用 `/stock-order-server/open-api/odd-entrust` 专用接口，不通过普通下单 `entrustProp` 建模；第一版内部按金额建模，发送给券商的 `entrustAmount` 为金额除以限价换算出的小数股数。最小金额、最小股数、数量精度、订单状态和撤单细节仍需后续按网页手册和 demo 继续细化。

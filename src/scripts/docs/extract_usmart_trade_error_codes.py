@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -147,6 +148,10 @@ def parse_rows(lines: list[str]) -> list[ErrorCodeRow]:
 
 
 def render_yaml(rows: list[ErrorCodeRow]) -> str:
+    grouped: OrderedDict[tuple[str | None, str, str], list[ErrorCodeRow]] = OrderedDict()
+    for row in rows:
+        grouped.setdefault((row.endpoint, row.section_id, row.source_section), []).append(row)
+
     lines = [
         "# Generated from API_manual/uSmart/API_manual/usmart-trade-openapi.zh-cn.md.",
         "# Do not hand-edit individual entries; update the source manual or extraction script.",
@@ -161,31 +166,47 @@ def render_yaml(rows: list[ErrorCodeRow]) -> str:
         "  notes:",
         "    - Keep broker raw code/msg for diagnostics and audit.",
         "    - Use gateway_error for OMS, risk, CLI, and API control flow.",
-        "codes:",
+        "    - Response statuses are grouped by endpoint; do not treat codes as globally valid.",
+        "summary:",
+        f"  endpoint_count: {len(grouped)}",
+        f"  response_status_row_count: {len(rows)}",
+        "endpoints:",
     ]
 
-    for row in rows:
+    for (endpoint, section_id, source_section), endpoint_rows in grouped.items():
         lines.extend(
             [
-                f"  - code: {yaml_quote(row.code)}",
-                f"    code_type: {yaml_quote(code_type(row.code))}",
-                f"    message: {yaml_quote(row.message)}",
-                f"    gateway_error: {yaml_quote(gateway_error_for(row.code, row.message))}",
-                f"    endpoint: {yaml_quote(row.endpoint)}",
-                f"    source_section: {yaml_quote(row.source_section)}",
-                f"    section_id: {yaml_quote(row.section_id)}",
-                f"    source_line: {row.source_line}",
+                f"  - endpoint: {yaml_quote(endpoint)}",
+                f"    source_section: {yaml_quote(source_section)}",
+                f"    section_id: {yaml_quote(section_id)}",
+                f"    response_status_count: {len(endpoint_rows)}",
+                "    response_statuses:",
             ]
         )
-        if row.schema:
-            lines.append(f"    schema: {yaml_quote(row.schema)}")
+        for row in endpoint_rows:
+            lines.extend(
+                [
+                    f"      - code: {yaml_quote(row.code)}",
+                    f"        code_type: {yaml_quote(code_type(row.code))}",
+                    f"        message: {yaml_quote(row.message)}",
+                    "        gateway_error: "
+                    f"{yaml_quote(gateway_error_for(row.code, row.message))}",
+                    f"        source_line: {row.source_line}",
+                ]
+            )
+            if row.schema:
+                lines.append(f"        schema: {yaml_quote(row.schema)}")
     return "\n".join(lines) + "\n"
 
 
 def main() -> None:
     rows = parse_rows(SOURCE.read_text(encoding="utf-8").splitlines())
     OUTPUT.write_text(render_yaml(rows), encoding="utf-8")
-    print(f"Wrote {len(rows)} uSmart trade error code rows to {OUTPUT.relative_to(ROOT)}")
+    endpoint_count = len({(row.endpoint, row.section_id, row.source_section) for row in rows})
+    print(
+        f"Wrote {len(rows)} uSmart trade response status rows "
+        f"for {endpoint_count} endpoints to {OUTPUT.relative_to(ROOT)}"
+    )
 
 
 if __name__ == "__main__":
