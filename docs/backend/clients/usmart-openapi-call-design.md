@@ -503,7 +503,8 @@ POST /user-server/open-api/login
 |---|---|---|
 | `areaCode` | 配置 | 区号 |
 | `phoneNumber` | 本地密钥配置 | 官方网页登录接口字段，需使用隐私资料加密密钥材料处理，默认按公钥加密 |
-| `password` | 本地密钥配置 | RSA 加密后的登录密码 |
+| `login_password_secret_ref` | 本地密钥配置 | 登录密码 secret 引用 |
+| `loginPasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的登录密码；映射到盈立官方 body 字段 `password` |
 
 登录手机号字段名确认使用 `phoneNumber`，不使用 `mobile`、`phone` 或 `telephone`。
 
@@ -524,6 +525,15 @@ POST /user-server/open-api/login
 | `captcha` | 用户输入 / 人工流程 | 手机验证码，不写日志 |
 
 `loginCaptcha` 参数表只列出 `areaCode`、`captcha`、`phoneNumber` 三个 body 字段；请求 body 示例里出现了 `modifyUserConfigParam`。第一版不主动发送 `modifyUserConfigParam`，除非盈立确认该示例字段在当前渠道必填。
+
+登录密码和交易密码必须在配置和代码变量名上分离：
+
+| 语义 | 配置 / 内部变量 | 盈立官方 body 字段 |
+|---|---|---|
+| 登录密码 | `login_password_secret_ref`、`loginPasswordEncrypted` | 登录接口 `/login` 的 `password` |
+| 交易密码 | `trade_password_secret_ref`、`tradePasswordEncrypted` | 下单、改单、撤单 body 的 `password` |
+
+除最终 request body builder 外，代码中不得使用裸 `password` 表示某个 secret，避免把登录密码和交易密码混用。
 
 响应处理：
 
@@ -572,7 +582,8 @@ POST /stock-order-server/open-api/entrust-order
 | `request.market` | `exchangeType` | 0 港股，5 美股，6 沪港通，7 深港通；第一版真实普通单只允许 `5` |
 | `request.symbol` | `stockCode` | 股票代码 |
 | `request.name` | `stockName` | 可选 |
-| 交易密码 | `password` | 发送到盈立交易 API request body 的交易密码字段；官方网页普通下单字段为可选，启用时必须用隐私资料加密密钥 RSA 加密 |
+| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；默认不读取 |
+| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；启用时映射到盈立官方 body 字段 `password` |
 | 是否强制委托 | `forceEntrustFlag` | 默认不启用 |
 | 交易阶段 | `sessionType` | 默认不传或正常交易 |
 
@@ -696,7 +707,8 @@ POST /stock-order-server/open-api/modify-order
 | `request.new_quantity` | `entrustAmount` | 新委托数量 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | `request.new_limit_price` | `entrustPrice` | 新委托价格 |
-| 交易密码 | `password` | 发送到盈立交易 API request body 的交易密码字段；官方网页改单字段为可选，启用时必须用隐私资料加密密钥 RSA 加密 |
+| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；默认不读取 |
+| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；启用时映射到盈立官方 body 字段 `password` |
 | 是否强制委托 | `forceEntrustFlag` | 默认不启用 |
 
 响应处理目标：
@@ -748,7 +760,8 @@ POST /stock-order-server/open-api/modify-order
 | 固定值 | `entrustAmount=0` | 撤单时传 0 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | 固定值 | `entrustPrice=0` | 撤单时传 0 |
-| 交易密码 | `password` | 发送到盈立交易 API request body 的交易密码字段；官方网页撤单字段为可选，启用时必须用隐私资料加密密钥 RSA 加密 |
+| `trade_password_secret_ref` | 内部配置 | 交易密码 secret 引用；默认不读取 |
+| `tradePasswordEncrypted` | `uSmartTradeSensitiveFieldEncryptor` | RSA 加密后的交易密码；启用时映射到盈立官方 body 字段 `password` |
 
 响应处理目标：
 

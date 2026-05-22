@@ -143,7 +143,7 @@ class BrokerLoginRequest:
 |---|---|---|
 | `account_ref` | 本地配置 | 脱敏账户引用，不是完整账号 |
 | `method` | 入口参数 | `password` 为渠道密码登录；`captcha` 为手机验证码登录 |
-| `login_profile_ref` | 本地密钥配置 | 指向区号、手机号、登录密码 secret 的引用 |
+| `login_profile_ref` | 本地密钥配置 | 指向区号、手机号、`login_password_secret_ref` 的引用 |
 | `request_id` | L1/L3 | 本地审计 ID；仅在端点 header profile 要求时外发为 `X-Request-Id` |
 | `allow_real_http` | 运行配置 | 默认 `False`；申请截图代码必须使用 dry-run，不做真实登录 |
 
@@ -275,7 +275,7 @@ POST /user-server/open-api/loginCaptcha
 |---|---|---|
 | `login_profile.area_code` | `areaCode` | 配置读取 |
 | `login_profile.phone_number` | `phoneNumber` | 使用隐私资料加密密钥材料处理后写入 body，默认按公钥加密 |
-| `login_profile.password` | `password` | 使用隐私资料加密密钥材料处理后写入 body，默认按公钥加密 |
+| `login_profile.login_password_secret_ref` | `password` | 读取登录密码 secret 后使用隐私资料加密密钥材料处理，最终写入盈立官方登录 body 字段 `password` |
 | 固定值 | `type` | 仅用于 `/send-phone-captcha`，`106` 表示短信登录验证码 |
 | 用户输入 / 人工流程 | `captcha` | 仅用于 `/loginCaptcha`，不写日志 |
 | `request.request_id` | 内部审计 ID / 可选 `X-Request-Id` | 始终保留本地审计；只有端点 header profile 要求时外发为 header |
@@ -342,7 +342,7 @@ POST /stock-order-server/open-api/entrust-order
 | `request.market` | `exchangeType` | `US -> 5` 为第一批普通真实交易范围；`HK -> 0` 仅保留港股暗盘设计；沪深港通先禁用真实交易 |
 | `request.symbol` | `stockCode` | 股票代码 |
 | 可选名称 | `stockName` | 非主键，可不传 |
-| 交易密码 secret | `password` | 盈立交易 API body 字段；官方网页普通下单字段为可选，启用时按隐私资料加密密钥 RSA 加密后传 |
+| `trade_password_secret_ref` | `password` | 读取交易密码 secret 后加密，最终写入盈立交易 API body 字段 `password`；官方网页普通下单字段为可选，默认不发送 |
 | 固定安全默认 | `forceEntrustFlag` | 默认不启用 |
 | `request.session` | `sessionType` | 第一批只做正常盘中交易 `0` / 不传；港股暗盘候选为 `3` 但仅保留设计；美股盘前盘后不进第一批 |
 
@@ -411,7 +411,7 @@ POST /stock-order-server/open-api/modify-order
 | `request.new_quantity` | `entrustAmount` | 未改数量时按官方网页要求处理；不能猜默认 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | `request.new_limit_price` | `entrustPrice` | 未改价格时按官方网页要求处理；不能猜默认 |
-| 交易密码 secret | `password` | 盈立交易 API body 字段；官方网页改单字段为可选，启用时按隐私资料加密密钥 RSA 加密后传 |
+| `trade_password_secret_ref` | `password` | 读取交易密码 secret 后加密，最终写入盈立交易 API body 字段 `password`；官方网页改单字段为可选，默认不发送 |
 | 固定安全默认 | `forceEntrustFlag` | 默认不启用 |
 
 ### 9.4 输出映射
@@ -455,7 +455,7 @@ POST /stock-order-server/open-api/modify-order
 | 固定值 | `entrustAmount` | `0` |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | 固定值 | `entrustPrice` | `0` |
-| 交易密码 secret | `password` | 盈立交易 API body 字段；官方网页撤单字段为可选，启用时按隐私资料加密密钥 RSA 加密后传 |
+| `trade_password_secret_ref` | `password` | 读取交易密码 secret 后加密，最终写入盈立交易 API body 字段 `password`；官方网页撤单字段为可选，默认不发送 |
 
 ### 10.4 输出映射
 
@@ -606,6 +606,7 @@ class uSmartHttpTransport:
 - `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和控制 `=` padding；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64；仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系。它必须和 `X-Sign` 渠道签名密钥材料分离。
 - 交易密码 `password` 指盈立交易 API request body 中的交易密码字段；普通下单、改单、撤单手册字段为可选。第一版保留字段抽象和加密能力，默认不发送，只有配置显式要求时才从 secret 读取并加密写入 body。
+- 配置和代码变量名必须区分登录密码和交易密码：登录使用 `login_password_secret_ref` / `loginPasswordEncrypted`，交易使用 `trade_password_secret_ref` / `tradePasswordEncrypted`。只有最终映射到盈立官方 request body 时才使用官方字段名 `password`。
 - token `expiration` 的精确格式、时区和官方刷新接口语义；第一版项目策略已确认：内存 session、只读可显式重登、交易动作不隐式刷新、单账户单 session。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。

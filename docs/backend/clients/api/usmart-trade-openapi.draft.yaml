@@ -599,6 +599,11 @@ components:
         wrapping for public_key/private_key are unusual, so RobustQuant binds
         final broker-provided key material to explicit config slots and verifies
         the transform in offline tests instead of inferring semantics from names.
+      x-robustquant-secret-naming:
+        login_password_secret_ref: Login password secret used only for /user-server/open-api/login.
+        loginPasswordEncrypted: Encrypted login password mapped to official login body field password.
+        trade_password_secret_ref: Trading password secret used only for trade-action body password fields.
+        tradePasswordEncrypted: Encrypted trading password mapped to official trade-action body field password.
   schemas:
     PasswordLoginRequest:
       type: object
@@ -617,6 +622,8 @@ components:
           type: string
           description: Encrypted login password.
           x-sensitive: true
+          x-robustquant-source-secret: login_password_secret_ref
+          x-robustquant-internal-name: loginPasswordEncrypted
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
           x-pending-confirmation: Final broker key material to demo config slot mapping.
     SendPhoneCaptchaRequest:
@@ -705,11 +712,13 @@ components:
           type: string
           x-sensitive: true
           description: Optional encrypted trading password in uSmart request body.
+          x-robustquant-source-secret: trade_password_secret_ref
+          x-robustquant-internal-name: tradePasswordEncrypted
           x-robustquant-policy: >
             Keep the field abstraction and encryption boundary. Do not send by
-            default; only include when trade_password_required=true and a trade
-            password secret is available. Encrypt with the sensitive-field RSA
-            transform, not the X-Sign key.
+            default; only include when trade_password_required=true and
+            trade_password_secret_ref is available. Encrypt with the
+            sensitive-field RSA transform, not the X-Sign key.
         forceEntrustFlag:
           type: boolean
           default: false
@@ -755,11 +764,13 @@ components:
           type: string
           x-sensitive: true
           description: Optional encrypted trading password in uSmart request body.
+          x-robustquant-source-secret: trade_password_secret_ref
+          x-robustquant-internal-name: tradePasswordEncrypted
           x-robustquant-policy: >
             Keep the field abstraction and encryption boundary. Do not send by
-            default; only include when trade_password_required=true and a trade
-            password secret is available. Encrypt with the sensitive-field RSA
-            transform, not the X-Sign key.
+            default; only include when trade_password_required=true and
+            trade_password_secret_ref is available. Encrypt with the
+            sensitive-field RSA transform, not the X-Sign key.
         forceEntrustFlag:
           type: boolean
           default: false
@@ -785,11 +796,13 @@ components:
           type: string
           x-sensitive: true
           description: Optional encrypted trading password in uSmart request body.
+          x-robustquant-source-secret: trade_password_secret_ref
+          x-robustquant-internal-name: tradePasswordEncrypted
           x-robustquant-policy: >
             Keep the field abstraction and encryption boundary. Do not send by
-            default; only include when trade_password_required=true and a trade
-            password secret is available. Encrypt with the sensitive-field RSA
-            transform, not the X-Sign key.
+            default; only include when trade_password_required=true and
+            trade_password_secret_ref is available. Encrypt with the
+            sensitive-field RSA transform, not the X-Sign key.
     OddLotOrderRequest:
       type: object
       additionalProperties: false

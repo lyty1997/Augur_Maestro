@@ -412,6 +412,7 @@
 - 用户确认 `orderStatus` 肯定要给 OMS 判断订单状态，`finalStateFlag` 也要让 OMS 知道；项目策略为 `status` / `orderStatus` 和 `finalStateFlag` 共同进入 OMS mapper，冲突或未知状态进入 `unknown_by_official_doc`。
 - 用户确认分页规则按官方手册：`pageNum` 当前页从 1 开始，默认 1；`pageSize` 每页结果数默认 10，最大 20。
 - 用户确认错误处理必须包含所有券商错误码，同时 RobustQuant gateway 要有自己的错误码层。
+- 用户确认配置和设计变量名必须区分登录密码和交易密码：登录密码使用 `login_password_secret_ref` / `loginPasswordEncrypted`，交易密码使用 `trade_password_secret_ref` / `tradePasswordEncrypted`；只有最终映射到盈立官方 request body 时才使用官方字段名 `password`。
 - 用户确认交易白名单先不固定，等待量化研究 Agent 输出候选标的。
 
 待确认：
