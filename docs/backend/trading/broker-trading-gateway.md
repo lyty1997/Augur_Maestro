@@ -421,6 +421,11 @@ broker.sign_failed
 broker.permission_denied
 broker.ip_not_allowed
 broker.rate_limited
+broker.bad_request
+broker.account_restricted
+broker.captcha_required
+broker.order_rejected
+broker.endpoint_not_found
 broker.unclassified
 ```
 

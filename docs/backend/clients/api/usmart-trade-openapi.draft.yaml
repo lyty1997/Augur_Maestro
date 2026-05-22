@@ -19,6 +19,7 @@ info:
     - ../../../../API_manual/uSmart/openapi-demo-py/common/utils.py
     - ../../../../API_manual/uSmart/openapi-demo-py/api/quote_push.py
     - ../../../../API_manual/uSmart/openapi-demo-py/common/ws_util.py
+    - usmart-trade-error-codes.draft.yaml
     - ../usmart-openapi-call-design.md
     - ../usmart-openapi-api-manual.md
     - ../../trading/broker-trading-gateway.md

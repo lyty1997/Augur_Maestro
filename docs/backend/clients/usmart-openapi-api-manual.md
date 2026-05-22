@@ -20,7 +20,7 @@
 | 基础报价 API | `https://api-doc.usmart8.com/zh-cn/quote-base.html` | HTTPS POST | 否 |
 | 报价推送 API | `https://api-doc.usmart8.com/zh-cn/quote-push.html` | WebSocket | 否 |
 
-本地网页转换稿保存于 `API_manual/uSmart/API_manual/`。官方 Python demo `API_manual/uSmart/openapi-demo-py/` 只作为签名、加密、序列化和连接流程参考，不替代网页字段表；不得提交或复制 demo 中的账号、密码、token、私钥或配置。
+本地网页转换稿保存于 `API_manual/uSmart/API_manual/`。官方 Python demo `API_manual/uSmart/openapi-demo-py/` 只作为签名、加密、序列化和连接流程参考，不替代网页字段表；不得提交或复制 demo 中的账号、密码、token、私钥或配置。交易错误码 catalog 由 `src/scripts/docs/extract_usmart_trade_error_codes.py` 从本地网页转换稿生成到 `docs/backend/clients/api/usmart-trade-error-codes.draft.yaml`。
 
 ## 1. 现有设计缺口
 
