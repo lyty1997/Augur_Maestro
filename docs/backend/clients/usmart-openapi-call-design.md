@@ -572,7 +572,7 @@ POST /stock-order-server/open-api/entrust-order
 | `request.market` | `exchangeType` | 0 港股，5 美股，6 沪港通，7 深港通；第一版真实普通单只允许 `5` |
 | `request.symbol` | `stockCode` | 股票代码 |
 | `request.name` | `stockName` | 可选 |
-| 交易密码 | `password` | 可选，是否需要以官方要求为准 |
+| 交易密码 | `password` | 发送到盈立交易 API request body 的交易密码字段；官方网页普通下单字段为可选，启用时必须用隐私资料加密密钥 RSA 加密 |
 | 是否强制委托 | `forceEntrustFlag` | 默认不启用 |
 | 交易阶段 | `sessionType` | 默认不传或正常交易 |
 
@@ -696,7 +696,7 @@ POST /stock-order-server/open-api/modify-order
 | `request.new_quantity` | `entrustAmount` | 新委托数量 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | `request.new_limit_price` | `entrustPrice` | 新委托价格 |
-| 交易密码 | `password` | 可选，是否需要以官方要求为准 |
+| 交易密码 | `password` | 发送到盈立交易 API request body 的交易密码字段；官方网页改单字段为可选，启用时必须用隐私资料加密密钥 RSA 加密 |
 | 是否强制委托 | `forceEntrustFlag` | 默认不启用 |
 
 响应处理目标：
@@ -748,7 +748,7 @@ POST /stock-order-server/open-api/modify-order
 | 固定值 | `entrustAmount=0` | 撤单时传 0 |
 | `request.broker_order_id` | `entrustId` | 原委托 ID |
 | 固定值 | `entrustPrice=0` | 撤单时传 0 |
-| 交易密码 | `password` | 可选，是否需要以官方要求为准 |
+| 交易密码 | `password` | 发送到盈立交易 API request body 的交易密码字段；官方网页撤单字段为可选，启用时必须用隐私资料加密密钥 RSA 加密 |
 
 响应处理目标：
 
@@ -812,8 +812,8 @@ POST /stock-order-server/open-api/modify-order
 | `onWayBalance` | `on_way_cash` | 在途资金 |
 | `entrustId` | `broker_order_id` | 委托记录号 |
 | `entrustType` | `side` 或成交类型 | 查询接口里可能包含买、卖、撤单、补单、改单等类型，不能简单复用下单方向枚举 |
-| `orderStatus` / `status` | `broker_status_raw` | 原始状态码，需经 mapper 转内部状态 |
-| `finalStateFlag` | `final_state_flag` | 是否最终状态，语义需确认 |
+| `orderStatus` / `status` | `broker_status_raw` | 原始状态码，必须经 mapper 转为 OMS 内部状态 |
+| `finalStateFlag` | `final_state_flag` | 是否终态标识，官方字段说明为 `0` 非终态、`1` 终态，必须进入 OMS mapper |
 | `businessAmount` | `filled_quantity` / `trade_quantity` | 成交数量 |
 | `businessAveragePrice` / `businessPrice` | `avg_fill_price` / `trade_price` | 成交均价或成交价 |
 | `businessBalance` | `trade_amount` | 成交金额 |
@@ -836,7 +836,7 @@ POST /stock-order-server/open-api/modify-order
 - 本地只读联调审计日志保留 30 个交易日。
 - 查询失败可以按限流策略做有限重试，默认最多 2 次退避；交易动作不自动重试。
 - 对账和风控只能使用结构化结果，不直接传播券商原始响应。
-- 查询接口分页必须显式传入 `page_num`、`page_size` 或使用配置默认值；不得无限翻页。
+- 查询接口分页按官方网页手册处理：`pageNum` 当前页从 1 开始，默认值 1；`pageSize` 每页结果数默认 10，最大 20；不得无限翻页。
 - 多市场 `exchangeType=100` 只允许用于查询，不允许流入下单请求。
 - 只读查询结果可以用于风控辅助，但不能替代对账状态；对账异常时必须暂停相关自动交易。
 - 第一版只做单账户只读联调，不启用批量资产和多账户聚合查询。
@@ -848,10 +848,10 @@ POST /stock-order-server/open-api/modify-order
 | 类型 | 示例 | 处理 |
 |---|---|---|
 | `transport_error` | DNS、TLS、connect timeout、read timeout | 交易动作进入 `unknown`，查询可有限重试 |
-| `http_error` | 401、403、404、5xx | 映射统一错误码，记录脱敏摘要 |
+| `http_error` | 401、403、404、5xx | 映射 gateway 错误码，记录脱敏摘要 |
 | `auth_error` | token 失效、签名失败、IP 白名单拒绝 | 停止交易动作，提示人工检查 |
 | `rate_limited` | 频率限制 | 查询退避重试，交易不自动补偿 |
-| `business_reject` | 资金不足、数量错误、市场规则拒绝 | 映射为 `broker_rejected` |
+| `business_reject` | 资金不足、数量错误、市场规则拒绝 | 保留券商 raw code/msg，并映射 gateway 错误码 |
 | `unknown_response` | 缺少订单号、状态码未知、响应结构不匹配 | 进入 `unknown_by_official_doc` 或 `unknown` |
 
 交易动作统一原则：
@@ -862,7 +862,7 @@ POST /stock-order-server/open-api/modify-order
 
 ### 12.1 状态映射初稿
 
-普通订单 `status` 已在交易 API 手册资料字典 `5.1 訂單狀態（Status）` 中给出。没有列出的状态码一律映射为 `unknown_by_official_doc`，并保留原始状态摘要供人工确认。
+普通订单 `status` 已在交易 API 手册资料字典 `5.1 訂單狀態（Status）` 中给出。今日订单、历史订单和订单详情中的 `status` / `orderStatus` 必须进入 OMS 状态 mapper；没有列出的状态码一律映射为 `unknown_by_official_doc`，并保留原始状态摘要供人工确认。
 
 | 来源字段 | 官方值 | 官方状态名 | 内部建议状态 | 说明 |
 |---|---|---|---|---|
@@ -876,8 +876,8 @@ POST /stock-order-server/open-api/modify-order
 | 普通订单 `status` | `6` | 已撤单 | `cancelled` | 订单终态候选 |
 | 普通订单 `status` | `7` | 部成撤单 | `partial_cancelled` | 部分成交后撤单，终态候选 |
 | 普通订单 `status` | `8` | 废单 | `broker_rejected` | 订单终态候选 |
-| 订单明细 `orderStatus` | `11` | 委托下单 | `submitted` 或 `accepted` 待确认 | 示例历史节点 |
-| 订单明细 `orderStatus` | `21` | 改单（最新订单） | `accepted` 或 `unknown` 待确认 | 示例历史节点 |
+| 订单明细 `orderStatus` | `11` | 委托下单 | `submitted` 或 `accepted` 待官方枚举确认 | 示例历史节点 |
+| 订单明细 `orderStatus` | `21` | 改单（最新订单） | `accepted` 或 `unknown` 待官方枚举确认 | 示例历史节点 |
 | 订单明细 `orderStatus` | `0` | 全部成交（订单结束） | `filled` | 示例显示为最终成交 |
 | 成交流水 `businessStatus` | `1` | 成交成功 | `filled_event` | 成交流水事件，不直接作为订单总状态 |
 | 成交流水 `businessStatus` | `2` | 成交取消 | `trade_cancelled_event` | 成交流水事件，不直接作为订单总状态 |
@@ -886,8 +886,11 @@ POST /stock-order-server/open-api/modify-order
 
 - 下单、改单、撤单响应里的 `status` 只能表示本次申请状态，不能单独作为最终订单状态。
 - 订单最终状态以订单明细、今日/历史订单、成交流水和对账综合确认。
-- `finalStateFlag` 若为最终状态标识，必须先确认枚举含义；未确认前不得用它自动结束 OMS 订单。
-- `orderStatus` 是订单明细历史节点状态，手册未提供完整资料字典；第一版只按已见示例做审计展示，不用于 OMS 主状态判断。
+- `finalStateFlag` 是券商返回的终态标识，官方字段说明为 `0` 非终态、`1` 终态；它必须进入 OMS mapper，但不能脱离 `status` / `orderStatus` 单独决定 OMS 终态。
+- `finalStateFlag=1` 且 `status` / `orderStatus` 映射为已成交、已撤、废单、失败等终态时，OMS 可标记本地订单终态。
+- `finalStateFlag=0` 时，不得把订单标记为终态。
+- `finalStateFlag` 与 `status` / `orderStatus` 冲突、缺失或出现未知值时，订单进入 `unknown_by_official_doc`，需要人工或后续查询确认。
+- `orderStatus` 是订单明细历史节点状态，必须进入 OMS mapper；完整枚举未覆盖前，未知值进入 `unknown_by_official_doc`。
 - 任意状态名文本只能做审计辅助，不能作为唯一状态判断依据。
 
 ## 13. 配置和密钥
@@ -981,6 +984,11 @@ safety:
 - 脱敏账户引用
 - 响应摘要哈希
 
+错误码分两层处理：
+
+- 券商 raw code catalog：从官方网页手册完整提取所有业务错误码，保留原始 `code`、`msg`、endpoint、接口族和手册来源，用于排查、对账和后续精细分类。
+- Gateway error code：RobustQuant 自己的稳定错误码，供 OMS、风控、CLI/API 调用方使用；不能把券商 raw code 直接泄露成内部控制流。
+
 禁止记录：
 
 - API Key、Secret、私钥。
@@ -1019,6 +1027,8 @@ safety:
 - 日志脱敏测试确认不输出 token、密码、私钥、完整账号。
 - 对官方示例状态 `1`、`5`、`11`、`21`、`0` 建立 mapper 单元测试；未识别状态必须进入 `unknown_by_official_doc`。
 - 对 `X-Request-Id` 和 `serialNo` 生成、长度校验、审计映射建立单元测试。
+- 对分页请求建立契约测试：默认 `pageNum=1`、默认 `pageSize=10`、最大 `pageSize=20`。
+- 对券商错误码建立 catalog 生成或校验测试：官方网页手册中的业务错误码必须全部进入 raw code catalog，并映射到 gateway 错误码或 `broker.unclassified`。
 
 只读联调测试：
 
@@ -1049,9 +1059,8 @@ safety:
 - token `expiration` 的精确格式、时区和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是券商侧 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
-- 订单明细 `orderStatus` 历史节点的完整枚举。
-- 错误码完整枚举。
-- `finalStateFlag` 的完整枚举和是否可作为 OMS 订单终态判断依据。
+- 订单明细 `orderStatus` 历史节点的完整枚举；已确认必须进入 OMS mapper，未知值进入 `unknown_by_official_doc`。
+- 券商错误码完整枚举提取；项目策略已确认必须有完整 raw code catalog 和独立 gateway 错误码层。
 - 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节；港股暗盘相关规则保留为后续设计项。
 - 频率限制、IP 白名单生效规则。
 

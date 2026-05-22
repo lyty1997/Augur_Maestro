@@ -409,6 +409,9 @@
 - 用户确认未来交易范围以美股为主；第一批真实交易只做美股盘中交易和美股碎股；港股新股暗盘仅保留设计，港股碎股不做；IPO 申购和 IPO 改单排除。
 - 用户确认第一版美股盘中普通单只允许限价单：`exchangeType=5`，`entrustType` 买入 `0`、卖出 `1`，`entrustProp` 只开放网页手册明确支持的美股限价枚举 `0`，`sessionType` 使用正常盘中默认值 `0` 或不传；字段不确定时阻断真实交易。
 - 用户确认第一版启用美股碎股买入和卖出；内部按委托金额建模，发送给 `/odd-entrust` 的 `entrustAmount` 由委托金额除以限价换算为小数股数。金额、价格和换算数量内部使用 `Decimal`，只在 HTTP JSON 边界序列化为券商接受的 number。
+- 用户确认 `orderStatus` 肯定要给 OMS 判断订单状态，`finalStateFlag` 也要让 OMS 知道；项目策略为 `status` / `orderStatus` 和 `finalStateFlag` 共同进入 OMS mapper，冲突或未知状态进入 `unknown_by_official_doc`。
+- 用户确认分页规则按官方手册：`pageNum` 当前页从 1 开始，默认 1；`pageSize` 每页结果数默认 10，最大 20。
+- 用户确认错误处理必须包含所有券商错误码，同时 RobustQuant gateway 要有自己的错误码层。
 - 用户确认交易白名单先不固定，等待量化研究 Agent 输出候选标的。
 
 待确认：
@@ -421,7 +424,8 @@
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。
 - 登录手机号、登录密码、交易密码使用官方 Python demo 的 `rsa_encrypt` transform：RSA `PKCS1_v1_5` 加密后 URL-safe Base64；仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系。
 - 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节；港股暗盘后置。
-- 错误码、订单明细 `orderStatus` 历史节点、`finalStateFlag` 和状态流转完整枚举。
+- 订单明细 `orderStatus` 历史节点和状态流转完整枚举；已确认必须进入 OMS mapper。
+- 券商错误码完整枚举提取；项目策略已确认保留完整券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
 - token `expiration` 的精确格式、时区和服务端刷新接口语义；同一账户在其他客户端登录时的冲突语义；HTTP 频率限制、WebSocket 订阅上限和 IP 白名单生效规则。
 
 建议：

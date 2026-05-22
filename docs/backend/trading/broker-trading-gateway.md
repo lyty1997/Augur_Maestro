@@ -411,7 +411,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - 登录态过期时，只读查询可以显式重新登录并使用新的 `request_id` 重新发起查询；交易动作不能在下单、改单、撤单过程中隐式刷新登录后继续提交，必须让 OMS 重新进入可审计状态。
 - 签名失败、验签失败、401、权限不足必须归一化为明确错误码。
 
-建议错误码：
+Gateway 错误码是 RobustQuant 自己的稳定错误层；券商返回的所有 raw code/msg 必须完整保留在券商错误码 catalog 中，再映射到 gateway 错误码。第一批 gateway 错误码包括：
 
 ```text
 broker.auth_missing
@@ -421,6 +421,7 @@ broker.sign_failed
 broker.permission_denied
 broker.ip_not_allowed
 broker.rate_limited
+broker.unclassified
 ```
 
 ## 8. 幂等和请求 ID
@@ -479,6 +480,9 @@ unknown
 映射规则：
 
 - 官方网页文档已明确状态码时，写入 `uSmartOrderStatusMapper`。
+- 今日订单、历史订单和订单详情中的 `status` / `orderStatus` 必须进入 OMS mapper；`finalStateFlag` 也必须进入 mapper 作为终态标识。
+- `finalStateFlag=1` 且状态码映射为已成交、已撤、废单、失败等终态时，OMS 可标记本地订单终态；`finalStateFlag=0` 时不得标记终态。
+- `finalStateFlag` 与 `status` / `orderStatus` 冲突、缺失或出现未知值时，订单进入 `unknown_by_official_doc`。
 - 官方网页文档未明确的状态码不得猜测，只能映射为 `unknown_by_official_doc`。
 - 无法判断是否已到达券商的请求，必须进入 `unknown`。
 - `unknown` 只能通过订单查询、成交查询、对账或人工确认转出。
@@ -630,6 +634,8 @@ safety:
 - 对盈立官方网页字段映射必须有契约测试：下单 `serialNo/entrustAmount/entrustPrice/entrustProp/entrustType/exchangeType/stockCode`，普通股票委托改单 `actionType=1`，普通股票委托撤单 `actionType=0`。
 - 对只读 DTO 映射必须有契约测试：资产、持仓、订单、成交、最大可买可卖、改单范围。
 - 对内部 `broker_request_id`、端点级 `X-Request-Id` 与 `serialNo` 的生成、长度校验和审计映射必须有单元测试。
+- 对分页请求必须有契约测试：`pageNum` 从 1 开始、默认 1；`pageSize` 默认 10、最大 20。
+- 对券商错误码必须有 catalog 生成或校验测试：官方网页手册中的业务错误码全部进入 raw code catalog，并映射到 gateway 错误码或 `broker.unclassified`。
 
 ## 14. 开发阶段划分
 
@@ -710,8 +716,8 @@ safety:
 - 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；当前代码仍必须保留配置占位并默认 dry-run，不因文档存在 base URL 自动出网。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
-- 订单明细 `orderStatus` 历史节点的完整枚举和状态流转。
-- 错误码完整枚举。
+- 订单明细 `orderStatus` 历史节点的完整枚举和状态流转；已确认必须进入 OMS mapper。
+- 券商错误码完整枚举提取；项目策略已确认保留完整券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
 - 订单类型、价格类型、市场、币种、盘前盘后规则。
 - `X-Request-Id` 的有效期和重复请求返回语义。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的官方关系；当前实现只保留本地审计映射，不假设两者相同。

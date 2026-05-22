@@ -703,7 +703,12 @@ components:
         password:
           type: string
           x-sensitive: true
-          x-pending-confirmation: Whether trading password is required and how it is encrypted.
+          description: Optional encrypted trading password in uSmart request body.
+          x-robustquant-policy: >
+            Keep the field abstraction and encryption boundary. Do not send by
+            default; only include when trade_password_required=true and a trade
+            password secret is available. Encrypt with the sensitive-field RSA
+            transform, not the X-Sign key.
         forceEntrustFlag:
           type: boolean
           default: false
@@ -748,7 +753,12 @@ components:
         password:
           type: string
           x-sensitive: true
-          x-pending-confirmation: Whether trading password is required and how it is encrypted.
+          description: Optional encrypted trading password in uSmart request body.
+          x-robustquant-policy: >
+            Keep the field abstraction and encryption boundary. Do not send by
+            default; only include when trade_password_required=true and a trade
+            password secret is available. Encrypt with the sensitive-field RSA
+            transform, not the X-Sign key.
         forceEntrustFlag:
           type: boolean
           default: false
@@ -773,7 +783,12 @@ components:
         password:
           type: string
           x-sensitive: true
-          x-pending-confirmation: Whether trading password is required and how it is encrypted.
+          description: Optional encrypted trading password in uSmart request body.
+          x-robustquant-policy: >
+            Keep the field abstraction and encryption boundary. Do not send by
+            default; only include when trade_password_required=true and a trade
+            password secret is available. Encrypt with the sensitive-field RSA
+            transform, not the X-Sign key.
     OddLotOrderRequest:
       type: object
       additionalProperties: false
@@ -877,11 +892,13 @@ components:
     BusinessCode:
       type: integer
       description: uSmart business response code. code=0 may indicate business success.
-      x-pending-confirmation: Complete enum.
+      x-robustquant-policy: Store every official broker raw code in a catalog and map it to a stable gateway error code.
+      x-pending-confirmation: Complete enum extraction from the official web manual.
     OrderStatusRaw:
       type: integer
       enum: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
-      x-pending-confirmation: Official JSON scalar type and status flow.
+      x-robustquant-policy: status/orderStatus must be consumed by the OMS mapper; unknown values map to unknown_by_official_doc.
+      x-pending-confirmation: Complete orderStatus enum and status flow.
     DecimalNumber:
       type: number
       x-pending-confirmation: Decimal precision.
@@ -982,10 +999,15 @@ components:
       x-pending-confirmation: Interface-specific enum.
     PageNumberPending:
       type: integer
-      x-pending-confirmation: Official pagination base index.
+      minimum: 1
+      default: 1
+      description: Official web manual says pageNum starts at 1 and defaults to 1.
     PageSizePending:
       type: integer
-      x-pending-confirmation: Official maximum page size.
+      minimum: 1
+      maximum: 20
+      default: 10
+      description: Official web manual says pageSize defaults to 10; RobustQuant caps requests at 20.
     AssetQueryResponseDraft:
       allOf:
         - $ref: "#/components/schemas/BusinessResponse"
@@ -1017,10 +1039,19 @@ components:
         - status
         - statusName
         - finalStateFlag
+      x-robustquant-oms-status-policy: >
+        status/orderStatus and finalStateFlag must be consumed by the OMS
+        mapper. finalStateFlag is 0 non-final, 1 final per official manual.
+        Do not use finalStateFlag alone; conflicting or unknown combinations
+        map to unknown_by_official_doc.
       x-pending-confirmation: Complete response shape and pagination wrapper.
     OrderDetailResponseDraft:
       allOf:
         - $ref: "#/components/schemas/BusinessResponse"
+      x-robustquant-oms-status-policy: >
+        detailList.orderStatus must be consumed by the OMS mapper. Unknown
+        historical node statuses map to unknown_by_official_doc until the full
+        official enum is extracted.
       x-pending-confirmation: Complete response shape and historical status node schema.
     TradeRecordResponseDraft:
       allOf:
