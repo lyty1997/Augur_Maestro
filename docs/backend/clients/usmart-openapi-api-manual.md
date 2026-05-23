@@ -601,8 +601,8 @@ class uSmartHttpTransport:
 以下事项不能靠代码猜测，必须从官方网页文档或盈立官方确认：
 
 - 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过 `USMART_API_BASE_URL` 配置显式选择，默认 dry-run 不出网。
-- 用户已确认项目策略：UAT 测试地址不自动等同 sandbox / paper trading；是否保证下单、改单、撤单不产生真实委托仍需券商确认，确认前交易动作继续 dry-run。
-- 用户已确认第一版交易 API header 跟随官方 Python demo：`X-Time` 和 `X-Request-Id` 不作为全局必填；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和内部审计映射。`X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。
+- 项目策略已确认：UAT 测试地址不自动等同 sandbox / paper trading；确认前交易动作继续 dry-run。UAT 是否保证下单、改单、撤单不产生真实委托仍需券商确认。
+- 项目策略已确认：第一版交易 API header 跟随官方 Python demo，`X-Time` 和 `X-Request-Id` 不作为全局必填；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和内部审计映射。`X-Request-Id` 长度按 30 位可配置字符串实现；下单 body `serialNo` 严格按最长 19 位实现。重复请求返回语义仍需官方确认。
 - `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和控制 `=` padding；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64；仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系。它必须和 `X-Sign` 渠道签名密钥材料分离。
 - 交易密码 `password` 指盈立交易 API request body 中的交易密码字段；普通下单、改单、撤单手册字段为可选。第一版保留字段抽象和加密能力，默认不发送，只有配置显式要求时才从 secret 读取并加密写入 body。

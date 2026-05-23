@@ -2,6 +2,7 @@
 
 版本：v0.1  
 状态：部分确认
+最后更新：2026-05-23
 
 这份文档记录后续需要逐步确认的问题。它的作用是防止我们在架构还不清楚时过早写死实现。
 
@@ -16,13 +17,14 @@
 - miniQMT 和盈立 OpenAPI 的只读查询测试不构成真实交易；任何会向券商提交委托、撤单、条件单、预埋单或改变券商侧订单状态的调用，都按真实交易处理。
 - 不允许用真实下单、真实撤单或真实条件单接口做连通性探测、冒烟测试或权限测试。
 - 真实交易能力默认关闭，必须经过实盘开关、策略授权、交易时间检查、风控、OMS、账户/标的白名单和对账设计后才能启用；运行期基础交易不要求逐笔人工确认，自动化程序可以执行通过风控门禁的正股买入和卖出，包括策略模块生成的建仓、加仓、减仓、平仓、止盈和止损意图。
+- uSmart 网页手册已提供 UAT 测试地址，但 RobustQuant 不自动把 UAT 视为可交易 sandbox；确认前只允许真实登录和只读查询，交易动作继续 dry-run。
 
 待确认：
 
 - 东北证券 miniQMT 是否已具备交易权限和 API 权限。
 - 第一条实盘闭环后续是否优先接 miniQMT；需等待 miniQMT 权限、运行环境和接口能力确认。
 - 盈立 OpenAPI 若后续申请通过，再根据 uSmart 官方网页手册确认港股、美股行情和交易权限。
-- 用户已确认：uSmart 网页手册已提供 UAT 测试地址，但 RobustQuant 不自动把 UAT 视为可交易 sandbox。只有盈立明确确认 UAT 下单、改单、撤单不会产生真实委托后，才允许在 UAT 调用交易动作；确认前只允许真实登录和只读查询，交易动作继续 dry-run。
+- 盈立是否明确保证 UAT 下单、改单、撤单不会产生真实委托；只有确认后，才允许在 UAT 调用交易动作。
 
 建议：
 
@@ -418,19 +420,30 @@
 - 用户确认交易白名单先不固定，等待量化研究 Agent 输出候选标的。
 - 用户确认第一版先按现金账户正股多头交易设计，`TradingGateway` 支持正股买入和卖出执行；自动止盈止损交给策略模块生成普通交易意图；不启用自动对冲、做空、融资融券、保证金交易或美股期权，后续迭代再加入对冲、做空和美股期权。
 
-待确认：
+已对齐的项目策略：
 
-- 交易 API base URL 已由网页版文档给出：生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`。
-- 用户已确认项目策略：测试地址 `http://open-jy-uat.yxzq.com` 不自动等同 sandbox / paper trading。是否保证交易动作不产生真实委托仍需券商确认；未确认前不运行真实下单、改单、撤单。
-- 用户已确认第一版交易 API header 跟随官方 Python demo：`X-Time` 和 `X-Request-Id` 不作为全局必填；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和内部审计映射。`X-Request-Id` 长度、有效期和重复请求语义仍需官方确认；当前官方资料存在 19 位和 30 位两种描述。
-- 下单 body `serialNo` 与 header `X-Request-Id` 的关系；Python demo 生成 19 位字符串，第一版按用户确认可使用数字 JSON，必要时切换字符串。
-- 交易开放 API 的 `X-Sign` 签名原文已确认只使用稳定 JSON body，不拼接 header 字段；网页文档描述 `safeBase64` / URL-safe Base64，Python demo 交易 helper 使用标准 Base64。用户已确认第一版默认跟随官方 Python demo 使用标准 Base64，并保留 URL-safe Base64 配置。基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
+- 交易 API base URL 已由官方网页文档给出：生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过配置显式选择，默认 dry-run 不出网。
+- 测试地址 `http://open-jy-uat.yxzq.com` 不自动等同 sandbox / paper trading；未确认 UAT 交易动作安全语义前，不运行真实下单、改单、撤单。
+- 第一版交易 API header 跟随官方 Python demo：`X-Time` 和 `X-Request-Id` 不作为全局必填；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和内部审计映射。
+- 下单 body `serialNo` 按最长 19 位处理；官方 Python demo 生成 19 位字符串，第一版可按用户确认使用数字 JSON，必要时切换字符串。
+- 交易开放 API 的 `X-Sign` 签名原文只使用稳定 JSON body，不拼接 header 字段；第一版默认跟随官方 Python demo 使用标准 Base64，并保留 URL-safe Base64 和 padding 配置。
+- 基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。
-- 登录手机号、登录密码、交易密码使用官方 Python demo 的 `rsa_encrypt` transform：RSA `PKCS1_v1_5` 加密后 URL-safe Base64；仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系。
-- 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节；港股暗盘后置。
-- 订单明细 `orderStatus` 历史节点和状态流转完整枚举；已确认必须进入 OMS mapper。
-- 券商错误码完整枚举提取；项目策略已确认保留完整券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
-- token `expiration` 的精确格式、时区和服务端刷新接口语义；同一账户在其他客户端登录时的冲突语义；HTTP 频率限制、WebSocket 订阅上限和 IP 白名单生效规则。
+- 登录手机号、登录密码、交易密码使用官方 Python demo 的 `rsa_encrypt` transform：RSA `PKCS1_v1_5` 加密后 URL-safe Base64。
+- 订单明细 `orderStatus` 必须进入 OMS mapper；`status` / `orderStatus` 和 `finalStateFlag` 冲突或未知时进入 `unknown_by_official_doc`。
+- 券商错误码必须保留完整 raw code catalog，并映射到 RobustQuant gateway 错误码层。
+
+仍需券商或联调确认：
+
+- UAT 下单、改单、撤单是否保证不产生真实委托。
+- `X-Request-Id` 的有效期、重复请求返回语义，以及与下单 body `serialNo` 的官方关系。
+- 券商最终下发的签名密钥材料、验签公钥材料、隐私资料加密密钥材料分别如何对应官方 Python demo 的 `public_key` / `private_key` 配置槽位。
+- token `expiration` 的精确格式、时区和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
+- 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节。
+- 美股碎股撤单 `/odd-modify` 的字段、状态和风控前置条件。
+- 订单明细 `orderStatus` 历史节点和状态流转完整枚举。
+- 券商响应状态完整提取和按 endpoint 分组的 raw code catalog 覆盖率。
+- HTTP 频率限制、WebSocket 订阅上限和 IP 白名单生效规则。
 
 建议：
 

@@ -425,7 +425,7 @@ class uSmartTradeAuthSigner:
 
 - `X-Request-Id` 重复请求返回语义。
 - 券商最终下发的密钥材料如何对应 demo 的 `public_key` / `private_key` 配置槽位。
-- 用户已确认：UAT 测试地址不自动等同 sandbox / paper trading；是否保证交易动作不产生真实委托仍需券商确认。
+- 项目策略已确认：UAT 测试地址不自动等同 sandbox / paper trading；是否保证交易动作不产生真实委托仍需券商确认。
 
 ## 6. 交易开放 API Client 设计
 
@@ -1067,7 +1067,7 @@ safety:
 需要从官方网页文档或 uSmart 官方确认：
 
 - 交易 API base URL：官方网页和 Python demo 给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过 `USMART_API_BASE_URL` 配置显式选择，默认 dry-run 不出网，真实出网需申请通过、IP 白名单、渠道号和密钥配置。
-- 用户已确认项目策略：UAT 测试地址不自动等同 sandbox / paper trading；是否保证下单、改单、撤单不产生真实委托仍需券商确认。
+- 项目策略已确认：UAT 测试地址不自动等同 sandbox / paper trading；是否保证下单、改单、撤单不产生真实委托仍需券商确认。
 - `X-Request-Id` 重复请求返回语义。
 - `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和 padding；签名输入已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64。仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系；密钥材料已确认必须与 `X-Sign` 渠道签名密钥分离。
