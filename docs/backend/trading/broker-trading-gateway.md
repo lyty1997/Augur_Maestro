@@ -690,8 +690,8 @@ safety:
 
 ### Phase 5：受控实盘
 
-- 前提：风控阈值、量化研究 Agent 输出交易白名单、人工暂停和对账可用。
-- 第一批只允许小额、低频、美股盘中限价和美股碎股，账户能力按现金账户正股多头交易设计。普通下单白名单固定为 `exchangeType=5`、`order_type=LIMIT`、`entrustProp=0`、`entrustType` 买 `0` / 卖 `1`、`entrustPrice>0`、`sessionType=0` 或不传；碎股买卖使用 `/odd-entrust`，内部按金额建模，券商 `entrustAmount` 由金额除以限价换算为小数股数。任何字段映射不确定时阻断真实交易。
+- 前提：风控阈值、量化研究 Agent 输出候选标的、人工批准发布交易白名单、人工暂停和对账可用。
+- 第一批只允许小额、低频、美股盘中限价和美股碎股，账户能力按现金账户正股多头交易设计。交易白名单由量化研究 Agent 输出候选并经人工批准发布，可包含美股正股和 ETF；每个条目至少包含 `symbol`、`market=US`、`asset_type=stock|etf`、`max_position_pct`、`max_order_notional`、`enabled_strategy_ids`、`approved_at`、`expires_at`。`TradingGateway` 不选股，只检查标的是否在当前有效白名单内；无有效白名单命中时，OMS/Risk 在进入券商网关前阻断交易并返回内部错误 `risk.symbol_not_whitelisted`。普通下单白名单固定为 `exchangeType=5`、`order_type=LIMIT`、`entrustProp=0`、`entrustType` 买 `0` / 卖 `1`、`entrustPrice>0`、`sessionType=0` 或不传；碎股买卖使用 `/odd-entrust`，内部按金额建模，券商 `entrustAmount` 由金额除以限价换算为小数股数。任何字段映射不确定时阻断真实交易。
 - 第一版风控阈值使用配置化 `live_guarded_small`，实际生效值按固定上限与账户净值 `NAV` 比例取更保守值：单笔普通订单 `min(500 USD, 5% NAV)`，美股碎股单笔 `min(100 USD, 1% NAV)`，单只股票最大持仓 `10% NAV`，最大持仓股票数量 `20`，单日最大交易次数 `5`，单日最大成交金额 `min(2000 USD, 20% NAV)`，单日最大亏损 `min(200 USD, 2% NAV)`。
 - 亏损触发策略分为 `risk_warn`、`risk_halt`、`risk_rebalance` / `risk_exit` / `risk_hedge`：达到阈值后进入更严格的仓位控制门禁，已授权策略的目标仓位再平衡、止盈和止损可以无人值守产生普通正股买卖意图；`TradingGateway` 只承接通过 OMS 和风控的正股买入卖出执行，不内置止盈止损判断；禁止无目标仓位依据的追涨、摊平或绕过风控。第一版不自动执行对冲、做空、融资融券、保证金交易或美股期权；这些能力后续迭代再加入，必须单独确认白名单、权限、额度和高风险授权流程，且不能绕过 OMS、风控、交易时间、审计和对账。
 - 港股新股暗盘只保留设计，港股碎股和 IPO 申购接口排除。

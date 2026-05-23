@@ -145,7 +145,7 @@ OMS
 
 ```text
 OMS
-  -> 风控通过 + 交易时间通过 + 白名单通过 + 策略授权通过
+  -> 风控通过 + 交易时间通过 + 研究 Agent 候选经人工发布的白名单通过 + 策略授权通过
   -> TradingGateway 允许
   -> uSmartOpenApiTradingAdapter
   -> uSmartTradeOpenApiClient
@@ -448,7 +448,7 @@ class uSmartTradeOpenApiClient:
 
 内部流程：
 
-1. 校验 endpoint 是否在白名单常量中。
+1. 校验 endpoint 是否在白名单常量中，并校验交易标的命中量化研究 Agent 候选经人工发布的当前有效白名单。
 2. 生成稳定 body JSON。
 3. 调用 `uSmartTradeAuthSigner.build_headers(...)`。
 4. 通过 `uSmartHttpTransport.post_json(...)` 发起 HTTPS 请求。

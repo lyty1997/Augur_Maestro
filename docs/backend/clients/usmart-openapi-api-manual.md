@@ -486,7 +486,7 @@ class uSmartTradeOpenApiClient:
 
 处理步骤：
 
-1. 校验 endpoint 在白名单中。
+1. 校验 endpoint 在白名单中，并校验交易标的命中量化研究 Agent 候选经人工发布的当前有效白名单。
 2. 稳定序列化 body。
 3. 对交易开放 API 敏感 body 字段调用 encryptor。
 4. 调用交易开放 API signer 生成 header。
