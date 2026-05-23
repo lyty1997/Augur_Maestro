@@ -30,10 +30,11 @@ Get-Content -Encoding UTF8 docs/README.md
 
 当前已知文档存在或仍需确认的事项：
 
-- `X-Request-Id` 长度存在 19 位与 30 位描述差异。
-- 交易接口与行情接口的签名位置、签名字段、`X-Type` 使用场景需要实测或券商确认。
-- 下单返回的 `entrustId` 是最终委托号还是受理号，需要通过查询与对账确认。
-- 券商订单状态、错误码、频率限制、IP 白名单、token 续期策略需要补充。
+- `X-Request-Id` 与下单 body `serialNo` 是两类字段：`serialNo` 按最长 19 位处理，`X-Request-Id` 按端点 profile 决定是否外发；其有效期、重复请求返回语义和官方关系仍需券商确认。
+- 交易开放 API、基础报价 API、报价推送 API 是三套独立 API；交易 signer 已按“稳定 JSON body 签名”建模，报价 HTTP / WS signer 仍需在各自文档中单独设计和验证。
+- 普通下单响应 `data.entrustId` 已按订单 ID 建模；改单/撤单响应中的 `data.entrustId` 按申请编号处理，不覆盖原委托 ID。最终订单状态仍必须通过订单查询、成交流水、对账和 `finalStateFlag` 综合确认。
+- 普通订单 `status` 已有官方枚举；订单明细 `orderStatus` 历史节点完整枚举、券商错误码 catalog 覆盖率、频率限制、IP 白名单、token `expiration` 格式和刷新语义仍需补充或联调确认。
+- UAT 测试地址不自动等同 sandbox / paper trading；未获得盈立明确确认前，不运行真实下单、改单、撤单。
 
 这些事项未确认前，不得把实现标记为完整生产可用。
 
