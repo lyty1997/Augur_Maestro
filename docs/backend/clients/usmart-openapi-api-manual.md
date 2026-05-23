@@ -606,7 +606,7 @@ class uSmartHttpTransport:
 - `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和控制 `=` padding；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
 - 隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现：RSA `PKCS1_v1_5` 加密后 URL-safe Base64；仍需确认券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系。它必须和 `X-Sign` 渠道签名密钥材料分离。
 - 交易密码 `password` 指盈立交易 API request body 中的交易密码字段；普通下单、改单、撤单手册字段为可选。第一版保留字段抽象和加密能力，默认不发送，只有配置显式要求时才从 secret 读取并加密写入 body。
-- 第一版 `trade_password_required=false`，因此默认不读取 `trade_password_secret_ref`，也不写入下单、改单、撤单 body；进入受控实盘前再显式开启。
+- 第一版 `trade_password_required=false`，因此默认不读取 `trade_password_secret_ref`，也不写入下单、改单、撤单 body；遇到券商要求交易密码、交易解锁或交易锁定时，订单进入 `blocked_by_broker_trade_lock`，停止自动交易并进入人工确认流程。
 - 配置和代码变量名必须区分登录密码和交易密码：登录使用 `login_password_secret_ref` / `loginPasswordEncrypted`，交易使用 `trade_password_secret_ref` / `tradePasswordEncrypted`。只有最终映射到盈立官方 request body 时才使用官方字段名 `password`。
 - token `expiration` 的精确格式、时区和官方刷新接口语义；第一版项目策略已确认：内存 session、只读可显式重登、交易动作不隐式刷新、单账户单 session。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。

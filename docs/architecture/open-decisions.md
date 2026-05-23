@@ -414,6 +414,7 @@
 - 用户确认错误处理必须包含所有券商错误码，同时 RobustQuant gateway 要有自己的错误码层。
 - 用户确认配置和设计变量名必须区分登录密码和交易密码：登录密码使用 `login_password_secret_ref` / `loginPasswordEncrypted`，交易密码使用 `trade_password_secret_ref` / `tradePasswordEncrypted`；只有最终映射到盈立官方 request body 时才使用官方字段名 `password`。
 - 用户确认第一版 `trade_password_required=false`：保留交易密码字段抽象和加密能力，但默认不读取 `trade_password_secret_ref`，也不写入下单、改单、撤单 body。
+- 用户确认第一版不自动调用 `trade-login`；遇到券商要求交易密码、交易解锁或交易锁定时，OMS 将订单置为 `blocked_by_broker_trade_lock`，停止自动交易并进入人工确认流程。
 - 用户确认交易白名单先不固定，等待量化研究 Agent 输出候选标的。
 - 用户确认第一版先按现金账户正股多头交易设计，`TradingGateway` 支持正股买入和卖出执行；自动止盈止损交给策略模块生成普通交易意图；不启用自动对冲、做空、融资融券、保证金交易或美股期权，后续迭代再加入对冲、做空和美股期权。
 

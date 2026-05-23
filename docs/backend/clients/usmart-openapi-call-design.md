@@ -270,7 +270,7 @@ src/
 - 自动对冲、做空、融资融券、保证金交易和美股期权；后续迭代再单独设计能力、白名单、额度和高风险授权。
 - 券商侧条件单、券商侧止盈止损、触发单；第一版自动止盈止损由策略模块产生普通正股买卖意图。
 
-`trade-login` 不是下单接口，但可能改变账户交易可用状态，因此不作为只读联调接口。
+`trade-login` 不是下单接口，但可能改变账户交易可用状态，因此不作为只读联调接口，也不进入第一版受控实盘自动流程。遇到券商要求交易密码、交易解锁或交易锁定时，OMS 阻断交易并进入人工确认流程。
 
 ### 3.2 非本文档范围：基础报价 API 与报价推送 API
 
@@ -864,6 +864,7 @@ POST /stock-order-server/open-api/modify-order
 | `transport_error` | DNS、TLS、connect timeout、read timeout | 交易动作进入 `unknown`，查询可有限重试 |
 | `http_error` | 401、403、404、5xx | 映射 gateway 错误码，记录脱敏摘要 |
 | `auth_error` | token 失效、签名失败、IP 白名单拒绝 | 停止交易动作，提示人工检查 |
+| `trade_locked` | 需要交易密码、交易解锁或账户交易锁定 | 映射 `broker.trade_locked`，订单置为 `blocked_by_broker_trade_lock`，提示人工确认 |
 | `rate_limited` | 频率限制 | 查询退避重试，交易不自动补偿 |
 | `business_reject` | 资金不足、数量错误、市场规则拒绝 | 保留券商 raw code/msg，并映射 gateway 错误码 |
 | `unknown_response` | 缺少订单号、状态码未知、响应结构不匹配 | 进入 `unknown_by_official_doc` 或 `unknown` |
@@ -1047,7 +1048,7 @@ safety:
 只读联调测试：
 
 - 只允许真实登录、资产查询、持仓查询、今日订单、历史订单、订单明细和成交流水。
-- 不允许 `trade-login`。
+- 不允许 `trade-login`；遇到需要交易密码或交易解锁时进入人工确认，不自动补交交易密码。
 - 不允许触达下单、改单、撤单 endpoint。
 - 不允许触达 IPO 申购、IPO 改单 endpoint。
 - 申请材料截图路径必须保持 dry-run，不做真实登录。

@@ -165,7 +165,7 @@ broker_gateway:
 - 即使 `mode=live_guarded`，只要 `trading_enabled=false`，也不能调用交易接口。
 - 下单、改单、撤单三个能力必须分别开关，不能用一个总开关隐式放开所有交易行为。
 - 登录、账户、持仓、订单、成交等交易开放 API 只读能力也要单独开关，便于未来只读联调逐项开放。基础报价 API 和报价推送 API 的开关归 `QuotationDataGateway`，不归 `TradingGateway`。
-- `trade-login` 虽然不是下单接口，但会改变账户交易可用状态，必须单独开关，默认关闭。
+- `trade-login` 虽然不是下单接口，但会改变账户交易可用状态，必须单独开关，第一版默认关闭；遇到券商要求交易密码、交易解锁或交易锁定时，不自动调用 `trade-login`，订单进入 `blocked_by_broker_trade_lock` 并提示人工确认。
 - IPO 申购必须排除在第一版外。第一批真实交易只做美股盘中交易和美股碎股；港股新股暗盘只保留能力设计，港股碎股不做。在 `read_only` 和申请材料截图阶段必须保持阻断，只允许 dry-run 构造。
 
 ## 5. 统一接口契约
@@ -301,7 +301,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 
 - 登录接口可作为只读联调范围，但日志禁止记录手机号、密码、token。
 - 申请材料截图只展示登录 dry-run 调用栈，不做真实登录。
-- `trade-login` 虽然不是下单，但它会改变账户交易可用状态，必须按敏感动作处理；默认不在只读联调中调用。
+- `trade-login` 虽然不是下单，但它会改变账户交易可用状态，必须按敏感动作处理；默认不在只读联调和第一版受控实盘自动流程中调用。遇到需要交易密码或交易解锁时，OMS 阻断交易并进入人工确认流程。
 - 设置、重置、修改登录密码或交易密码属于账户安全操作，不进入 RobustQuant 网关第一版。
 
 ### 6.2 交易与订单
@@ -424,6 +424,7 @@ broker.rate_limited
 broker.bad_request
 broker.account_restricted
 broker.captcha_required
+broker.trade_locked
 broker.order_rejected
 broker.endpoint_not_found
 broker.unclassified
@@ -458,6 +459,7 @@ broker_request_id -> serialNo -> broker_order_id
 |---|---|---|
 | `transport_error` | DNS、连接、TLS、超时 | 进入 `unknown`，不得自动重试 |
 | `auth_error` | 401、token 失效、签名失败 | 进入 `failed` 或 `unknown`，按是否已触达券商判断 |
+| `trade_locked` | 券商要求交易密码、交易解锁或账户交易锁定 | 订单进入 `blocked_by_broker_trade_lock`，停止自动交易并提示人工确认 |
 | `rate_limit` | 频率限制 | 查询可重试，交易不可自动补偿 |
 | `broker_reject` | 券商明确拒绝 | 进入 `broker_rejected` |
 | `business_error` | 参数、资金、权限、市场规则错误 | 进入 `broker_rejected` 或 `failed` |
