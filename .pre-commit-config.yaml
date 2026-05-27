@@ -21,11 +21,11 @@ repos:
     hooks:
       - id: trading-safety-static-check
         name: Trading safety static check
-        entry: python scripts/quality/trading_safety_static_check.py
+        entry: python src/scripts/quality/trading_safety_static_check.py
         language: python
         pass_filenames: false
       - id: markdown-docs-check
         name: Markdown docs check
-        entry: python scripts/quality/markdown_docs_check.py
+        entry: python src/scripts/quality/markdown_docs_check.py
         language: python
         pass_filenames: false
