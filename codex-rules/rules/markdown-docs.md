@@ -9,7 +9,7 @@
 
 ## 图表
 
-RobustQuant 现有文档主要使用 Mermaid。新增图表默认沿用 Mermaid，除非用户明确要求 PlantUML 或目标文档已有 PlantUML 风格。
+Augur_Maestro 现有文档主要使用 Mermaid。新增图表默认沿用 Mermaid，除非用户明确要求 PlantUML 或目标文档已有 PlantUML 风格。
 
 Mermaid 图表应保持简单、可读，节点文字尽量使用明确中文标签。复杂交易链路、状态机、数据流可以用图辅助，但不能用图替代文字说明。
 

@@ -2,7 +2,7 @@ version: 0.1.0-draft
 kind: usmart_trade_session_retry_profiles
 api_family: trade_openapi
 status: draft
-owner: RobustQuant TradingGateway
+owner: Augur_Maestro TradingGateway
 source_documents:
   - ../../../../API_manual/uSmart/API_manual/usmart-trade-openapi.zh-cn.md
   - ../../../../API_manual/uSmart/openapi-demo-py/api/trade.py

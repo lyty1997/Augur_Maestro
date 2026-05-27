@@ -6,7 +6,7 @@
 
 ## 0. 文档定位
 
-本文档定义 RobustQuant 后续对接券商交易接口的 `TradingGateway` 模块设计。`TradingGateway` 是 OMS 与具体券商交易适配器之间的统一交易安全边界，上层同时覆盖 miniQMT、盈立交易开放 API、Ptrade 和后续券商交易接口。OpenAPI、miniQMT、Ptrade 都只是适配器类型，不是网关本体。
+本文档定义 Augur_Maestro 后续对接券商交易接口的 `TradingGateway` 模块设计。`TradingGateway` 是 OMS 与具体券商交易适配器之间的统一交易安全边界，上层同时覆盖 miniQMT、盈立交易开放 API、Ptrade 和后续券商交易接口。OpenAPI、miniQMT、Ptrade 都只是适配器类型，不是网关本体。
 
 盈立官方资料拆成三套不同 API：交易开放 API、基础报价 API、报价推送 API。本文档只定义交易开放 API 对应的 `TradingGateway` 边界。行情数据另设 `QuotationDataGateway`：基础报价 API 负责 K 线、快照、盘口、逐笔等 HTTP 行情；报价推送 API 负责 WebSocket 行情推送。三套 API 的 base URL、签名/认证、限流、连接生命周期和错误处理不能混为一谈。
 
@@ -358,7 +358,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - 登录接口可作为只读联调范围，但日志禁止记录手机号、密码、token。
 - 申请材料截图只展示登录 dry-run 调用栈，不做真实登录。
 - `trade-login` 虽然不是下单，但它会改变账户交易可用状态，必须按敏感动作处理；默认不在只读联调和第一版受控实盘自动流程中调用。遇到需要交易密码或交易解锁时，OMS 阻断交易并进入人工确认流程。
-- 设置、重置、修改登录密码或交易密码属于账户安全操作，不进入 RobustQuant 网关第一版。
+- 设置、重置、修改登录密码或交易密码属于账户安全操作，不进入 Augur_Maestro 网关第一版。
 
 ### 6.2 交易与订单
 
@@ -470,7 +470,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - 登录态过期时，只读查询可以显式重新登录并使用新的 `request_id` 重新发起查询；交易动作不能在下单、改单、撤单过程中隐式刷新登录后继续提交，必须让 OMS 重新进入可审计状态。
 - 签名失败、验签失败、401、权限不足必须归一化为明确错误码。
 
-Gateway 错误码是 RobustQuant 自己的稳定错误层；券商返回的 raw code/msg 必须按 endpoint 保留在券商响应状态 catalog 中，再映射到 gateway 错误码。实现时只能根据当前调用 endpoint 查找对应 `response_statuses`，不能把不同接口的状态码混用。
+Gateway 错误码是 Augur_Maestro 自己的稳定错误层；券商返回的 raw code/msg 必须按 endpoint 保留在券商响应状态 catalog 中，再映射到 gateway 错误码。实现时只能根据当前调用 endpoint 查找对应 `response_statuses`，不能把不同接口的状态码混用。
 
 Gateway 稳定错误码 catalog 维护在 [broker-gateway-error-codes.yaml](broker-gateway-error-codes.yaml)。该 YAML 是手工维护的内部契约源，包含 `origin`、`category`、`http_status`、`retryable`、`safe_message` 和 `caller_action`；uSmart 等券商 raw code catalog 只能映射到这里列出的稳定错误码或 `broker.unclassified`。
 
@@ -512,7 +512,7 @@ class BrokerGatewayError:
 
 ## 8. 幂等和请求 ID
 
-盈立官方网页文档提到 `X-Request-Id` 用于防重。RobustQuant 内部还需要自己的幂等关系。
+盈立官方网页文档提到 `X-Request-Id` 用于防重。Augur_Maestro 内部还需要自己的幂等关系。
 
 建议关系：
 
@@ -788,7 +788,7 @@ safety:
 重要规则：
 
 - 官方测试环境地址已由网页手册给出，用户已确认可用于非生产联调；本轮只读 profile 仍不运行下单、改单、撤单测试。
-- 交易接口截图或演示代码不作为 RobustQuant 开发验收标准。
+- 交易接口截图或演示代码不作为 Augur_Maestro 开发验收标准。
 - 测试 fixture 不得包含真实账号、token、真实资金和真实持仓。
 - 对 `unknown`、超时、401、限流、字段缺失必须有单元测试。
 - 对日志脱敏必须有测试，防止未来把 token 或账户打出来。
@@ -883,7 +883,7 @@ safety:
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举和状态流转；已确认必须进入 OMS mapper。
-- 券商响应状态完整枚举提取；项目策略已确认按 endpoint 分组保留券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
+- 券商响应状态完整枚举提取；项目策略已确认按 endpoint 分组保留券商 raw code catalog，并映射到 Augur_Maestro gateway 错误码层。
 - 订单类型、价格类型、市场、币种、盘前盘后规则。
 - `X-Request-Id` 的有效期和重复请求返回语义；网页手册 30 位、demo `modify-order` 16 位时间字符串和 `serialNo` 19 位字符串之间的最终验收规则。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的官方关系；当前实现只保留本地审计映射，不假设两者相同。

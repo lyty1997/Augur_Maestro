@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: uSmart Trade OpenAPI Integration Draft
   version: 0.1.0-draft
-  summary: Draft contract for RobustQuant integration with uSmart trade OpenAPI.
+  summary: Draft contract for Augur_Maestro integration with uSmart trade OpenAPI.
   description: >
     This draft covers only the uSmart trade OpenAPI. It does not include the
     basic quote OpenAPI or quote push WebSocket API. Fields marked with
@@ -10,7 +10,7 @@ info:
     documentation or uSmart before implementation is treated as final. The
     official Python demo is an implementation reference for signing,
     encryption, serialization, and WebSocket flow only.
-  x-robustquant-source-docs:
+  x-augur_maestro-source-docs:
     - ../../../../API_manual/uSmart/API_manual/usmart-trade-openapi.zh-cn.md
     - ../../../../API_manual/uSmart/API_manual/usmart-quote-base-openapi.zh-cn.md
     - ../../../../API_manual/uSmart/API_manual/usmart-quote-push-openapi.zh-cn.md
@@ -24,18 +24,18 @@ info:
     - ../usmart-openapi-call-design.md
     - ../usmart-openapi-api-manual.md
     - ../../trading/broker-trading-gateway.md
-  x-robustquant-scope:
+  x-augur_maestro-scope:
     api_family: trade_openapi
     excludes:
       - basic_quote_openapi
       - quote_push_websocket_api
-  x-robustquant-session-policy:
+  x-augur_maestro-session-policy:
     storage: in_memory_only
     account_scope: single_account_single_session_first_version
     readonly_expired_token: explicit_relogin_allowed_with_new_request_id
     trade_action_expired_token: fail_without_implicit_refresh
     pending_confirmation: expiration format, timezone, official refresh API semantics, and same-account multi-client conflict behavior.
-  x-robustquant-demo-reference:
+  x-augur_maestro-demo-reference:
     trade_http:
       sign_input: json body string only
       sign_algorithm: MD5withRSA
@@ -50,7 +50,7 @@ info:
         First implementation follows the official Python demo. X-Time and
         X-Request-Id are not global required headers for trade HTTP endpoints.
         modify-order carries X-Request-Id because the demo explicitly adds it;
-        entrust-order relies on body serialNo plus RobustQuant internal
+        entrust-order relies on body serialNo plus Augur_Maestro internal
         request audit instead of forcing header X-Request-Id.
     quote_http:
       sign_input: Authorization + X-Channel + X-Lang + X-Request-Id + X-Time + json body string
@@ -77,7 +77,7 @@ tags:
   - name: trades
     description: Trade record endpoints.
   - name: guarded-trade
-    description: Trade actions that RobustQuant must block outside live_guarded.
+    description: Trade actions that Augur_Maestro must block outside live_guarded.
 paths:
   /user-server/open-api/login:
     post:
@@ -87,8 +87,8 @@ paths:
       description: >
         Password login using phone number, password, and channel headers. In
         application screenshots this endpoint must be shown by dry-run only.
-      x-robustquant-first-readonly: true
-      x-robustquant-dry-run-for-application: true
+      x-augur_maestro-first-readonly: true
+      x-augur_maestro-dry-run-for-application: true
       parameters:
         - $ref: "#/components/parameters/HeaderContentType"
         - $ref: "#/components/parameters/HeaderLang"
@@ -116,8 +116,8 @@ paths:
       tags: [auth]
       operationId: usmartSendPhoneCaptcha
       summary: Send phone captcha for channel captcha login.
-      x-robustquant-first-readonly: false
-      x-robustquant-dry-run-for-application: true
+      x-augur_maestro-first-readonly: false
+      x-augur_maestro-dry-run-for-application: true
       parameters:
         - $ref: "#/components/parameters/HeaderContentType"
         - $ref: "#/components/parameters/HeaderLang"
@@ -145,11 +145,11 @@ paths:
       tags: [auth]
       operationId: usmartCaptchaLogin
       summary: Channel captcha login.
-      x-robustquant-first-readonly: true
-      x-robustquant-dry-run-for-application: true
+      x-augur_maestro-first-readonly: true
+      x-augur_maestro-dry-run-for-application: true
       x-pending-confirmation: >
         Official example contains modifyUserConfigParam, but parameter table
-        lists only areaCode, captcha, and phoneNumber. RobustQuant does not send
+        lists only areaCode, captcha, and phoneNumber. Augur_Maestro does not send
         modifyUserConfigParam until uSmart confirms it is required.
       parameters:
         - $ref: "#/components/parameters/HeaderContentType"
@@ -179,13 +179,13 @@ paths:
       operationId: usmartPlaceOrder
       summary: Place a normal stock order.
       description: >
-        RobustQuant must block real calls unless the gateway is in live_guarded
+        Augur_Maestro must block real calls unless the gateway is in live_guarded
         mode and all OMS, risk, time-window, and audit checks pass.
-      x-robustquant-first-live-scope: us_regular_hours_limit_order
-      x-robustquant-blocked-in-read-only: true
-      x-robustquant-dry-run-for-application: true
-      x-robustquant-header-profile: trade_demo_default
-      x-robustquant-first-live-order-profile:
+      x-augur_maestro-first-live-scope: us_regular_hours_limit_order
+      x-augur_maestro-blocked-in-read-only: true
+      x-augur_maestro-dry-run-for-application: true
+      x-augur_maestro-header-profile: trade_demo_default
+      x-augur_maestro-first-live-order-profile:
         market: US
         exchangeType: 5
         order_type: LIMIT
@@ -226,9 +226,9 @@ paths:
         The same endpoint is used for normal stock order modification and
         cancellation. actionType=1 means modify, and actionType=0 means cancel.
         IPO modification/cancellation uses different enums and is excluded.
-      x-robustquant-blocked-in-read-only: true
-      x-robustquant-dry-run-for-application: true
-      x-robustquant-header-profile: trade_demo_modify_order
+      x-augur_maestro-blocked-in-read-only: true
+      x-augur_maestro-dry-run-for-application: true
+      x-augur_maestro-header-profile: trade_demo_modify_order
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
         - $ref: "#/components/parameters/HeaderContentType"
@@ -260,10 +260,10 @@ paths:
       tags: [orders, guarded-trade]
       operationId: usmartPlaceOddLotOrder
       summary: Place an odd-lot order.
-      x-robustquant-first-live-scope: us_odd_lot_only
-      x-robustquant-blocked-in-read-only: true
+      x-augur_maestro-first-live-scope: us_odd_lot_only
+      x-augur_maestro-blocked-in-read-only: true
       x-user-confirmed: "2026-05-21: first version enables US odd-lot buy and sell."
-      x-robustquant-first-live-order-profile:
+      x-augur_maestro-first-live-order-profile:
         market: US
         exchangeType: 5
         sides:
@@ -304,8 +304,8 @@ paths:
       tags: [orders, guarded-trade]
       operationId: usmartCancelOddLotOrder
       summary: Cancel an odd-lot order.
-      x-robustquant-first-live-scope: us_odd_lot_only
-      x-robustquant-blocked-in-read-only: true
+      x-augur_maestro-first-live-scope: us_odd_lot_only
+      x-augur_maestro-blocked-in-read-only: true
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
         - $ref: "#/components/parameters/HeaderContentType"
@@ -333,7 +333,7 @@ paths:
       tags: [account]
       operationId: usmartGetStockAsset
       summary: Query account asset.
-      x-robustquant-first-readonly: true
+      x-augur_maestro-first-readonly: true
       x-pending-confirmation: Official request and response field tables need full schema extraction.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
@@ -361,7 +361,7 @@ paths:
       tags: [account]
       operationId: usmartGetStockHolding
       summary: Query stock holdings.
-      x-robustquant-first-readonly: true
+      x-augur_maestro-first-readonly: true
       x-pending-confirmation: Official request and response field tables need full schema extraction.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
@@ -389,7 +389,7 @@ paths:
       tags: [orders]
       operationId: usmartQueryTodayOrders
       summary: Query today's orders.
-      x-robustquant-first-readonly: true
+      x-augur_maestro-first-readonly: true
       x-pending-confirmation: Official request and response field tables need full schema extraction.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
@@ -417,7 +417,7 @@ paths:
       tags: [orders]
       operationId: usmartQueryHistoryOrders
       summary: Query historical orders.
-      x-robustquant-first-readonly: true
+      x-augur_maestro-first-readonly: true
       x-pending-confirmation: Official request and response field tables need full schema extraction.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
@@ -445,7 +445,7 @@ paths:
       tags: [orders]
       operationId: usmartQueryOrderDetail
       summary: Query order detail.
-      x-robustquant-first-readonly: true
+      x-augur_maestro-first-readonly: true
       x-pending-confirmation: Official request and response field tables need full schema extraction.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
@@ -473,7 +473,7 @@ paths:
       tags: [trades]
       operationId: usmartQueryStockRecords
       summary: Query trade records.
-      x-robustquant-first-readonly: true
+      x-augur_maestro-first-readonly: true
       x-pending-confirmation: Official request and response field tables need full schema extraction.
       parameters:
         - $ref: "#/components/parameters/HeaderAuthorization"
@@ -538,7 +538,7 @@ components:
       x-demo-observed: >
         Official Python demo uses X-Time on quote HTTP signing. Trade HTTP demo
         does not add X-Time in the shared trade request helper.
-      x-robustquant-required-when: Endpoint header profile or uSmart final integration requires it.
+      x-augur_maestro-required-when: Endpoint header profile or uSmart final integration requires it.
     HeaderDeviceType:
       name: X-Dt
       in: header
@@ -573,10 +573,10 @@ components:
         minLength: 1
         maxLength: 30
       description: >
-        Endpoint-level request id header. RobustQuant always keeps an internal
+        Endpoint-level request id header. Augur_Maestro always keeps an internal
         broker_request_id for audit, but only sends this header when the
         endpoint header profile requires it.
-      x-robustquant-required-when: modify-order profile, or another endpoint profile explicitly enables it.
+      x-augur_maestro-required-when: modify-order profile, or another endpoint profile explicitly enables it.
       x-pending-confirmation: Effective lifetime and duplicate semantics.
     HeaderSign:
       name: X-Sign
@@ -587,7 +587,7 @@ components:
       description: Signature over stable JSON body using trade OpenAPI key material.
       x-demo-observed: >
         Official Python demo signs json.dumps(params) with MD5withRSA and
-        encodes trade X-Sign with standard Base64. User confirmed RobustQuant
+        encodes trade X-Sign with standard Base64. User confirmed Augur_Maestro
         should follow the official Python demo for trade X-Sign encoding and
         keep URL-safe Base64 as a configurable fallback if uSmart requires it.
         Quote HTTP uses a different header+body signing string and URL-safe
@@ -598,9 +598,9 @@ components:
         encryption and URL-safe Base64 encoding for phoneNumber, login
         password, and trade password fields. Official demo maps public_key to
         sensitive-field encryption and private_key to X-Sign signing. The PEM
-        wrapping in common/utils.py is unusual, so RobustQuant validates semantic
+        wrapping in common/utils.py is unusual, so Augur_Maestro validates semantic
         key roles instead of copying the wrapper literally.
-      x-robustquant-secret-naming:
+      x-augur_maestro-secret-naming:
         login_password_secret_ref: Login password secret used only for /user-server/open-api/login.
         loginPasswordEncrypted: Encrypted login password mapped to official login body field password.
         trade_password_secret_ref: Trading password secret used only for trade-action body password fields.
@@ -619,15 +619,15 @@ components:
           description: Encrypted phone number.
           x-sensitive: true
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
-          x-robustquant-key-role: sensitive_encrypt_public_key
+          x-augur_maestro-key-role: sensitive_encrypt_public_key
         password:
           type: string
           description: Encrypted login password.
           x-sensitive: true
-          x-robustquant-source-secret: login_password_secret_ref
-          x-robustquant-internal-name: loginPasswordEncrypted
+          x-augur_maestro-source-secret: login_password_secret_ref
+          x-augur_maestro-internal-name: loginPasswordEncrypted
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
-          x-robustquant-key-role: sensitive_encrypt_public_key
+          x-augur_maestro-key-role: sensitive_encrypt_public_key
     SendPhoneCaptchaRequest:
       type: object
       additionalProperties: false
@@ -640,7 +640,7 @@ components:
           description: Encrypted phone number.
           x-sensitive: true
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
-          x-robustquant-key-role: sensitive_encrypt_public_key
+          x-augur_maestro-key-role: sensitive_encrypt_public_key
         type:
           type: integer
           const: 106
@@ -656,7 +656,7 @@ components:
           description: Encrypted phone number.
           x-sensitive: true
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
-          x-robustquant-key-role: sensitive_encrypt_public_key
+          x-augur_maestro-key-role: sensitive_encrypt_public_key
         captcha:
           type: string
           x-sensitive: true
@@ -688,12 +688,12 @@ components:
         entrustProp:
           type: string
           enum: ["0", "d", "e", "g", "w"]
-          x-robustquant-first-live-allowed: ["0"]
+          x-augur_maestro-first-live-allowed: ["0"]
           x-user-confirmed: "2026-05-21: first live normal-order profile only enables 0 for US regular-hours limit orders."
-          x-robustquant-rejects: ["d", "e", "g", "w"]
+          x-augur_maestro-rejects: ["d", "e", "g", "w"]
           description: >
             First implementation enables only 0 for US regular-hours limit
-            orders. Web documentation adds w-market order; RobustQuant first
+            orders. Web documentation adds w-market order; Augur_Maestro first
             live scope rejects market orders. HK grey-market rules are
             design-only. Odd-lot orders use /stock-order-server/open-api/odd-entrust
             and do not send entrustProp according to the current manual.
@@ -704,7 +704,7 @@ components:
         exchangeType:
           type: integer
           enum: [0, 5, 6, 7]
-          x-robustquant-first-live-allowed: [5]
+          x-augur_maestro-first-live-allowed: [5]
           x-user-confirmed: "2026-05-21: first live normal-order profile only enables US exchangeType=5."
         stockCode:
           type: string
@@ -714,9 +714,9 @@ components:
           type: string
           x-sensitive: true
           description: Optional encrypted trading password in uSmart request body.
-          x-robustquant-source-secret: trade_password_secret_ref
-          x-robustquant-internal-name: tradePasswordEncrypted
-          x-robustquant-policy: >
+          x-augur_maestro-source-secret: trade_password_secret_ref
+          x-augur_maestro-internal-name: tradePasswordEncrypted
+          x-augur_maestro-policy: >
             Keep the field abstraction and encryption boundary. Do not send by
             default; only include when trade_password_required=true and
             trade_password_secret_ref is available. Encrypt with the
@@ -724,28 +724,28 @@ components:
         forceEntrustFlag:
           type: boolean
           default: false
-          x-robustquant-default: false
+          x-augur_maestro-default: false
         sessionType:
           type: integer
           enum: [0, 1, 2, 3, 12]
-          x-robustquant-first-live-allowed: [0]
+          x-augur_maestro-first-live-allowed: [0]
           x-user-confirmed: "2026-05-21: first live normal-order profile uses regular-hours sessionType=0 or omits the field if accepted by uSmart."
-          description: Web documentation adds 12-fund order; RobustQuant first live scope only allows regular-hours 0 or omitted.
+          description: Web documentation adds 12-fund order; Augur_Maestro first live scope only allows regular-hours 0 or omitted.
         orderType:
           type: integer
           enum: [0, 1]
           description: Web documentation field; 0 AMO, 1 LOO.
-          x-robustquant-first-live-allowed: []
-          x-pending-confirmation: Not supported by RobustQuant first implementation.
+          x-augur_maestro-first-live-allowed: []
+          x-pending-confirmation: Not supported by Augur_Maestro first implementation.
         validDate:
           type: string
           pattern: "^\\d{4}-\\d{2}-\\d{2}$"
           description: Web documentation field for valid date.
-          x-pending-confirmation: Not supported by RobustQuant first implementation.
+          x-pending-confirmation: Not supported by Augur_Maestro first implementation.
         exchange:
           type: string
           description: Web documentation field, e.g. SMART or fixed exchange.
-          x-pending-confirmation: Not supported by RobustQuant first implementation.
+          x-pending-confirmation: Not supported by Augur_Maestro first implementation.
     ModifyOrderRequest:
       type: object
       additionalProperties: false
@@ -766,9 +766,9 @@ components:
           type: string
           x-sensitive: true
           description: Optional encrypted trading password in uSmart request body.
-          x-robustquant-source-secret: trade_password_secret_ref
-          x-robustquant-internal-name: tradePasswordEncrypted
-          x-robustquant-policy: >
+          x-augur_maestro-source-secret: trade_password_secret_ref
+          x-augur_maestro-internal-name: tradePasswordEncrypted
+          x-augur_maestro-policy: >
             Keep the field abstraction and encryption boundary. Do not send by
             default; only include when trade_password_required=true and
             trade_password_secret_ref is available. Encrypt with the
@@ -798,9 +798,9 @@ components:
           type: string
           x-sensitive: true
           description: Optional encrypted trading password in uSmart request body.
-          x-robustquant-source-secret: trade_password_secret_ref
-          x-robustquant-internal-name: tradePasswordEncrypted
-          x-robustquant-policy: >
+          x-augur_maestro-source-secret: trade_password_secret_ref
+          x-augur_maestro-internal-name: tradePasswordEncrypted
+          x-augur_maestro-policy: >
             Keep the field abstraction and encryption boundary. Do not send by
             default; only include when trade_password_required=true and
             trade_password_secret_ref is available. Encrypt with the
@@ -810,11 +810,11 @@ components:
       additionalProperties: false
       required: [entrustAmount, entrustPrice, entrustType, exchangeType, stockCode]
       description: >
-        uSmart odd-lot request. RobustQuant first version models the internal
+        uSmart odd-lot request. Augur_Maestro first version models the internal
         user intent by notional amount, then derives broker entrustAmount as
         notional_amount / entrustPrice. Use Decimal internally and serialize to
         JSON number only at the HTTP boundary.
-      x-robustquant-internal-model:
+      x-augur_maestro-internal-model:
         notional_amount: required
         quantity_formula: entrustAmount = notional_amount / entrustPrice
         numeric_policy: Decimal internally; no binary float in domain or audit records.
@@ -823,13 +823,13 @@ components:
           allOf:
             - $ref: "#/components/schemas/DecimalNumber"
           description: Fractional-share quantity derived from internal notional amount divided by entrustPrice.
-          x-robustquant-derived-from: notional_amount / entrustPrice
+          x-augur_maestro-derived-from: notional_amount / entrustPrice
           x-pending-confirmation: Minimum fractional quantity and decimal precision.
         entrustPrice:
           allOf:
             - $ref: "#/components/schemas/DecimalNumber"
           description: Limit price used to derive odd-lot fractional quantity. Must be greater than zero.
-          x-robustquant-constraint: positive_decimal
+          x-augur_maestro-constraint: positive_decimal
         entrustType:
           type: integer
           enum: [0, 1]
@@ -838,8 +838,8 @@ components:
         exchangeType:
           type: integer
           enum: [0, 5]
-          x-robustquant-first-live-allowed: [5]
-          x-robustquant-rejects: [0]
+          x-augur_maestro-first-live-allowed: [5]
+          x-augur_maestro-rejects: [0]
         stockCode:
           type: string
     OddLotCancelRequest:
@@ -863,11 +863,11 @@ components:
         token:
           type: string
           x-sensitive: true
-          description: Top-level token. RobustQuant first version stores it only in process memory and never logs it in full.
+          description: Top-level token. Augur_Maestro first version stores it only in process memory and never logs it in full.
         expiration:
           type: string
           x-pending-confirmation: Expiration format and timezone.
-          x-robustquant-policy: Parse into expires_at when possible; do not assume a long-lived session if parsing fails.
+          x-augur_maestro-policy: Parse into expires_at when possible; do not assume a long-lived session if parsing fails.
         tradePassword:
           x-pending-confirmation: Official scalar type.
         openedAccount:
@@ -908,7 +908,7 @@ components:
     BusinessCode:
       type: integer
       description: uSmart business response code. code=0 may indicate business success.
-      x-robustquant-policy: >
+      x-augur_maestro-policy: >
         Look up raw codes by current endpoint in usmart-trade-error-codes.draft.yaml.
         Do not treat codes from another endpoint as valid for this operation.
         Map endpoint-specific raw codes to stable gateway error codes.
@@ -916,7 +916,7 @@ components:
     OrderStatusRaw:
       type: integer
       enum: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
-      x-robustquant-policy: status/orderStatus must be consumed by the OMS mapper; unknown values map to unknown_by_official_doc.
+      x-augur_maestro-policy: status/orderStatus must be consumed by the OMS mapper; unknown values map to unknown_by_official_doc.
       x-pending-confirmation: Complete orderStatus enum and status flow.
     DecimalNumber:
       type: number
@@ -1026,7 +1026,7 @@ components:
       minimum: 1
       maximum: 20
       default: 10
-      description: Official web manual says pageSize defaults to 10; RobustQuant caps requests at 20.
+      description: Official web manual says pageSize defaults to 10; Augur_Maestro caps requests at 20.
     AssetQueryResponseDraft:
       allOf:
         - $ref: "#/components/schemas/BusinessResponse"
@@ -1058,7 +1058,7 @@ components:
         - status
         - statusName
         - finalStateFlag
-      x-robustquant-oms-status-policy: >
+      x-augur_maestro-oms-status-policy: >
         status/orderStatus and finalStateFlag must be consumed by the OMS
         mapper. finalStateFlag is 0 non-final, 1 final per official manual.
         Do not use finalStateFlag alone; conflicting or unknown combinations
@@ -1067,7 +1067,7 @@ components:
     OrderDetailResponseDraft:
       allOf:
         - $ref: "#/components/schemas/BusinessResponse"
-      x-robustquant-oms-status-policy: >
+      x-augur_maestro-oms-status-policy: >
         detailList.orderStatus must be consumed by the OMS mapper. Unknown
         historical node statuses map to unknown_by_official_doc until the full
         official enum is extracted.

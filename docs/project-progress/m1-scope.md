@@ -1,4 +1,4 @@
-﻿# RobustQuant M1 交付范围
+﻿# Augur_Maestro M1 交付范围
 
 版本：v0.1  
 状态：草案，待用户确认  
@@ -109,7 +109,7 @@ M1 主题范围：
 
 ### 3.4 回测线
 
-- 先并行最小验证 Qlib 和 VectorBT，再选择最适合 RobustQuant 的主执行器。
+- 先并行最小验证 Qlib 和 VectorBT，再选择最适合 Augur_Maestro 的主执行器。
 - 回测必须读取 PostgreSQL 标准表，不能直接访问 AKShare。
 - 回测配置必须保存初始资金、手续费、滑点、调仓规则、复权方式和配置哈希。
 - 回测结果至少保存总收益、年化收益、最大回撤、波动率、夏普比率、胜率和换手率。
@@ -223,7 +223,7 @@ M3 目标是受控实盘交易闭环，前提是 miniQMT 或其他券商 API 行
 
 M3 进入任何真实下单前，都必须重新更新交易链路设计并经用户确认。
 
-盈立 OpenAPI 申请材料需要源码截图时，该事项按券商申请材料处理，不作为 RobustQuant 开发交付。开发侧只按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 解析 uSmart 官方网页手册和本地 Markdown 转换稿，并且不允许真实提交委托。
+盈立 OpenAPI 申请材料需要源码截图时，该事项按券商申请材料处理，不作为 Augur_Maestro 开发交付。开发侧只按 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md) 解析 uSmart 官方网页手册和本地 Markdown 转换稿，并且不允许真实提交委托。
 
 ## 10. 当前需要讨论的决策
 

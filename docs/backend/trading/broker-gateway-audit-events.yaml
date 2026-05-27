@@ -2,7 +2,7 @@ version: 0.1.0-draft
 kind: broker_gateway_audit_event_catalog
 namespace: broker
 status: draft
-owner: RobustQuant TradingGateway
+owner: Augur_Maestro TradingGateway
 source_documents:
   - docs/backend/trading/broker-trading-gateway.md
   - docs/backend/observability-audit.md

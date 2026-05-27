@@ -6,7 +6,7 @@
 
 ## 1. 文档定位
 
-本文档定义 RobustQuant M1 的 PostgreSQL 数据模型。目标是让后续 SQLAlchemy 模型和 Alembic 迁移有明确依据。
+本文档定义 Augur_Maestro M1 的 PostgreSQL 数据模型。目标是让后续 SQLAlchemy 模型和 Alembic 迁移有明确依据。
 
 M1 只覆盖 A 股研究回测闭环，不覆盖真实下单。订单、成交、持仓、资金和实盘对账模型后续单独设计。
 

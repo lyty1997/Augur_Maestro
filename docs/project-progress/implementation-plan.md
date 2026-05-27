@@ -1,4 +1,4 @@
-﻿# RobustQuant M1 实施路线图
+﻿# Augur_Maestro M1 实施路线图
 
 版本：v0.1  
 状态：草案，待用户确认  
@@ -313,15 +313,15 @@ flowchart TB
 - 依赖：M1.A.02、M1.A.04。
 - 目标：提供可复现的命令链。
 - 交付：
-  - `robustquant --help`。
-  - `robustquant data init-db`。
-  - `robustquant universe build-candidates`。
-  - `robustquant universe approve`。
-  - `robustquant data import-daily-bars`。
-  - `robustquant data validate`。
-  - `robustquant research create-task`。
-  - `robustquant backtest run`。
-  - `robustquant report generate`。
+  - `augur_maestro --help`。
+  - `augur_maestro data init-db`。
+  - `augur_maestro universe build-candidates`。
+  - `augur_maestro universe approve`。
+  - `augur_maestro data import-daily-bars`。
+  - `augur_maestro data validate`。
+  - `augur_maestro research create-task`。
+  - `augur_maestro backtest run`。
+  - `augur_maestro report generate`。
 - DoD：
   - 每个命令都有 `--help`。
   - 命令成功输出关键 ID。
@@ -461,7 +461,7 @@ flowchart TB
 
 ## 10. 盈立 OpenAPI 官方网页手册解析
 
-盈立申请材料要求源码截图，该事项与 RobustQuant 开发无关，不作为 M1 任务。开发侧只解析 uSmart 官方网页手册和本地 Markdown 转换稿，为未来正式券商接入设计提供依据。
+盈立申请材料要求源码截图，该事项与 Augur_Maestro 开发无关，不作为 M1 任务。开发侧只解析 uSmart 官方网页手册和本地 Markdown 转换稿，为未来正式券商接入设计提供依据。
 
 ### YL.01 官方网页文档解析确认
 

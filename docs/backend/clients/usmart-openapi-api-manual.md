@@ -101,7 +101,7 @@ src/
 
 ## 4. 对外本地 API 清单
 
-本地 API 是 RobustQuant 自己暴露给 CLI / Web / 任务的接口，不是直接暴露券商 OpenAPI。
+本地 API 是 Augur_Maestro 自己暴露给 CLI / Web / 任务的接口，不是直接暴露券商 OpenAPI。
 
 | 本地能力 | 本地入口 | 应用服务方法 | 网关方法 | 券商 endpoint | 默认模式 |
 |---|---|---|---|---|---|
@@ -879,6 +879,6 @@ class uSmartHttpTransport:
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举；已确认 `status` / `orderStatus` 和 `finalStateFlag` 都必须进入 OMS mapper，未知或冲突状态进入 `unknown_by_official_doc`。
-- 券商响应状态完整提取；项目策略已确认必须按 endpoint 分组保留券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
+- 券商响应状态完整提取；项目策略已确认必须按 endpoint 分组保留券商 raw code catalog，并映射到 Augur_Maestro gateway 错误码层。
 - 美股碎股使用 `/stock-order-server/open-api/odd-entrust` 专用接口，不通过普通下单 `entrustProp` 建模；第一版内部按金额建模，发送给券商的 `entrustAmount` 为金额除以限价换算出的小数股数。最小金额、最小股数、数量精度、订单状态和撤单细节仍需后续按网页手册和 demo 继续细化。
 - 第一版先按现金账户正股多头交易设计，`TradingGateway` 只承接正股买入卖出执行，止盈止损由策略模块产生普通交易意图；不启用自动对冲、做空、融资融券、保证金交易或美股期权；后续迭代再加入对冲、做空和美股期权。

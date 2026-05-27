@@ -1,4 +1,4 @@
-﻿# RobustQuant 待决策清单
+﻿# Augur_Maestro 待决策清单
 
 版本：v0.1  
 状态：部分确认
@@ -13,7 +13,7 @@
 - M1 先做 A 股研究回测闭环。
 - M1 不接真实交易接口，只保留统一券商适配器抽象和占位实现。
 - 盈立 OpenAPI 申请结果不确定，港股、美股和盈立正式接入不作为 M1 研究闭环依赖。
-- 盈立反馈申请 OpenAPI 需要提供登录、下单、改单、撤单源码截图；该事项属于券商申请材料，不作为 RobustQuant 开发交付。
+- 盈立反馈申请 OpenAPI 需要提供登录、下单、改单、撤单源码截图；该事项属于券商申请材料，不作为 Augur_Maestro 开发交付。
 - miniQMT 和盈立 OpenAPI 的只读查询测试不构成真实交易；任何会向券商提交委托、撤单、条件单、预埋单或改变券商侧订单状态的调用，都按真实交易处理。
 - 不允许用真实下单、真实撤单或真实条件单接口做连通性探测、冒烟测试或权限测试。
 - 真实交易能力默认关闭，必须经过实盘开关、策略授权、交易时间检查、风控、OMS、账户/标的白名单和对账设计后才能启用；运行期基础交易不要求逐笔人工确认，自动化程序可以执行通过风控门禁的正股买入和卖出，包括策略模块生成的建仓、加仓、减仓、平仓、止盈和止损意图。
@@ -194,7 +194,7 @@
 - Agent 在 M1 只做 A 股研究回测闭环。
 - 回测引擎优先选择成熟库，不自研完整回测框架。
 - 交易接口暂时只做抽象占位，不阻塞研究 Agent。
-- 回测库先并行最小验证 Qlib 和 VectorBT，再选择最适合 RobustQuant 的主执行器。
+- 回测库先并行最小验证 Qlib 和 VectorBT，再选择最适合 Augur_Maestro 的主执行器。
 - 第一版报告格式使用 Markdown。
 - 研究报告必须包含基础归因分析，回答主要收益和亏损来自哪些标的、主题、因子、时间窗口、事件窗口和交易成本。
 - 第一版主题股票池不要求用户逐只手工输入，可以由 AKShare 概念板块、行业分类、公开资料和 AI 辅助生成候选，再由用户确认。
@@ -214,7 +214,7 @@
 建议：
 
 - M1 先做规则驱动的 Agent 编排，不急着让 LLM 自动生成可执行代码。
-- 回测库只能作为执行引擎，RobustQuant 仍需保留自己的数据模型、实验记录、风控假设和报告格式。
+- 回测库只能作为执行引擎，Augur_Maestro 仍需保留自己的数据模型、实验记录、风控假设和报告格式。
 - 先把数据版本、实验参数、回测结果、报告产物记录完整，避免研究结果不可复现。
 - Agent 输出策略草案后必须进入人工审核状态，不能直接进入实盘。
 
@@ -394,7 +394,7 @@
 已确认：
 
 - 盈立反馈 OpenAPI 申请需要登录、下单、改单、撤单源码截图。
-- 源码截图属于券商申请材料事项，不作为 RobustQuant 开发交付。
+- 源码截图属于券商申请材料事项，不作为 Augur_Maestro 开发交付。
 - 不允许用真实下单、改单、撤单接口做连通性测试或截图演示。
 - uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdown 转换稿位于 `API_manual/uSmart/API_manual/`。
 - 已同步官方网页文档：交易开放 API `https://api-doc.usmart8.com/zh-cn/trade.html`、基础报价 API `https://api-doc.usmart8.com/zh-cn/quote-base.html`、报价推送 API `https://api-doc.usmart8.com/zh-cn/quote-push.html`。
@@ -415,7 +415,7 @@
 - 用户确认第一版启用美股碎股买入和卖出；内部按委托金额建模，发送给 `/odd-entrust` 的 `entrustAmount` 由委托金额除以限价换算为小数股数。金额、价格和换算数量内部使用 `Decimal`，只在 HTTP JSON 边界序列化为券商接受的 number。
 - 用户确认 `orderStatus` 肯定要给 OMS 判断订单状态，`finalStateFlag` 也要让 OMS 知道；项目策略为 `status` / `orderStatus` 和 `finalStateFlag` 共同进入 OMS mapper，冲突或未知状态进入 `unknown_by_official_doc`。
 - 用户确认分页规则按官方手册：`pageNum` 当前页从 1 开始，默认 1；`pageSize` 每页结果数默认 10，最大 20。
-- 用户确认错误处理必须包含所有券商错误码，同时 RobustQuant gateway 要有自己的错误码层。
+- 用户确认错误处理必须包含所有券商错误码，同时 Augur_Maestro gateway 要有自己的错误码层。
 - 用户确认配置和设计变量名必须区分登录密码和交易密码：登录密码使用 `login_password_secret_ref` / `loginPasswordEncrypted`，交易密码使用 `trade_password_secret_ref` / `tradePasswordEncrypted`；只有最终映射到盈立官方 request body 时才使用官方字段名 `password`。
 - 用户确认第一版 `trade_password_required=false`：保留交易密码字段抽象和加密能力，但默认不读取 `trade_password_secret_ref`，也不写入下单、改单、撤单 body。
 - 用户确认第一版不自动调用 `trade-login`；遇到券商要求交易密码、交易解锁或交易锁定时，OMS 将订单置为 `blocked_by_broker_trade_lock`，停止自动交易并进入人工确认流程。
@@ -433,13 +433,13 @@
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。
 - 登录手机号、登录密码、交易密码使用官方 Python demo 的 `rsa_encrypt` transform：RSA `PKCS1_v1_5` 加密后 URL-safe Base64。
 - 订单明细 `orderStatus` 必须进入 OMS mapper；`status` / `orderStatus` 和 `finalStateFlag` 冲突或未知时进入 `unknown_by_official_doc`。
-- 券商错误码必须保留完整 raw code catalog，并映射到 RobustQuant gateway 错误码层。
+- 券商错误码必须保留完整 raw code catalog，并映射到 Augur_Maestro gateway 错误码层。
 
 仍需券商或联调确认：
 
 - 后续交易验证 profile 的启用条件、验证范围和回滚条件。
 - `X-Request-Id` 的有效期、重复请求返回语义，以及与下单 body `serialNo` 的官方关系。
-- 券商最终下发的生产/测试密钥材料命名是否继续沿用官方 demo README 语义：`public_key` 用于隐私字段加密，`private_key` 用于 `X-Sign`；实现按 RobustQuant key role 绑定和校验。
+- 券商最终下发的生产/测试密钥材料命名是否继续沿用官方 demo README 语义：`public_key` 用于隐私字段加密，`private_key` 用于 `X-Sign`；实现按 Augur_Maestro key role 绑定和校验。
 - token `expiration` 的精确格式、时区和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
 - 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节。
 - 美股碎股撤单 `/odd-modify` 的字段、状态和风控前置条件。

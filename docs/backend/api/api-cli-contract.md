@@ -48,13 +48,13 @@ M1 默认由应用层生成 UUID。日志、报告和错误信息应尽量输出
 ### 2.1 顶层命令
 
 ```bash
-robustquant --help
-robustquant doctor
-robustquant data --help
-robustquant universe --help
-robustquant research --help
-robustquant backtest --help
-robustquant report --help
+augur_maestro --help
+augur_maestro doctor
+augur_maestro data --help
+augur_maestro universe --help
+augur_maestro research --help
+augur_maestro backtest --help
+augur_maestro report --help
 ```
 
 `doctor` 用于本地环境检查，只检查 Python、依赖、配置、数据库连接和目录权限。它不得调用真实券商接口，也不得探测真实下单能力。
@@ -62,11 +62,11 @@ robustquant report --help
 ### 2.2 数据命令
 
 ```bash
-robustquant data init-db
-robustquant data import-symbols --market CN_A --provider akshare
-robustquant data import-calendar --market CN_A --start 2016-01-01 --end 2026-05-15
-robustquant data import-daily-bars --universe-id <uuid> --start 2016-01-01 --end 2026-05-15 --adjust none --adjust qfq
-robustquant data validate --universe-id <uuid> --start 2016-01-01 --end 2026-05-15 --adjust qfq
+augur_maestro data init-db
+augur_maestro data import-symbols --market CN_A --provider akshare
+augur_maestro data import-calendar --market CN_A --start 2016-01-01 --end 2026-05-15
+augur_maestro data import-daily-bars --universe-id <uuid> --start 2016-01-01 --end 2026-05-15 --adjust none --adjust qfq
+augur_maestro data validate --universe-id <uuid> --start 2016-01-01 --end 2026-05-15 --adjust qfq
 ```
 
 成功输出：
@@ -98,11 +98,11 @@ message=AKShare provider failed; see logs for trace_id
 ### 2.3 股票池命令
 
 ```bash
-robustquant universe build-candidates --config configs/universe/m1_theme_universe.yaml
-robustquant universe list-candidates --candidate-run-id <uuid>
-robustquant universe decide --candidate-id <uuid> --decision approved --reason "人工确认属于半导体设备链"
-robustquant universe approve-run --universe-id <uuid> --candidate-run-id <uuid>
-robustquant universe list-members --universe-id <uuid>
+augur_maestro universe build-candidates --config configs/universe/m1_theme_universe.yaml
+augur_maestro universe list-candidates --candidate-run-id <uuid>
+augur_maestro universe decide --candidate-id <uuid> --decision approved --reason "人工确认属于半导体设备链"
+augur_maestro universe approve-run --universe-id <uuid> --candidate-run-id <uuid>
+augur_maestro universe list-members --universe-id <uuid>
 ```
 
 规则：
@@ -115,9 +115,9 @@ robustquant universe list-members --universe-id <uuid>
 ### 2.4 研究命令
 
 ```bash
-robustquant research create-task --config configs/research/m1_baseline.yaml
-robustquant research prepare-data --task-id <uuid>
-robustquant research show --task-id <uuid>
+augur_maestro research create-task --config configs/research/m1_baseline.yaml
+augur_maestro research prepare-data --task-id <uuid>
+augur_maestro research show --task-id <uuid>
 ```
 
 研究配置示例：
@@ -150,9 +150,9 @@ risk_assumption:
 ### 2.5 回测命令
 
 ```bash
-robustquant backtest run --task-id <uuid> --engine vectorbt --strategy m1_momentum_baseline
-robustquant backtest attribution --backtest-id <uuid>
-robustquant backtest show --backtest-id <uuid>
+augur_maestro backtest run --task-id <uuid> --engine vectorbt --strategy m1_momentum_baseline
+augur_maestro backtest attribution --backtest-id <uuid>
+augur_maestro backtest show --backtest-id <uuid>
 ```
 
 规则：
@@ -165,8 +165,8 @@ robustquant backtest show --backtest-id <uuid>
 ### 2.6 报告命令
 
 ```bash
-robustquant report generate --task-id <uuid> --backtest-id <uuid> --format markdown
-robustquant report list --task-id <uuid>
+augur_maestro report generate --task-id <uuid> --backtest-id <uuid> --format markdown
+augur_maestro report list --task-id <uuid>
 ```
 
 规则：

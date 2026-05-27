@@ -1,1 +1,1 @@
-"""RobustQuant core package."""
+"""Augur_Maestro core package."""

@@ -2,7 +2,7 @@ version: 0.1.0-draft
 kind: usmart_trade_key_material_profiles
 api_family: trade_openapi
 status: draft
-owner: RobustQuant TradingGateway
+owner: Augur_Maestro TradingGateway
 source_documents:
   - ../../../../API_manual/uSmart/API_manual/usmart-trade-openapi.zh-cn.md
   - ../../../../API_manual/uSmart/openapi-demo-py/common/utils.py
@@ -23,8 +23,8 @@ policy:
   notes:
     - Official demo README names public_key as 公钥 and private_key as 私钥.
     - Official demo uses config public_key for rsa_encrypt sensitive-field encryption and config private_key for X-Sign signing.
-    - common/utils.py wraps those slots with unusual PEM headers; RobustQuant must validate semantic key type instead of copying the wrapper literally.
-    - RobustQuant must bind broker-issued key material to semantic roles below and validate each role before enabling real HTTP.
+    - common/utils.py wraps those slots with unusual PEM headers; Augur_Maestro must validate semantic key type instead of copying the wrapper literally.
+    - Augur_Maestro must bind broker-issued key material to semantic roles below and validate each role before enabling real HTTP.
 profiles:
   usmart_trade_default:
     description: Key role contract for uSmart trade OpenAPI request signing and sensitive field encryption.
@@ -91,7 +91,7 @@ profiles:
           - encrypted_fields_must_not_be_logged_before_or_after_encryption
           - private_key_must_not_be_bound_to_this_role_without_explicit_compat_override
       sensitive_decrypt_private_key:
-        purpose: Not needed by RobustQuant application runtime.
+        purpose: Not needed by Augur_Maestro application runtime.
         status: forbidden
         reason: The client only encrypts sensitive fields before sending requests; it must not hold a broker private decryption key unless official integration explicitly requires a separate diagnostic tool.
       quote_sign_private_key:

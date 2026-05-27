@@ -6,7 +6,7 @@
 
 ## 1. 文档定位
 
-本文档定义 RobustQuant M1 的 Python 层接口类。它承接 [data-model.md](../data/data-model.md) 的数据库模型，但不等同于 SQLAlchemy ORM 模型。
+本文档定义 Augur_Maestro M1 的 Python 层接口类。它承接 [data-model.md](../data/data-model.md) 的数据库模型，但不等同于 SQLAlchemy ORM 模型。
 
 目标：
 
@@ -129,19 +129,19 @@ class DateRange:
 ### 3.3 错误类型
 
 ```python
-class RobustQuantError(Exception):
-    """Base error for RobustQuant."""
+class AugurMaestroError(Exception):
+    """Base error for Augur_Maestro."""
 
 
-class DomainValidationError(RobustQuantError):
+class DomainValidationError(AugurMaestroError):
     """Raised when a domain rule is violated."""
 
 
-class ExternalProviderError(RobustQuantError):
+class ExternalProviderError(AugurMaestroError):
     """Raised when an external provider fails."""
 
 
-class DataQualityError(RobustQuantError):
+class DataQualityError(AugurMaestroError):
     """Raised when data quality blocks downstream usage."""
 ```
 

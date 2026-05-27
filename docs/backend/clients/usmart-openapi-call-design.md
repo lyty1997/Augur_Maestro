@@ -6,7 +6,7 @@
 
 ## 0. 文档定位
 
-本文档说明 RobustQuant 中“从本地入口到实际调用 uSmart / 盈立交易开放 API server”的全链路代码层设计。它回答券商审核最关心的几个问题：
+本文档说明 Augur_Maestro 中“从本地入口到实际调用 uSmart / 盈立交易开放 API server”的全链路代码层设计。它回答券商审核最关心的几个问题：
 
 - 从 CLI / Web / 本地服务到 uSmart / 盈立交易开放 API server，中间经过哪些层。
 - 哪一层代码会发起到交易开放 API 的 HTTP 请求。
@@ -21,7 +21,7 @@
 
 盈立官方资料实际拆成三套 API，本文档只覆盖第一套：
 
-| API | 官方文档 | 协议 | RobustQuant 边界 |
+| API | 官方文档 | 协议 | Augur_Maestro 边界 |
 |---|---|---|---|
 | 交易开放 API | `https://api-doc.usmart8.com/zh-cn/trade.html` | HTTPS POST | `TradingGateway`、`BrokerTradingAdapter`、uSmart 交易适配器 |
 | 基础报价 API | `https://api-doc.usmart8.com/zh-cn/quote-base.html` | HTTPS POST | `QuotationDataGateway` 后续 HTTP 行情适配器 |
@@ -58,12 +58,12 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为字段、endpoint、枚举
 
 ## 1. 调用链路
 
-RobustQuant 本地系统与 uSmart / 盈立交易开放 API 是 client-server 架构：
+Augur_Maestro 本地系统与 uSmart / 盈立交易开放 API 是 client-server 架构：
 
 ```mermaid
 sequenceDiagram
     participant UI as CLI / Web / 任务
-    participant App as RobustQuant 应用服务
+    participant App as Augur_Maestro 应用服务
     participant TG as TradingGateway
     participant AD as uSmartOpenApiTradingAdapter
     participant CL as uSmartTradeOpenApiClient
@@ -203,11 +203,11 @@ OMS
 
 ### 1.4 本地 server 与券商 server 的关系
 
-RobustQuant 后续可能有自己的 FastAPI server。它和 uSmart / 盈立交易开放 API server 是两个不同角色：
+Augur_Maestro 后续可能有自己的 FastAPI server。它和 uSmart / 盈立交易开放 API server 是两个不同角色：
 
 | Server | 归属 | 作用 |
 |---|---|---|
-| RobustQuant FastAPI server | 本地系统 | 给 Web/CLI/任务提供本地接口，调用 `TradingGateway` |
+| Augur_Maestro FastAPI server | 本地系统 | 给 Web/CLI/任务提供本地接口，调用 `TradingGateway` |
 | uSmart / 盈立交易开放 API server | 券商 | 接收交易开放 API HTTPS 请求，处理登录、查询、委托、改单、撤单 |
 
 本地 FastAPI server 不直接拼接 uSmart 请求，也不保存私钥和 token 原文。真正与交易开放 API server 通信的是 `uSmartTradeOpenApiClient` + `uSmartHttpTransport`。
@@ -364,7 +364,7 @@ src/
 |---|---|---|
 | HTTP header 幂等 | `X-Request-Id` | 由端点 header profile 决定是否外发；外发时由 `RequestIdGenerator` 生成，按 30 位可配置字符串校验 |
 | 下单 body 流水 | `serialNo` | 与本地 `broker_request_id` 建立映射，按官方网页最长 19 位约束处理；demo 生成字符串，第一版按数字可配置 |
-| 本地 OMS 订单 | `order_id` | RobustQuant 内部 ID，不直接暴露给券商 |
+| 本地 OMS 订单 | `order_id` | Augur_Maestro 内部 ID，不直接暴露给券商 |
 | 链路追踪 | `trace_id` | 可为 UUID/ULID，不参与券商幂等 |
 
 映射关系：
@@ -435,7 +435,7 @@ class uSmartTradeAuthSigner:
 - 官方手册同时出现“验签测试公开密钥”和“隐私资料加密测试公开密钥”，说明 `X-Sign` 渠道签名密钥材料与隐私资料加密密钥材料是两套，不得混用。
 - 登录手机号、登录密码、交易密码等字段使用官方文档所说的“隐私资料加密”密钥材料，与 `X-Sign` 渠道签名私钥不是同一件事。
 - 官方 Python demo 的 `common/utils.py` 已给出隐私字段加密实现：`rsa_encrypt(data)` 使用 `Crypto.Cipher.PKCS1_v1_5` 做 RSA 加密，再用 `base64.urlsafe_b64encode(...)` 输出字符串。实现按这个 transform 建模。
-- 官方 demo README 和代码用法已确认映射：`public_key` 用于 `rsa_encrypt` 隐私字段加密，`private_key` 用于 `md5_with_rsa` 生成 `X-Sign`。`common/utils.py` 的 PEM header 包装反直觉，RobustQuant 实现必须按 `sensitive_encrypt_public_key` / `trade_sign_private_key` 语义 key role 校验，不照抄包装。
+- 官方 demo README 和代码用法已确认映射：`public_key` 用于 `rsa_encrypt` 隐私字段加密，`private_key` 用于 `md5_with_rsa` 生成 `X-Sign`。`common/utils.py` 的 PEM header 包装反直觉，Augur_Maestro 实现必须按 `sensitive_encrypt_public_key` / `trade_sign_private_key` 语义 key role 校验，不照抄包装。
 - 密钥角色、demo 槽位、env ref 和校验规则落盘在 [api/usmart-trade-key-material-profiles.yaml](api/usmart-trade-key-material-profiles.yaml)；官方来源材料可以来自 demo 同名槽位，但运行时只能按 `trade_sign_private_key`、`sensitive_encrypt_public_key` 等语义角色取 secret ref。
 - `uSmartTradeSensitiveFieldEncryptor` 负责加密 `phoneNumber`、`password`、交易密码等交易开放 API 字段。
 - `uSmartTradeAuthSigner` 只负责交易开放 API 请求签名，不接收明文密码和手机号。
@@ -896,7 +896,7 @@ POST /stock-order-server/open-api/modify-order
 
 | 字段 | 可见性 | 说明 |
 |---|---|---|
-| `code` | CLI/API/OMS | RobustQuant 稳定错误码，来自 `broker-gateway-error-codes.yaml` |
+| `code` | CLI/API/OMS | Augur_Maestro 稳定错误码，来自 `broker-gateway-error-codes.yaml` |
 | `category` | CLI/API/OMS | 错误分类，用于控制流和统计 |
 | `message` | CLI/API/OMS | 安全消息，不能直接等于券商原始错误原文 |
 | `retryable` | CLI/API/OMS | 是否允许调用方按策略重试；交易动作即使为 true 也不得自动补偿提交 |
@@ -1068,7 +1068,7 @@ safety:
 错误码分两层处理：
 
 - 券商 raw code catalog：从官方网页手册按接口提取响应状态，保留原始 `code`、`msg`、endpoint、接口族和手册来源；每个接口只处理自己 `response_statuses` 下列出的状态码。
-- Gateway error code：RobustQuant 自己的稳定错误码，供 OMS、风控、CLI/API 调用方使用；不能把券商 raw code 直接泄露成内部控制流。稳定错误码 catalog 维护在 [../trading/broker-gateway-error-codes.yaml](../trading/broker-gateway-error-codes.yaml)。
+- Gateway error code：Augur_Maestro 自己的稳定错误码，供 OMS、风控、CLI/API 调用方使用；不能把券商 raw code 直接泄露成内部控制流。稳定错误码 catalog 维护在 [../trading/broker-gateway-error-codes.yaml](../trading/broker-gateway-error-codes.yaml)。
 
 禁止记录：
 

@@ -2,7 +2,7 @@ version: 0.1.0-draft
 kind: broker_gateway_error_catalog
 namespace: broker
 status: draft
-owner: RobustQuant TradingGateway
+owner: Augur_Maestro TradingGateway
 source_documents:
   - docs/backend/trading/broker-trading-gateway.md
   - docs/backend/clients/usmart-openapi-call-design.md
@@ -21,7 +21,7 @@ policy:
   unknown_raw_code_error: broker.unclassified
   generated: false
   notes:
-    - This catalog defines RobustQuant stable broker gateway errors.
+    - This catalog defines Augur_Maestro stable broker gateway errors.
     - Broker raw code catalogs map endpoint-local raw code/msg values to these stable errors.
     - Audit events such as broker.connect_started are not error codes and must not be added here.
     - TradingGateway may emit gateway-origin errors before any broker adapter or external HTTP call.

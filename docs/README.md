@@ -1,6 +1,6 @@
-# RobustQuant 设计文档
+# Augur_Maestro 设计文档
 
-本目录用于沉淀 RobustQuant 的项目设计文档。这里的文档面向项目内部研发和长期维护，和盈立 OpenAPI 申请材料分开管理。
+本目录用于沉淀 Augur_Maestro 的项目设计文档。这里的文档面向项目内部研发和长期维护，和盈立 OpenAPI 申请材料分开管理。
 
 ## 目录结构
 

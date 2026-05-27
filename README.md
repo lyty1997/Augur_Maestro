@@ -1,6 +1,6 @@
-# RobustQuant
+# Augur_Maestro
 
-RobustQuant 是量化研究与交易系统项目。当前 M1 阶段优先建设 A 股研究回测闭环和交易安全边界，不接真实交易。
+Augur_Maestro 是量化研究与交易系统项目。当前 M1 阶段优先建设 A 股研究回测闭环和交易安全边界，不接真实交易。
 
 ## 本地开发
 

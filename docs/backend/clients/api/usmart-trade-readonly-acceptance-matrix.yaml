@@ -2,7 +2,7 @@ version: 0.1.0-draft
 kind: usmart_trade_readonly_acceptance_matrix
 api_family: trade_openapi
 status: draft
-owner: RobustQuant TradingGateway
+owner: Augur_Maestro TradingGateway
 source_documents:
   - usmart-trade-endpoint-profiles.yaml
   - usmart-trade-session-retry-profiles.yaml

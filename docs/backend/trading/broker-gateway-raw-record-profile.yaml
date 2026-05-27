@@ -2,7 +2,7 @@ version: 0.1.0-draft
 kind: broker_gateway_raw_record_profile
 namespace: broker
 status: draft
-owner: RobustQuant TradingGateway
+owner: Augur_Maestro TradingGateway
 source_documents:
   - broker-trading-gateway.md
   - broker-gateway-audit-events.yaml

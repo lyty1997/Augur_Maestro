@@ -77,7 +77,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源。本地 Markdow
 
 ## 5. 不进入开发范围
 
-以下事项不作为 RobustQuant 开发任务：
+以下事项不作为 Augur_Maestro 开发任务：
 
 - 为申请材料运行真实下单、改单、撤单。
 - 在 M1 中实现真实 `uSmartOpenApiTradingAdapter` transport。

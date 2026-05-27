@@ -161,7 +161,7 @@ def render_yaml(rows: list[ErrorCodeRow]) -> str:
         "  api_family: trade_openapi",
         "policy:",
         "  raw_code_catalog: complete_from_official_manual_response_status_tables",
-        "  gateway_error_layer: robustquant_stable_error_codes",
+        "  gateway_error_layer: augur_maestro_stable_error_codes",
         "  default_gateway_error: broker.unclassified",
         "  notes:",
         "    - Keep broker raw code/msg for diagnostics and audit.",

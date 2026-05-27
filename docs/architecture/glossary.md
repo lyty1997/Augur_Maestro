@@ -1,4 +1,4 @@
-﻿# RobustQuant 术语表
+﻿# Augur_Maestro 术语表
 
 版本：v0.1  
 状态：草案
