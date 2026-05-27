@@ -1,0 +1,453 @@
+version: 0.1.0-draft
+kind: usmart_trade_readonly_acceptance_matrix
+api_family: trade_openapi
+status: draft
+owner: RobustQuant TradingGateway
+source_documents:
+  - usmart-trade-endpoint-profiles.yaml
+  - usmart-trade-session-retry-profiles.yaml
+  - usmart-trade-runtime-config-profile.yaml
+  - usmart-trade-error-codes.draft.yaml
+  - ../../trading/broker-gateway-error-codes.yaml
+  - ../../trading/broker-gateway-audit-events.yaml
+  - ../../trading/broker-gateway-raw-record-profile.yaml
+  - ../usmart-openapi-call-design.md
+  - ../usmart-openapi-api-manual.md
+  - ../usmart-readonly-integration-runbook.md
+  - ../../trading/broker-trading-gateway.md
+policy:
+  first_readonly_integration_only: true
+  real_http_requires_explicit_user_configuration: true
+  real_http_allowed_operation_kinds:
+    - login
+    - readonly
+  forbidden_real_http_operation_kinds:
+    - trade_action
+    - trade_sensitive_unlock
+  no_trade_endpoint_integration_in_this_round: true
+  no_raw_json_in_cli_or_normal_logs: true
+  no_real_credentials_or_tokens_in_fixtures: true
+  all_real_http_results_must_have_audit_ref: true
+  dry_run_required_for_application_materials: true
+global_preconditions:
+  offline_contract:
+    - endpoint_profiles_yaml_loads
+    - session_retry_profiles_yaml_loads
+    - key_material_profiles_yaml_loads
+    - runtime_config_profile_yaml_loads
+    - broker_gateway_error_catalog_yaml_loads
+    - broker_gateway_audit_catalog_yaml_loads
+    - broker_gateway_raw_record_profile_yaml_loads
+    - synthetic_keys_only
+  readonly_integration:
+    - mode_read_only
+    - transport_allow_real_http_readonly_true
+    - configured_base_url
+    - channel_id_configured
+    - ip_whitelist_ready
+    - key_material_configured_by_role
+    - login_profile_configured
+    - audit_store_available
+    - raw_record_profile_validation_passed
+    - user_explicitly_approved_real_readonly_http
+    - runtime_config_profile_validated
+case_defaults:
+  forbidden_observability:
+    - token_value
+    - login_password
+    - trade_password
+    - captcha
+    - private_key_material
+    - full_phone_number
+    - raw_http_response_text
+  required_observability:
+    - trace_id
+    - broker_request_id
+    - endpoint
+    - operation_kind
+    - duration_ms
+    - gateway_error_code_when_failed
+    - raw_hash_when_response_exists
+    - raw_ref_when_structured_response_is_saved
+  common_offline_cases:
+    request_builder_profile_match:
+      type: offline_contract
+      required: true
+      asserts:
+        - endpoint_path_matches_profile
+        - header_profile_matches_profile
+        - body_serialization_profile_is_trade_json_body
+        - response_envelope_matches_profile
+    signer_same_body_string:
+      type: offline_contract
+      required: true
+      asserts:
+        - final_body_string_signed
+        - final_body_string_sent_without_post_sign_mutation
+    redaction:
+      type: offline_contract
+      required: true
+      asserts:
+        - forbidden_observability_values_absent_from_logs
+        - response_summary_has_no_raw_json_text
+    raw_error_mapping:
+      type: offline_contract
+      required: true
+      asserts:
+        - endpoint_local_raw_code_catalog_used
+        - mapped_to_gateway_error_code_or_broker_unclassified
+  common_readonly_integration_cases:
+    happy_path:
+      type: readonly_integration
+      required: true
+      asserts:
+        - http_status_recorded
+        - broker_code_recorded
+        - raw_hash_recorded
+        - raw_ref_recorded_when_payload_saved
+        - mapper_returns_broker_agnostic_dto
+    auth_expired_path:
+      type: simulated_or_integration
+      required: true
+      asserts:
+        - stale_session_marked
+        - at_most_one_explicit_relogin
+        - new_broker_request_id_after_relogin
+        - failed_request_id_not_reused
+    schema_missing_required:
+      type: offline_contract
+      required: true
+      asserts:
+        - maps_to_broker_response_invalid_or_unknown_response
+        - raw_ref_preserved
+        - no_fake_empty_success
+    empty_result:
+      type: offline_contract
+      required: true
+      asserts:
+        - empty_list_maps_to_empty_page_or_empty_collection
+        - data_missing_does_not_map_to_empty_success
+cases:
+  - id: login_password
+    endpoint_id: password_login
+    endpoint: /user-server/open-api/login
+    operation_kind: login
+    gateway_method: connect
+    real_http_allowed_in_first_readonly: true
+    acceptance_cases:
+      - id: login_request_builder_encrypts_credentials
+        type: offline_contract
+        required: true
+        asserts:
+          - body_has_areaCode_phoneNumber_password
+          - phoneNumber_encrypted_with_sensitive_encrypt_profile
+          - password_encrypted_with_sensitive_encrypt_profile
+          - authorization_header_absent
+          - tradePassword_field_absent
+      - id: login_response_mapper_top_level_token
+        type: offline_contract
+        required: true
+        asserts:
+          - token_path_token_accepted
+          - expiration_path_expiration_accepted
+          - token_value_stored_memory_only
+          - token_fingerprint_audited
+      - id: login_response_mapper_data_token
+        type: offline_contract
+        required: true
+        asserts:
+          - token_path_data_token_accepted
+          - expiration_path_data_expiration_accepted
+      - id: login_response_token_conflict
+        type: offline_contract
+        required: true
+        asserts:
+          - top_level_and_data_token_conflict_maps_to_broker_response_invalid
+          - new_session_not_installed
+      - id: login_real_http_smoke
+        type: readonly_integration
+        required: true
+        asserts:
+          - session_created
+          - session_replaces_previous_account_session
+          - token_not_logged
+          - session_profile_usmart_single_account_memory_session_v1_used
+
+  - id: open_asset_query_v1_account_cash_positions
+    endpoint_id: open_asset_query_v1
+    endpoint: /asset-center-server/open-api/open-assetQuery/v1
+    operation_kind: readonly
+    gateway_methods:
+      - get_account
+      - get_cash
+      - get_positions
+    real_http_allowed_in_first_readonly: true
+    acceptance_cases:
+      - id: asset_request_builder_default
+        type: offline_contract
+        required: true
+        asserts:
+          - body_empty_when_currency_omitted
+          - exchangeType_not_sent
+      - id: asset_request_builder_currency
+        type: offline_contract
+        required: true
+        asserts:
+          - CNY_maps_to_moneyType_0
+          - USD_maps_to_moneyType_1
+          - HKD_maps_to_moneyType_2
+      - id: asset_mapper_cash_and_positions
+        type: offline_contract
+        required: true
+        asserts:
+          - data_assetSingleInfoRespVOS_maps_to_account_and_cash
+          - holdInfos_maps_to_positions
+          - Decimal_used_for_amounts_quantities_and_prices
+          - unknown_currency_maps_to_unknown_currency_with_raw_ref
+      - id: asset_empty_holdInfos
+        type: offline_contract
+        required: true
+        asserts:
+          - empty_holdInfos_maps_to_empty_positions
+          - asset_snapshot_still_returned_when_asset_data_present
+      - id: asset_real_http_smoke
+        type: readonly_integration
+        required: true
+        asserts:
+          - account_snapshot_returned
+          - cash_snapshot_returned
+          - positions_collection_returned
+          - raw_ref_available_for_mapper_input
+
+  - id: today_entrust
+    endpoint_id: today_entrust
+    endpoint: /stock-order-server/open-api/today-entrust
+    operation_kind: readonly
+    gateway_method: query_orders
+    order_query_scope: today
+    real_http_allowed_in_first_readonly: true
+    acceptance_cases:
+      - id: today_request_builder_default_pagination
+        type: offline_contract
+        required: true
+        asserts:
+          - pageNum_default_1
+          - pageSize_default_10
+          - pageSize_clamped_to_20
+          - exchangeType_default_100
+      - id: today_demo_pagination_compat_disabled_by_default
+        type: offline_contract
+        required: true
+        asserts:
+          - demo_pageNum_0_not_used_by_default
+          - demo_compat_requires_explicit_profile_flag
+      - id: today_mapper_empty_page
+        type: offline_contract
+        required: true
+        asserts:
+          - code_0_data_list_empty_maps_to_empty_page
+          - total_missing_with_empty_list_defaults_to_0_or_raw_ref_policy
+      - id: today_mapper_status_unknown
+        type: offline_contract
+        required: true
+        asserts:
+          - unknown_status_maps_to_unknown_by_official_doc
+          - finalStateFlag_preserved
+      - id: today_real_http_smoke
+        type: readonly_integration
+        required: true
+        asserts:
+          - page_returned
+          - page_num_and_page_size_audited
+          - order_rows_have_raw_ref_when_present
+
+  - id: his_entrust
+    endpoint_id: his_entrust
+    endpoint: /stock-order-server/open-api/his-entrust
+    operation_kind: readonly
+    gateway_method: query_orders
+    order_query_scope: history
+    real_http_allowed_in_first_readonly: true
+    acceptance_cases:
+      - id: history_request_builder_default
+        type: offline_contract
+        required: true
+        asserts:
+          - dateFlag_default_1
+          - exchangeType_default_100
+          - pageNum_default_1
+          - pageSize_default_10
+      - id: history_request_builder_custom_date_guard
+        type: offline_contract
+        required: true
+        asserts:
+          - dateFlag_6_requires_begin_and_end_dates
+          - dateFlag_7_requires_explicit_config
+      - id: history_mapper_page
+        type: offline_contract
+        required: true
+        asserts:
+          - data_list_maps_to_order_page
+          - entrustId_and_serialNo_preserved_as_strings
+          - status_and_finalStateFlag_preserved
+      - id: history_real_http_smoke
+        type: readonly_integration
+        required: true
+        asserts:
+          - history_page_returned
+          - no_unbounded_query_used_by_default
+
+  - id: order_detail
+    endpoint_id: order_detail
+    endpoint: /stock-order-server/open-api/order-detail
+    operation_kind: readonly
+    gateway_method: query_orders
+    order_query_scope: detail
+    real_http_allowed_in_first_readonly: true
+    acceptance_cases:
+      - id: order_detail_request_requires_lookup_key
+        type: offline_contract
+        required: true
+        asserts:
+          - entrustId_or_serialNo_required
+          - pageNum_not_sent
+          - pageSize_not_sent
+      - id: order_detail_mapper_events
+        type: offline_contract
+        required: true
+        asserts:
+          - data_maps_to_order_detail
+          - appEntrustRecordDetailInfoList_maps_to_order_events
+          - orderStatus_preserved_and_mapped_when_known
+          - unknown_orderStatus_maps_to_unknown_by_official_doc
+      - id: order_detail_real_http_smoke_when_order_exists
+        type: readonly_integration_optional
+        required: false
+        skip_allowed_reason: Account may have no usable entrustId or serialNo during readonly smoke test.
+        asserts:
+          - detail_returned_for_known_order
+          - event_list_mapped_or_empty
+      - id: order_detail_not_found_mapping
+        type: offline_contract
+        required: true
+        asserts:
+          - endpoint_local_not_found_raw_code_maps_to_gateway_error
+          - raw_message_not_exposed
+
+  - id: stock_record
+    endpoint_id: stock_record
+    endpoint: /stock-order-server/open-api/stock-record
+    operation_kind: readonly
+    gateway_method: query_trades
+    real_http_allowed_in_first_readonly: true
+    acceptance_cases:
+      - id: stock_record_request_builder_default
+        type: offline_contract
+        required: true
+        asserts:
+          - exchangeType_default_100
+          - pageNum_default_1
+          - pageSize_default_10
+      - id: stock_record_time_range_builder
+        type: offline_contract
+        required: true
+        asserts:
+          - beginTime_endTime_serialized_as_documented_strings
+          - invalid_time_range_rejected_before_http
+      - id: stock_record_mapper_page
+        type: offline_contract
+        required: true
+        asserts:
+          - businessAmount_maps_to_trade_quantity
+          - businessAveragePrice_or_businessPrice_maps_to_trade_price
+          - businessBalance_maps_to_trade_amount
+          - businessStatus_preserved_and_mapped_when_known
+      - id: stock_record_empty_page
+        type: offline_contract
+        required: true
+        asserts:
+          - code_0_data_list_empty_maps_to_empty_page
+      - id: stock_record_real_http_smoke
+        type: readonly_integration
+        required: true
+        asserts:
+          - trade_page_returned
+          - empty_trade_page_allowed
+
+cross_endpoint_cases:
+  - id: no_trade_endpoint_real_http
+    type: safety_contract
+    required: true
+    endpoints:
+      - trade_login
+      - entrust_order
+      - odd_entrust
+      - modify_order
+      - cancel_order
+      - odd_modify_cancel
+    asserts:
+      - real_http_allowed_in_readonly_false
+      - operation_kind_not_in_real_http_allowed_operation_kinds
+      - gateway_returns_broker_trading_disabled_or_capability_disabled
+      - transport_not_called
+  - id: readonly_retry_policy
+    type: offline_contract
+    required: true
+    asserts:
+      - readonly_uses_max_retries_2
+      - each_retry_uses_new_broker_request_id
+      - 401_stops_retry_and_uses_explicit_relogin_flow
+      - failed_request_id_not_reused
+  - id: raw_ref_and_redaction
+    type: offline_contract
+    required: true
+    asserts:
+      - raw_ref_created_for_saved_structured_payloads
+      - raw_hash_computed_after_redaction
+      - cli_and_normal_logs_do_not_show_raw_json
+      - token_password_private_key_full_phone_absent
+      - full_funds_and_positions_not_in_normal_logs
+  - id: endpoint_profile_consistency
+    type: yaml_validation
+    required: true
+    asserts:
+      - enabled_first_readonly_endpoints_are_login_or_readonly
+      - enabled_first_readonly_endpoints_have_real_http_allowed_true
+      - trade_action_endpoints_have_real_http_allowed_false
+      - every_endpoint_operation_kind_resolves_to_session_retry_policy
+      - every_endpoint_error_mapping_uses_endpoint_local_raw_catalog
+      - real_http_endpoints_require_runtime_config_profile_validation
+  - id: audit_events
+    type: offline_contract
+    required: true
+    asserts:
+      - login_attempt_emits_connect_events
+      - query_attempt_emits_query_events
+      - failed_attempt_emits_gateway_error_code
+      - raw_hash_and_raw_ref_link_to_audit_record
+      - audited_lookup_emits_broker_raw_record_accessed
+exit_criteria:
+  phase_1_offline_ready:
+    - all_required_offline_contract_cases_pass
+    - no_real_credentials_in_fixtures
+    - no_real_http_called_by_offline_suite
+    - no_trade_endpoint_called_by_any_suite
+  phase_2_readonly_integration_ready:
+    - global_readonly_integration_preconditions_met
+    - usmart_readonly_integration_v1_runtime_profile_validated
+    - login_real_http_smoke_passes
+    - open_asset_query_v1_real_http_smoke_passes
+    - today_entrust_real_http_smoke_passes
+    - his_entrust_real_http_smoke_passes
+    - stock_record_real_http_smoke_passes
+    - order_detail_real_http_smoke_passes_or_is_skipped_with_no_known_order_reason
+    - audit_redaction_check_passes_after_real_http
+    - runbook_execution_record_created
+    - no_trade_endpoint_real_http_attempted
+open_questions_after_readonly_integration:
+  - Actual login response token and expiration wrapping observed in readonly integration.
+  - Actual expiration format and timezone.
+  - Whether today_entrust accepts demo pageNum=0 and whether it differs from web manual pageNum=1.
+  - Whether open_assetQuery/v1 fully replaces stock-holding for all required position fields.
+  - Empty page response shape for each paginated endpoint.
+  - Maximum date span and closed interval semantics for stock-record beginTime/endTime.

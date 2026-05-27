@@ -117,6 +117,7 @@ src/
 核心边界：
 
 - `TradingGateway` 是唯一交易上层入口，接口名和 DTO 不出现 `usmart`、`qmt`、`ptrade` 等券商细节。
+- 2026-05-25 用户确认 Gateway 以上层必须适配多种 broker 后端实现：上层只依赖统一 Broker DTO、统一错误码和 `BrokerTradingAdapter` 抽象；uSmart、miniQMT、Ptrade 分别作为该统一抽象的派生实现。
 - `uSmartOpenApiTradingAdapter` 只负责 uSmart OpenAPI 的 HTTP 协议和交易字段转换。
 - `MiniQMTTradingAdapter` 只负责 miniQMT 的 SDK、客户端或桥接进程协议转换，本阶段只保留基类派生占位。
 - `PtradeTradingAdapter` 后续按同一基类派生，不要求修改 `TradingGateway`。
@@ -138,35 +139,81 @@ src/
 
 ```yaml
 broker_gateway:
+  broker: usmart
   mode: read_only
   trading_enabled: false
-  allow_login: true
-  allow_trade_status_query: true
-  allow_account_query: true
-  allow_position_query: true
-  allow_order_query: true
-  allow_trade_query: true
-  allow_place_order: false
-  allow_modify_order: false
-  allow_cancel_order: false
-  allow_trade_login: false
-  allow_trade_quantity_query: true
-  allow_modify_range_query: true
-  allow_odd_lot_order: false
-  allow_grey_market_order: false
-  allow_ipo: false
-  allow_prepost_market: false
-  allow_real_http_readonly: false
+  transport:
+    allow_real_http_readonly: false
+  capabilities:
+    login_captcha: false
+    login: true
+    disconnect: true
+    trade_status_query: true
+    account_query: true
+    position_query: true
+    order_query: true
+    trade_query: true
+    trade_quantity_query: false
+    modify_range_query: false
+    trade_login: false
+    place_order: false
+    odd_lot_order: false
+    modify_order: false
+    cancel_order: false
+    odd_lot_cancel: false
+    grey_market_order: false
+    ipo: false
+    prepost_market: false
 ```
 
 规则：
 
+- `mode=disabled` 时，除本地 `health_check` 外不允许任何 broker 出网请求，返回 `broker.disabled`。
+- `mode=read_only` 只允许 capability 中显式开启的登录、交易状态、账户、持仓、订单和成交查询；真实 HTTP 还必须同时满足 `transport.allow_real_http_readonly=true`。
+- `mode=simulated` 不调用真实券商交易接口；查询可走模拟账本或显式配置的只读真实查询，但不能触达真实下单、改单、撤单 endpoint。
 - `mode != live_guarded` 时，所有真实交易接口必须返回 `broker.trading_disabled`。
 - 即使 `mode=live_guarded`，只要 `trading_enabled=false`，也不能调用交易接口。
-- 下单、改单、撤单三个能力必须分别开关，不能用一个总开关隐式放开所有交易行为。
+- 下单、碎股下单、改单、撤单、碎股撤单能力必须分别开关，不能用一个总开关隐式放开所有交易行为。
 - 登录、账户、持仓、订单、成交等交易开放 API 只读能力也要单独开关，便于未来只读联调逐项开放。基础报价 API 和报价推送 API 的开关归 `QuotationDataGateway`，不归 `TradingGateway`。
 - `trade-login` 虽然不是下单接口，但会改变账户交易可用状态，必须单独开关，第一版默认关闭；遇到券商要求交易密码、交易解锁或交易锁定时，不自动调用 `trade-login`，订单进入 `blocked_by_broker_trade_lock` 并提示人工确认。
 - IPO 申购必须排除在第一版外。第一批真实交易只做美股盘中交易和美股碎股；港股新股暗盘只保留能力设计，港股碎股不做。在 `read_only` 和申请材料截图阶段必须保持阻断，只允许 dry-run 构造。
+- `allow_real_http_readonly` 是 transport 出网开关，不属于 `capabilities`；DTO 中不得出现 `allow_real_http` 之类可以绕过配置的字段。
+
+### 4.1 Gateway 能力开关契约
+
+能力开关以 Gateway 统一方法为准，不以某个 broker endpoint 为准。具体 broker 若不支持某能力，即使配置为 true，也必须在适配器能力声明或启动校验中降级为 `broker.unsupported_capability`，不能让上层绕过 Gateway 调私有接口。
+
+| Gateway 方法 | capability key | read_only | live_guarded | 本轮 uSmart 只读联调 |
+|---|---|---|---|---|
+| `health_check` | 无 | 允许本地健康检查 | 允许 | 允许，不要求出网 |
+| `request_login_captcha` | `login_captcha` | 可配置允许 | 可配置允许 | 默认关闭，避免短信滥用 |
+| `connect(BrokerLoginRequest)` | `login` | 可配置允许 | 可配置允许 | 允许，需 `transport.allow_real_http_readonly=true` 才真实出网 |
+| `disconnect` | `disconnect` | 允许本地清理 | 允许 | 允许本地清理，不要求券商远端登出 |
+| `get_trade_status` | `trade_status_query` | 可配置允许 | 可配置允许 | 允许 |
+| `get_account` / `get_cash` | `account_query` | 可配置允许 | 可配置允许 | 允许，映射 `open-assetQuery/v1` |
+| `get_positions` | `position_query` | 可配置允许 | 可配置允许 | 允许，映射 `open-assetQuery/v1` 的 `holdInfos` |
+| `query_orders` | `order_query` | 可配置允许 | 可配置允许 | 允许 `today/history/detail` |
+| `query_trades` | `trade_query` | 可配置允许 | 可配置允许 | 允许 |
+| `query_trade_quantity` | `trade_quantity_query` | 可配置允许 | 可配置允许 | 后置，不进第一批只读联调 |
+| `query_modify_range` | `modify_range_query` | 可配置允许 | 可配置允许 | 后置，不进第一批只读联调 |
+| `trade_login` | `trade_login` | 禁止 | 高风险配置允许 | 禁止；第一版不自动调用 |
+| `place_order` | `place_order` | 禁止 | 需 `trading_enabled=true` 且 capability=true | 禁止真实出网，只允许 dry-run builder |
+| `place_odd_lot_order` | `odd_lot_order` | 禁止 | 需 `trading_enabled=true` 且 capability=true | 禁止真实出网，只允许 dry-run builder |
+| `modify_order` | `modify_order` | 禁止 | 需 `trading_enabled=true` 且 capability=true | 禁止真实出网，只允许 dry-run builder |
+| `cancel_order` | `cancel_order` | 禁止 | 需 `trading_enabled=true` 且 capability=true | 禁止真实出网，只允许 dry-run builder |
+| `cancel_odd_lot_order` | `odd_lot_cancel` | 禁止 | 需 `trading_enabled=true` 且 capability=true | 禁止真实出网，只允许 dry-run builder |
+
+统一错误码见 [broker-gateway-error-codes.yaml](broker-gateway-error-codes.yaml)。能力开关相关的第一批 Gateway 本地错误包括：
+
+| 场景 | gateway 错误码 |
+|---|---|
+| `mode=disabled` | `broker.disabled` |
+| 只读模式触发交易动作 | `broker.trading_disabled` |
+| `live_guarded` 但 `trading_enabled=false` | `broker.trading_disabled` |
+| capability 为 false | `broker.capability_disabled` |
+| broker 后端不支持该能力 | `broker.unsupported_capability` |
+| 出网开关未开但请求真实 HTTP | `broker.real_http_disabled` |
+| 调用方不是允许的 OMS / 对账 / 查询服务 | `broker.caller_not_allowed` |
 
 ## 5. 统一接口契约
 
@@ -175,35 +222,41 @@ broker_gateway:
 ```python
 class TradingGateway:
     def health_check(self) -> BrokerHealth: ...
-    def connect(self) -> BrokerSession: ...
+    def request_login_captcha(self, request: BrokerCaptchaRequest) -> BrokerCaptchaResult: ...
+    def connect(self, request: BrokerLoginRequest) -> BrokerLoginResult: ...
+    def disconnect(self, request: BrokerDisconnectRequest) -> BrokerDisconnectResult: ...
     def get_trade_status(self, account_ref: AccountRef) -> BrokerTradeUnlockStatus: ...
     def get_account(self, account_ref: AccountRef) -> AccountSnapshot: ...
     def get_positions(self, account_ref: AccountRef) -> list[PositionSnapshot]: ...
     def get_cash(self, account_ref: AccountRef) -> CashSnapshot: ...
-    def query_order(self, request: QueryOrderRequest) -> BrokerOrderSnapshot: ...
-    def query_orders(self, request: QueryOrderListRequest) -> Page[BrokerOrderSnapshot]: ...
+    def query_orders(self, request: OrderQueryRequest) -> Page[BrokerOrderSnapshot]: ...
     def query_trades(self, request: QueryTradeRequest) -> list[BrokerTradeSnapshot]: ...
     def query_trade_quantity(self, request: TradeQuantityRequest) -> TradeQuantitySnapshot: ...
     def query_modify_range(self, request: ModifyRangeRequest) -> ModifyRangeSnapshot: ...
     def place_order(self, request: BrokerOrderRequest) -> BrokerOrderAck: ...
+    def place_odd_lot_order(self, request: BrokerOddLotOrderRequest) -> BrokerOrderAck: ...
     def modify_order(self, request: BrokerModifyRequest) -> BrokerModifyAck: ...
     def cancel_order(self, request: BrokerCancelRequest) -> BrokerCancelAck: ...
+    def cancel_odd_lot_order(self, request: BrokerOddLotCancelRequest) -> BrokerCancelAck: ...
 
 
 class BrokerTradingAdapter:
-    def connect(self) -> BrokerSession: ...
+    def request_login_captcha(self, request: BrokerCaptchaRequest) -> BrokerCaptchaResult: ...
+    def connect(self, request: BrokerLoginRequest) -> BrokerLoginResult: ...
+    def disconnect(self, request: BrokerDisconnectRequest) -> BrokerDisconnectResult: ...
     def get_trade_status(self, account_ref: AccountRef) -> BrokerTradeUnlockStatus: ...
     def get_account(self, account_ref: AccountRef) -> AccountSnapshot: ...
     def get_positions(self, account_ref: AccountRef) -> list[PositionSnapshot]: ...
     def get_cash(self, account_ref: AccountRef) -> CashSnapshot: ...
-    def query_order(self, request: QueryOrderRequest) -> BrokerOrderSnapshot: ...
-    def query_orders(self, request: QueryOrderListRequest) -> Page[BrokerOrderSnapshot]: ...
+    def query_orders(self, request: OrderQueryRequest) -> Page[BrokerOrderSnapshot]: ...
     def query_trades(self, request: QueryTradeRequest) -> list[BrokerTradeSnapshot]: ...
     def query_trade_quantity(self, request: TradeQuantityRequest) -> TradeQuantitySnapshot: ...
     def query_modify_range(self, request: ModifyRangeRequest) -> ModifyRangeSnapshot: ...
     def place_order(self, request: BrokerOrderRequest) -> BrokerOrderAck: ...
+    def place_odd_lot_order(self, request: BrokerOddLotOrderRequest) -> BrokerOrderAck: ...
     def modify_order(self, request: BrokerModifyRequest) -> BrokerModifyAck: ...
     def cancel_order(self, request: BrokerCancelRequest) -> BrokerCancelAck: ...
+    def cancel_odd_lot_order(self, request: BrokerOddLotCancelRequest) -> BrokerCancelAck: ...
 
 
 class QuotationDataGateway:
@@ -215,11 +268,14 @@ class QuotationDataGateway:
 
 接口分组：
 
-- 连接与权限：`health_check`、`connect`、`get_trade_status`。
-- 只读账户：`get_account`、`get_positions`、`get_cash`。
-- 只读订单：`query_order`、`query_orders`、`query_trades`、`query_trade_quantity`、`query_modify_range`。
+2026-05-25 用户确认：`TradingGateway` 层 DTO 必须明确交易内核范围内所有可能发生的登录、查询和交易行为接口。Gateway 以上层只能面向这些统一接口编程；具体 broker 后端通过 capability 声明支持或不支持，未支持能力返回统一错误，例如 `broker.unsupported_capability`，不能让上层直接调用 uSmart、miniQMT 或 Ptrade 私有方法。
+
+- 连接与登录：`health_check`、`request_login_captcha`、`connect(BrokerLoginRequest)`、`disconnect`、`get_trade_status`。`request_login_captcha` 仅用于验证码登录流程；不代表允许交易。`disconnect` 表示清理本地会话或适配器连接，不要求券商一定有远端登出接口。
+- 只读账户：`get_account`、`get_positions`、`get_cash`。这些接口返回内部 DTO，可保留程序内部完整 `Decimal` 数值，但日志和展示层必须脱敏。
+- 只读订单与成交：统一使用 `query_orders(OrderQueryRequest)` 表达今日订单、历史订单和订单明细；使用 `query_trades(QueryTradeRequest)` 表达成交流水；保留 `query_trade_quantity`、`query_modify_range` 作为风控和改单前辅助查询。
+- 交易动作：`place_order`、`modify_order`、`cancel_order`，以及后续扩展的 `place_odd_lot_order`、`cancel_odd_lot_order`。这些方法属于 Gateway 能力面，但默认 capability 为关闭；本轮 uSmart 只读联调不触达真实交易 endpoint。
 - 行情数据不放在 `TradingGateway`，由 `QuotationDataGateway` 提供。基础报价 API 与报价推送 API 不应出现在 `BrokerTradingAdapter` 中。
-- 交易动作：`place_order`、`modify_order`、`cancel_order`。
+- 账户安全、出入金、修改登录密码、修改交易密码、IPO 申购、券商侧条件单、期权、保证金、做空等能力不进入第一版 Gateway 必实现面；后续若进入交易内核范围，必须先新增统一 DTO 和 capability，再由各 broker 适配器派生实现。
 
 交易动作只能由 OMS 调用。后续代码层面应通过依赖注入和应用服务边界限制调用方，不在 CLI 或策略运行时暴露这些方法。
 
@@ -332,8 +388,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 
 | 能力 | 盈立 endpoint | 网关用途 |
 |---|---|---|
-| 查询持仓 | `/stock-order-server/open-api/stock-holding` | 持仓快照、对账 |
-| 查询资产 | `/stock-order-server/open-api/stock-asset` | 资金和资产快照 |
+| 查询资产与持仓 | `/asset-center-server/open-api/open-assetQuery/v1` | 资金、资产快照和 `holdInfos` 持仓明细；按网页版手册当前事实源实现 |
 | 批量资产查询 | `/stock-order-server/open-api/stock-asset-list` | 第一版不启用；只读联调先限定单账户 |
 | 聚合资产 | `/aggregation-server/open-api/user-asset-aggregation/v1` | 第一版不启用；只读联调先限定单账户 |
 | 查询汇率 | `/stock-capital-server/open-api/currency-exchange-info` | 多币种估值辅助 |
@@ -342,7 +397,7 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 
 - 真实资金和持仓属于隐私数据；只读联调审计日志可以保留原始结构化字段和整理后的结构化结果，但不得保存原始 JSON 文本、token、密码、私钥、完整手机号。
 - 风控可以读取可用资金、可卖数量和持仓比例，但不能直接依赖未经对账的单次查询结果启用自动交易。
-- 第一版只做单账户只读联调，优先使用单账户 `stock-asset` 和 `stock-holding`；批量资产和聚合资产后置。
+- 第一版只做单账户只读联调，资产和持仓优先使用网页版手册当前 `open-assetQuery/v1`；旧 `stock-asset` / `stock-holding` 不作为本轮实现依据。
 - 查询汇率只用于估值和展示辅助，不能单独触发调仓或换汇动作。
 
 ### 6.4 基础报价 API 与报价推送 API
@@ -393,15 +448,16 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - 请求使用 HTTPS。
 - Header 中包含 `X-Sign`。
 - `X-Sign` 使用 `MD5withRSA` 对 Body 内容加密或签名后，再经过 Base64 编码；网页描述为 `safeBase64` / URL-safe Base64，官方 Python demo 的交易 helper 使用标准 Base64。用户已确认交易 API 默认跟随官方 Python demo 使用标准 Base64，并保留切换到 URL-safe Base64 的配置。
-- 交易开放 API 的 `X-Sign` 签名原文只使用稳定 JSON body，不拼接 header 字段。
+- 交易开放 API 的 `X-Sign` 签名原文只使用最终发送的同一 JSON body 字符串，不拼接 header 字段。
 - 用户已确认第一版跟随官方 Python demo：交易 HTTP helper 默认发送 `Content-type`、`X-Lang`、`X-Channel`、`X-Sign`、`Authorization`；`modify-order` 示例额外传入 `X-Request-Id`；`entrust-order` 不强制外发 header `X-Request-Id`，使用 body `serialNo` 和本地审计映射。
 - 交易 API 默认使用官方 Python demo 的标准 Base64；URL-safe Base64 和 padding 通过配置控制，用于兼容网页手册或券商最终要求。
 - `X-Time` 使用 Unix epoch milliseconds 字符串；交易 demo 默认 helper 未携带，第一版不作为交易 API 全局必填 header，只在端点 profile 或配置要求时外发。
 - `X-Dt` 默认 `"4"` 表示 Windows；`X-Type` 默认 `"1"` 表示大陆版 APP。
-- `X-Sign` 渠道签名密钥材料与手机号、登录密码、交易密码等隐私资料加密密钥材料必须分离；隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现，即 RSA `PKCS1_v1_5` 加密后 URL-safe Base64。券商最终下发密钥材料与 demo `public_key` / `private_key` 配置槽位的对应关系需要显式配置并用离线测试验证。
+- `X-Sign` 渠道签名密钥材料与手机号、登录密码、交易密码等隐私资料加密密钥材料必须分离；隐私资料加密按官方 Python demo 的 `rsa_encrypt` transform 实现，即 RSA `PKCS1_v1_5` 加密后 URL-safe Base64。官方 demo 映射为 `public_key` 加密隐私字段、`private_key` 生成 `X-Sign`；`common/utils.py` 的 PEM 包装反直觉，工程实现必须按 key role 校验。
+- uSmart 密钥角色契约落盘在 [../clients/api/usmart-trade-key-material-profiles.yaml](../clients/api/usmart-trade-key-material-profiles.yaml)：官方来源材料可以来自 demo `public_key` / `private_key` 同名槽位，但运行时按 `trade_sign_private_key`、`sensitive_encrypt_public_key` 等语义角色取 secret ref。
 - 基础报价 API 网页文档和官方 demo 进一步说明其签名原文包含 `Authorization`、`X-Channel`、`X-Lang`、`X-Request-Id`、`X-Time` 头字段与 body 的有序拼接；这属于另一套 API，不应用交易开放 API 的 signer 承接。
-- `X-Request-Id` 用于确保唯一和防重，但是否外发由端点 header profile 决定。
-- 官方资料对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；官方 Python demo 生成的 `serialNo` 是 19 位字符串。当前实现按内部 `broker_request_id` 始终审计、外发 `X-Request-Id` 30 位可配置字符串、`serialNo` 最长 19 位处理，第一版 `serialNo` 可按用户确认使用数字 JSON，必要时切换字符串。
+- `X-Request-Id` 用于确保唯一和防重，但是否外发由 `docs/backend/clients/api/usmart-trade-endpoint-profiles.yaml` 中的端点 header/request_id profile 决定。
+- 官方资料对 `X-Request-Id` 长度存在 19 位和 30 位两种摘录，下单 body 的 `serialNo` 明确最长 19 位；官方 Python demo 生成的 `serialNo` 是 19 位字符串，`modify-order` 示例里的 `X-Request-Id` 是 16 位时间字符串。当前实现按内部 `broker_request_id` 始终审计、外发 `X-Request-Id` 长度由 endpoint profile 配置、`serialNo` 最长 19 位处理，第一版 `serialNo` 可按用户确认使用数字 JSON，必要时切换字符串。
 - 接入涉及 IP 白名单。
 
 设计规则：
@@ -410,27 +466,49 @@ uSmart / 盈立 OpenAPI 当前以官方网页文档为真相源，本地 Markdow
 - `uSmartTradeAuthSigner` 只返回交易开放 API 请求头，不向日志暴露私钥、密码、token、明文手机号。
 - token 存在内存会话中，默认不落库；如必须持久化，需要加密保存并记录过期时间。
 - 第一版只维护单账户单 session；真实登录成功会替换该账户现有内存 session，并记录脱敏 token 指纹和过期时间。
+- uSmart 会话、重登、重试和幂等规则落盘在 [../clients/api/usmart-trade-session-retry-profiles.yaml](../clients/api/usmart-trade-session-retry-profiles.yaml)；实现按 `operation_kind` 解析对应 policy。
 - 登录态过期时，只读查询可以显式重新登录并使用新的 `request_id` 重新发起查询；交易动作不能在下单、改单、撤单过程中隐式刷新登录后继续提交，必须让 OMS 重新进入可审计状态。
 - 签名失败、验签失败、401、权限不足必须归一化为明确错误码。
 
-Gateway 错误码是 RobustQuant 自己的稳定错误层；券商返回的 raw code/msg 必须按 endpoint 保留在券商响应状态 catalog 中，再映射到 gateway 错误码。实现时只能根据当前调用 endpoint 查找对应 `response_statuses`，不能把不同接口的状态码混用。第一批 gateway 错误码包括：
+Gateway 错误码是 RobustQuant 自己的稳定错误层；券商返回的 raw code/msg 必须按 endpoint 保留在券商响应状态 catalog 中，再映射到 gateway 错误码。实现时只能根据当前调用 endpoint 查找对应 `response_statuses`，不能把不同接口的状态码混用。
 
-```text
-broker.auth_missing
-broker.auth_expired
-broker.auth_failed
-broker.sign_failed
-broker.permission_denied
-broker.ip_not_allowed
-broker.rate_limited
-broker.bad_request
-broker.account_restricted
-broker.captcha_required
-broker.trade_locked
-broker.order_rejected
-broker.endpoint_not_found
-broker.unclassified
+Gateway 稳定错误码 catalog 维护在 [broker-gateway-error-codes.yaml](broker-gateway-error-codes.yaml)。该 YAML 是手工维护的内部契约源，包含 `origin`、`category`、`http_status`、`retryable`、`safe_message` 和 `caller_action`；uSmart 等券商 raw code catalog 只能映射到这里列出的稳定错误码或 `broker.unclassified`。
+
+统一错误返回 DTO：
+
+```python
+@dataclass(frozen=True)
+class BrokerGatewayError:
+    code: BrokerGatewayErrorCode
+    category: str
+    message: str
+    retryable: bool
+    trace_id: str
+    caller_action: str
+    broker: BrokerName | None = None
+    account_ref: AccountRef | None = None
+    request_id: str | None = None
+    endpoint: str | None = None
+    http_status: int | None = None
+    raw_code: str | None = None
+    raw_message_hash: str | None = None
+    raw_ref: BrokerRawRecordRef | None = None
+    occurred_at: datetime | None = None
 ```
+
+字段规则：
+
+| 字段 | 规则 |
+|---|---|
+| `code` | 必须来自 [broker-gateway-error-codes.yaml](broker-gateway-error-codes.yaml) |
+| `category`、`retryable`、`caller_action` | 默认从错误码 catalog 读取，mapper 只能按明确规则覆盖 `retryable` |
+| `message` | 对 CLI/API 安全的简短消息，默认使用 catalog 的 `safe_message`；不能直接使用券商中文原文 |
+| `raw_code` | 仅当券商返回或 HTTP 层有明确原始码时填写；Gateway 本地 guard 错误可为空 |
+| `raw_message_hash` | 允许记录券商原始错误消息摘要，不返回原文 |
+| `raw_ref` | 指向受控审计存储中的原始结构化记录；排查时通过审计权限查询 |
+| `endpoint` | 对券商返回错误必须填写当前 endpoint，保证按 endpoint-local catalog 映射 |
+
+上层调用约定：Gateway 内部可以用 `BrokerGatewayException(error)` 或 `Result[T, BrokerGatewayError]` 实现，但 CLI/FastAPI/OMS 看到的错误结构必须等价于 `BrokerGatewayError`。成功响应不能携带 `raw_message`；失败响应也不能把券商原始消息原文直接暴露给普通 UI 或 API 调用方。
 
 ## 8. 幂等和请求 ID
 
@@ -451,7 +529,8 @@ broker_request_id -> serialNo -> broker_order_id
 - 内部 `broker_request_id` 必须持久化到本地订单审计表；如果端点外发 `X-Request-Id`，外发值也必须持久化。
 - 下单超时后，不得用同一个或新的 `broker_request_id` / `serialNo` 自动重发下单。
 - 撤单超时后，不得自动重复撤单。
-- 查询接口可以按限流策略重试；交易接口不自动重试。
+- 查询接口可以按限流策略重试；uSmart 第一版使用 `readonly_bounded_backoff_v1.max_retries=2`，每次重试都必须生成新的 `broker_request_id`。
+- 交易接口不自动重试；timeout、连接中断或未知响应进入 `unknown` / 对账流程。
 
 ## 9. 错误处理与状态映射
 
@@ -516,22 +595,59 @@ unknown
 
 ## 11. 审计、日志和隐私
 
-网关必须记录审计事件：
+Broker Gateway 审计事件 catalog 维护在 [broker-gateway-audit-events.yaml](broker-gateway-audit-events.yaml)。审计事件不是错误码；`broker.connect_started`、`broker.query_completed` 等事件不得写入 [broker-gateway-error-codes.yaml](broker-gateway-error-codes.yaml)。
 
-| 事件 | 说明 |
-|---|---|
-| `broker.connect_started` | 开始连接或登录 |
-| `broker.connect_completed` | 连接或登录成功 |
-| `broker.connect_failed` | 连接或登录失败 |
-| `broker.query_completed` | 只读查询完成 |
-| `broker.order_submit_requested` | OMS 请求提交订单 |
-| `broker.order_submit_blocked` | 网关因安全开关阻止订单 |
-| `broker.order_submit_unknown` | 下单结果未知 |
-| `broker.order_status_mapped` | 券商状态映射完成 |
-| `broker.cancel_requested` | OMS 请求撤单 |
-| `broker.cancel_unknown` | 撤单结果未知 |
-| `broker.ws_connected` | WebSocket 连接成功 |
-| `broker.ws_disconnected` | WebSocket 断线 |
+统一审计事件 DTO：
+
+```python
+@dataclass(frozen=True)
+class BrokerAuditEvent:
+    event: str
+    trace_id: str
+    occurred_at: datetime
+    level: Literal["info", "warning", "error", "critical"]
+    broker: BrokerName
+    operation_kind: Literal["login", "readonly", "trade_action", "reconciliation", "market_data"]
+    account_ref: AccountRef | None = None
+    request_id: str | None = None
+    order_id: str | None = None
+    broker_order_id_masked: str | None = None
+    endpoint: str | None = None
+    capability: str | None = None
+    gateway_error_code: BrokerGatewayErrorCode | None = None
+    raw_hash: str | None = None
+    raw_ref: BrokerRawRecordRef | None = None
+    duration_ms: int | None = None
+    metadata: Mapping[str, Any] | None = None
+```
+
+原始结构化记录引用 DTO：
+
+```python
+@dataclass(frozen=True)
+class BrokerRawRecordRef:
+    raw_ref: str
+    raw_hash: str
+    broker: BrokerName
+    api_family: str
+    endpoint: str
+    trace_id: str
+    request_id: str
+    schema_version: str
+    payload_kind: Literal["request_summary", "response_structured", "error_structured", "mapper_input", "mapper_output"]
+    sensitivity_level: Literal["low", "account_private", "trading_private", "credential_secret"]
+    created_at: datetime
+```
+
+规则：
+
+- `credential_secret` 级别记录不得持久化；token、密码、验证码、私钥只允许保存指纹或脱敏摘要。
+- 只读联调可以保存账户、持仓、订单和成交的结构化原始字段，但必须通过 `BrokerRawRecordRef` 受控查询，普通日志和 CLI/API 不直接输出；payload kind、sensitivity、retention、lookup permission 和 hash 规则以 [broker-gateway-raw-record-profile.yaml](broker-gateway-raw-record-profile.yaml) 为准。
+- 写入券商请求前，必须先生成 `trace_id` 和 `request_id`；交易动作还必须已有本地 `order_id`。
+- 如果审计记录或 `broker_request_id` 持久化失败，不允许触达真实 OpenAPI。
+- `raw_hash` 按脱敏后的 canonical structured payload 计算；不得对完整 HTTP response 原文建公开可见哈希后暴露原文。
+
+网关必须记录的事件以 [broker-gateway-audit-events.yaml](broker-gateway-audit-events.yaml) 为准；原始结构化记录存储以 [broker-gateway-raw-record-profile.yaml](broker-gateway-raw-record-profile.yaml) 为准。本文列出核心类别：连接登录、只读查询、交易动作请求、交易动作阻断、未知交易结果、订单状态映射、行情连接状态。
 
 日志允许记录：
 
@@ -557,7 +673,7 @@ unknown
 
 ## 12. 配置设计
 
-建议配置拆分：
+建议配置拆分。uSmart 第一批只读联调的机器可读配置契约维护在 [../clients/api/usmart-trade-runtime-config-profile.yaml](../clients/api/usmart-trade-runtime-config-profile.yaml)，实现必须先通过 runtime config validation，才允许安装真实 HTTP transport：
 
 `.env`，不进入 Git：
 
@@ -566,9 +682,12 @@ USMART_API_BASE_URL=...
 USMART_QUOTE_BASE_URL=...
 USMART_WS_URL=...
 USMART_CHANNEL_ID=...
-USMART_SIGN_PRIVATE_KEY_PATH=...
-USMART_SIGN_VERIFY_PUBLIC_KEY_PATH=...
-USMART_SENSITIVE_KEY_PATH=...
+USMART_TRADE_SIGN_PRIVATE_KEY_REF=...
+USMART_TRADE_SIGN_VERIFY_PUBLIC_KEY_REF=...
+USMART_SENSITIVE_ENCRYPT_PUBLIC_KEY_REF=...
+# 仅用于离线 demo 兼容测试；运行时不得直接按 demo 槽位绑定。
+USMART_DEMO_SLOT_PUBLIC_KEY_REF=...
+USMART_DEMO_SLOT_PRIVATE_KEY_REF=...
 USMART_ACCOUNT_REF=...
 USMART_LOGIN_AREA_CODE=...
 USMART_LOGIN_PHONE=...
@@ -583,32 +702,65 @@ broker: usmart
 mode: read_only
 trading_enabled: false
 
-timeouts:
-  connect_ms: 3000
-  read_ms: 5000
+transport:
+  allow_real_http_readonly: false
+  connect_timeout_ms: 3000
+  read_timeout_ms: 5000
 
 rate_limit:
   readonly_per_second: 2
   trading_per_second: 1
 
+key_material_profile: usmart_trade_default
+
+sign:
+  key_role: trade_sign_private_key
+  key_ref_env: USMART_TRADE_SIGN_PRIVATE_KEY_REF
+  algorithm: MD5withRSA
+  encoding_default: standard_base64
+  sign_input: final_json_body_string
+
+sensitive_encrypt:
+  key_role: sensitive_encrypt_public_key
+  key_ref_env: USMART_SENSITIVE_ENCRYPT_PUBLIC_KEY_REF
+  algorithm: RSA_PKCS1_v1_5_encrypt
+  encoding: urlsafe_base64
+
+demo_compatibility:
+  enabled: false
+  demo_slot_public_key_ref_env: USMART_DEMO_SLOT_PUBLIC_KEY_REF
+  demo_slot_private_key_ref_env: USMART_DEMO_SLOT_PRIVATE_KEY_REF
+
 capabilities:
+  login_captcha: false
   login: true
+  disconnect: true
   trade_status_query: true
   account_query: true
   position_query: true
   order_query: true
   trade_query: true
-  trade_quantity_query: true
-  modify_range_query: true
+  trade_quantity_query: false
+  modify_range_query: false
   trade_login: false
   place_order: false
+  odd_lot_order: false
   modify_order: false
   cancel_order: false
-  odd_lot_order: false
+  odd_lot_cancel: false
   grey_market_order: false
   ipo: false
   prepost_market: false
-  allow_real_http_readonly: false
+
+session:
+  profile: usmart_single_account_memory_session_v1
+  token_store: process_memory_only
+  token_persistence: false
+
+retry:
+  readonly_max_retries: 2
+  trade_action_max_retries: 0
+  relogin_on_readonly_auth_expired: explicit_once_new_request
 
 request_id:
   header_length: 30
@@ -631,20 +783,21 @@ safety:
 | 单元测试 | 签名、字段映射、脱敏、错误分类、状态映射 | 不允许 |
 | 契约测试 | 用录制或人工构造的脱敏响应验证 DTO 映射 | 不允许 |
 | 交易开放 API 只读集成测试 | 登录、账户、持仓、订单查询 | 仅在用户明确配置只读环境后允许 |
-| 受控实盘前演练 | 下单、改单、撤单链路演练 | 需要盈立明确确认 UAT / sandbox 不产生真实委托；未确认不执行 |
+| 受控交易验证 | 下单、改单、撤单链路演练 | 使用后续专门交易验证 profile；本轮只读 profile 不执行 |
 
 重要规则：
 
-- UAT 测试地址已由网页手册给出；用户已确认不自动把 UAT 当作可交易 sandbox。未得到盈立明确确认前，不运行真实下单、改单、撤单测试。
+- 官方测试环境地址已由网页手册给出，用户已确认可用于非生产联调；本轮只读 profile 仍不运行下单、改单、撤单测试。
 - 交易接口截图或演示代码不作为 RobustQuant 开发验收标准。
 - 测试 fixture 不得包含真实账号、token、真实资金和真实持仓。
 - 对 `unknown`、超时、401、限流、字段缺失必须有单元测试。
 - 对日志脱敏必须有测试，防止未来把 token 或账户打出来。
 - 对盈立官方网页字段映射必须有契约测试：下单 `serialNo/entrustAmount/entrustPrice/entrustProp/entrustType/exchangeType/stockCode`，普通股票委托改单 `actionType=1`，普通股票委托撤单 `actionType=0`。
 - 对只读 DTO 映射必须有契约测试：资产、持仓、订单、成交、最大可买可卖、改单范围。
-- 对内部 `broker_request_id`、端点级 `X-Request-Id` 与 `serialNo` 的生成、长度校验和审计映射必须有单元测试。
-- 对分页请求必须有契约测试：`pageNum` 从 1 开始、默认 1；`pageSize` 默认 10、最大 20。
+- 对内部 `broker_request_id`、端点级 `X-Request-Id` 与 `serialNo` 的生成、长度校验、endpoint profile 和审计映射必须有单元测试。
+- 对 endpoint profile 和分页请求必须有契约测试：内部 DTO 按 `page_num` 从 1 开始、默认 1；HTTP 默认 `pageNum=1`、`pageSize=10`、最大 20；另覆盖官方 demo `today_entrust pageNum="0"/pageSize="20"` 的 endpoint profile，但默认不启用。
 - 对券商错误码必须有 catalog 生成或校验测试：官方网页手册中的响应状态按 endpoint 分组进入 raw code catalog，并映射到 gateway 错误码或 `broker.unclassified`。
+- 第一批 uSmart 只读联调验收清单维护在 [../clients/api/usmart-trade-readonly-acceptance-matrix.yaml](../clients/api/usmart-trade-readonly-acceptance-matrix.yaml)；登录、资产/持仓、今日订单、历史订单、订单明细和成交流水必须按矩阵覆盖 offline contract 和 readonly smoke。
 
 ## 14. 开发阶段划分
 
@@ -671,12 +824,14 @@ safety:
 
 - 只在 `read_only` 模式下启用。
 - 第一批只读联调只允许真实登录、资产查询、持仓查询、今日订单、历史订单、订单明细和成交流水。
+- 2026-05-25 用户确认本轮 uSmart-gateway 对接即按上述第一批只读联调范围执行；下单、改单、撤单不进入本轮真实接口联调。
 - 行情联调通过 `QuotationDataGateway`，不通过 `TradingGateway`。
 - uSmart 通过 `uSmartOpenApiTradingAdapter` 接入；miniQMT 通过 `MiniQMTTradingAdapter` 接入。
 - 禁止 `trade-login`、下单、改单、撤单、IPO 申购。
 - 只读联调允许真实登录和查询，但申请材料截图仍必须使用 dry-run，不做真实登录。
 - 控制台允许显示整理后的完整只读结果，优先用自然语言摘要和表格，不显示原始 JSON。
 - 本地只读联调审计日志保留 30 个交易日，可以记录账户、持仓、订单和成交的原始结构化字段及整理后结构化结果；禁止记录 token、密码、私钥、完整手机号和券商原始 HTTP response 全文。
+- Phase 2 执行顺序按 [../clients/usmart-readonly-integration-runbook.md](../clients/usmart-readonly-integration-runbook.md)；退出标准以 [../clients/api/usmart-trade-readonly-acceptance-matrix.yaml](../clients/api/usmart-trade-readonly-acceptance-matrix.yaml) 的 `phase_2_readonly_integration_ready` 为准；如账户没有可用订单，`order_detail` 真实 smoke 可按矩阵记录 skip reason，但 offline contract 仍必须通过。
 
 ### Phase 3：模拟盘网关
 
@@ -684,9 +839,9 @@ safety:
 - 验证交易意图、风控、OMS 状态机和对账流程。
 - 不调用券商交易接口。
 
-### Phase 4：UAT / sandbox 交易验证
+### Phase 4：官方测试环境交易验证
 
-- 前提：盈立明确确认 UAT / sandbox 不会产生真实委托。
+- 前提：切换到后续专门交易验证 profile，并完成 OMS、风控、交易时间、白名单、策略授权、审计和对账门禁。
 - 验证下单、改单、撤单、查询、成交回报。
 - 仍然经过 OMS、风控、交易时间检查和审计。
 
@@ -711,7 +866,7 @@ safety:
 
 代码验收，后续实施时适用：
 
-- 默认配置启动后，交易接口全部不可用。
+- 默认配置启动后，交易接口全部不可用；真实只读 HTTP 也必须先通过 [../clients/api/usmart-trade-runtime-config-profile.yaml](../clients/api/usmart-trade-runtime-config-profile.yaml) 的 `usmart_readonly_integration_v1` 校验。
 - 单元测试覆盖签名、脱敏、错误映射、状态映射、能力开关。
 - 只读集成测试不会调用任何交易 endpoint。
 - 任何交易调用必须带 `order_id`、`risk_check_id`、`trace_id`。
@@ -723,18 +878,18 @@ safety:
 
 必须从官方网页文档或盈立官方确认：
 
-- UAT 测试地址 `http://open-jy-uat.yxzq.com` 是否等同 sandbox / paper trading，是否保证交易动作不产生真实委托仍需券商确认；项目策略已确认：未确认前交易动作继续 dry-run。
+- 官方测试环境地址 `http://open-jy-uat.yxzq.com` 已按用户确认作为非生产联调环境；本轮仍只开放真实登录和只读查询，交易动作留到后续专门交易验证 profile。
 - 交易 API base URL：网页版官方文档给出生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；当前代码仍必须保留配置占位并默认 dry-run，不因文档存在 base URL 自动出网。
 - IPO 改撤单接口的 `actionType` 枚举与普通股票委托不同，后续如接入 IPO 必须单独建模。
 - 券商内部改单是原生修改还是 cancel + replace；本地 OMS 风险模型按 cancel + replace 处理。
 - 订单明细 `orderStatus` 历史节点的完整枚举和状态流转；已确认必须进入 OMS mapper。
 - 券商响应状态完整枚举提取；项目策略已确认按 endpoint 分组保留券商 raw code catalog，并映射到 RobustQuant gateway 错误码层。
 - 订单类型、价格类型、市场、币种、盘前盘后规则。
-- `X-Request-Id` 的有效期和重复请求返回语义。
+- `X-Request-Id` 的有效期和重复请求返回语义；网页手册 30 位、demo `modify-order` 16 位时间字符串和 `serialNo` 19 位字符串之间的最终验收规则。
 - 下单 body `serialNo` 与 header `X-Request-Id` 的官方关系；当前实现只保留本地审计映射，不假设两者相同。
-- 交易开放 API 的 `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和 padding；签名原文已确认只使用稳定 JSON body，不拼接 header 字段。
-- 隐私资料加密密钥材料与官方 Python demo `public_key` / `private_key` 配置槽位的最终对应关系；加密 transform 已按 demo 确认为 RSA `PKCS1_v1_5` + URL-safe Base64。
-- token `expiration` 的精确格式、时区和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
+- 交易开放 API 的 `X-Sign` 输出编码默认跟随官方 Python demo 使用标准 Base64，并通过配置允许切换 URL-safe Base64 和 padding；签名原文已确认只使用最终发送的同一 JSON body 字符串，不拼接 header 字段。
+- 券商最终下发的生产/测试密钥材料命名是否继续沿用 demo README 语义：`public_key` 用于隐私字段加密，`private_key` 用于 `X-Sign`；加密 transform 已按 demo 确认为 RSA `PKCS1_v1_5` + URL-safe Base64。
+- token `expiration` 的精确格式、时区、包装路径（顶层或 `data`）和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
 - HTTP 频率限制和 WebSocket 订阅上限。
 
 需要用户确认：

@@ -17,14 +17,14 @@
 - miniQMT 和盈立 OpenAPI 的只读查询测试不构成真实交易；任何会向券商提交委托、撤单、条件单、预埋单或改变券商侧订单状态的调用，都按真实交易处理。
 - 不允许用真实下单、真实撤单或真实条件单接口做连通性探测、冒烟测试或权限测试。
 - 真实交易能力默认关闭，必须经过实盘开关、策略授权、交易时间检查、风控、OMS、账户/标的白名单和对账设计后才能启用；运行期基础交易不要求逐笔人工确认，自动化程序可以执行通过风控门禁的正股买入和卖出，包括策略模块生成的建仓、加仓、减仓、平仓、止盈和止损意图。
-- uSmart 网页手册已提供 UAT 测试地址，但 RobustQuant 不自动把 UAT 视为可交易 sandbox；确认前只允许真实登录和只读查询，交易动作继续 dry-run。
+- uSmart 网页手册已提供官方测试环境接口地址；用户已确认其可用于非生产联调，本轮只允许真实登录和只读查询，交易动作继续 dry-run。
 
 待确认：
 
 - 东北证券 miniQMT 是否已具备交易权限和 API 权限。
 - 第一条实盘闭环后续是否优先接 miniQMT；需等待 miniQMT 权限、运行环境和接口能力确认。
 - 盈立 OpenAPI 若后续申请通过，再根据 uSmart 官方网页手册确认港股、美股行情和交易权限。
-- 盈立是否明确保证 UAT 下单、改单、撤单不会产生真实委托；只有确认后，才允许在 UAT 调用交易动作。
+- 后续交易验证 profile 如何启用下单、改单、撤单，以及如何记录官方测试环境验证结果。
 
 建议：
 
@@ -425,7 +425,7 @@
 已对齐的项目策略：
 
 - 交易 API base URL 已由官方网页文档给出：生产 `https://open-jy.yxzq.com`、测试 `http://open-jy-uat.yxzq.com`；实现仍必须通过配置显式选择，默认 dry-run 不出网。
-- 测试地址 `http://open-jy-uat.yxzq.com` 不自动等同 sandbox / paper trading；未确认 UAT 交易动作安全语义前，不运行真实下单、改单、撤单。
+- 测试地址 `http://open-jy-uat.yxzq.com` 按用户确认作为非生产测试环境；本轮仍不运行下单、改单、撤单，因为交易动作不在只读联调范围内。
 - 第一版交易 API header 跟随官方 Python demo：`X-Time` 和 `X-Request-Id` 不作为全局必填；`modify-order` 额外携带 `X-Request-Id`；`entrust-order` 使用 body `serialNo` 和内部审计映射。
 - 下单 body `serialNo` 按最长 19 位处理；官方 Python demo 生成 19 位字符串，第一版可按用户确认使用数字 JSON，必要时切换字符串。
 - 交易开放 API 的 `X-Sign` 签名原文只使用稳定 JSON body，不拼接 header 字段；第一版默认跟随官方 Python demo 使用标准 Base64，并保留 URL-safe Base64 和 padding 配置。
@@ -437,9 +437,9 @@
 
 仍需券商或联调确认：
 
-- UAT 下单、改单、撤单是否保证不产生真实委托。
+- 后续交易验证 profile 的启用条件、验证范围和回滚条件。
 - `X-Request-Id` 的有效期、重复请求返回语义，以及与下单 body `serialNo` 的官方关系。
-- 券商最终下发的签名密钥材料、验签公钥材料、隐私资料加密密钥材料分别如何对应官方 Python demo 的 `public_key` / `private_key` 配置槽位。
+- 券商最终下发的生产/测试密钥材料命名是否继续沿用官方 demo README 语义：`public_key` 用于隐私字段加密，`private_key` 用于 `X-Sign`；实现按 RobustQuant key role 绑定和校验。
 - token `expiration` 的精确格式、时区和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
 - 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节。
 - 美股碎股撤单 `/odd-modify` 的字段、状态和风控前置条件。
@@ -450,5 +450,35 @@
 建议：
 
 - 只解析官方网页文档和本地转换稿，为未来正式接入做设计依据；Python demo 仅用于实现细节校验。
-- 官方网页文档已给出 UAT 地址，但未明确 UAT 交易动作安全语义；用户已确认未得到盈立明确说明前，不把它当作可下单 sandbox。不把券商申请截图格式作为当前开发阻塞项。
+- 官方网页文档已给出测试环境地址；用户已确认它可用于非生产联调。不把券商申请截图格式作为当前开发阻塞项。
 - 具体调用栈、字段映射、只读查询 DTO 和签名策略按 [usmart-openapi-call-design.md](../backend/clients/usmart-openapi-call-design.md) 继续维护；统一网关能力模式和安全边界按 [broker-trading-gateway.md](../backend/trading/broker-trading-gateway.md) 维护。
+
+## 12. uSmart Gateway 对接已对齐事项（2026-05-26）
+
+已确认：
+
+- 本轮 uSmart-gateway 对接范围限定为真实登录、资产查询、持仓查询、今日订单、历史订单、订单明细和成交流水；下单、改单、撤单继续保持 dry-run / 网关阻断。
+- 当前代码中的 uSmart 对接草稿未经用户确认和文档缺口对齐，后续可以放弃或替换；实现以已确认设计文档为准。
+- Gateway 以上层只依赖统一 Broker DTO、统一错误码和 `BrokerTradingAdapter` 抽象；uSmart、miniQMT、Ptrade 分别作为该统一抽象的派生实现。
+- `TradingGateway.connect` 使用 `BrokerLoginRequest`；订单查询用一个 `OrderQueryRequest(scope=today|history|detail)`；程序内部账户、资金、持仓 DTO 保留完整 `Decimal`，普通日志和展示脱敏。
+- 原始券商结构化字段通过 `BrokerRawRecordRef` 引用查询，不直接挂在用户可见 DTO；raw record payload kind、sensitivity、retention、redaction、hash 和 audited lookup 规则见 [../backend/trading/broker-gateway-raw-record-profile.yaml](../backend/trading/broker-gateway-raw-record-profile.yaml)。
+- `trade-login` 是高风险交易解锁能力，不属于普通登录 DTO；第一版不自动调用，默认关闭。
+- `capabilities` 只表达业务能力；`transport.allow_real_http_readonly` 是真实只读 HTTP 出网保护开关，不进入 DTO。
+- Gateway 稳定错误码 catalog 见 [../backend/trading/broker-gateway-error-codes.yaml](../backend/trading/broker-gateway-error-codes.yaml)；Broker 审计事件 catalog 见 [../backend/trading/broker-gateway-audit-events.yaml](../backend/trading/broker-gateway-audit-events.yaml)。
+- 逐接口 HTTP 语义 profile 见 [../backend/clients/api/usmart-trade-endpoint-profiles.yaml](../backend/clients/api/usmart-trade-endpoint-profiles.yaml)；key material profile 见 [../backend/clients/api/usmart-trade-key-material-profiles.yaml](../backend/clients/api/usmart-trade-key-material-profiles.yaml)；session/retry profile 见 [../backend/clients/api/usmart-trade-session-retry-profiles.yaml](../backend/clients/api/usmart-trade-session-retry-profiles.yaml)。
+- 第一批只读联调验收矩阵见 [../backend/clients/api/usmart-trade-readonly-acceptance-matrix.yaml](../backend/clients/api/usmart-trade-readonly-acceptance-matrix.yaml)；运行时配置与出网门禁 profile 见 [../backend/clients/api/usmart-trade-runtime-config-profile.yaml](../backend/clients/api/usmart-trade-runtime-config-profile.yaml)；执行 runbook 见 [../backend/clients/usmart-readonly-integration-runbook.md](../backend/clients/usmart-readonly-integration-runbook.md)。
+- 对照官方 Python demo 后确认：登录响应需兼容顶层 `token` 与 `data.token`；签名必须使用最终发送的同一 body 字符串；`today_entrust` demo 的 `pageNum="0"` 与网页手册 1-based 分页冲突，默认不启用 demo 兼容模式。
+- 网页版转换稿变更记录提到 `stock-holding`，但当前正文缺少可实现级别章节；demo 的 `stock_holding()` 仅作为 fallback 候选，不替代网页版 `open-assetQuery/v1`。
+- uSmart 密钥材料按 `usmart_trade_default` key material profile 绑定：官方 demo `private_key` 映射为 `trade_sign_private_key` 并用于 `X-Sign`，官方 demo `public_key` 映射为 `sensitive_encrypt_public_key` 并用于手机号、登录密码和交易密码加密；demo 槽位名不作为运行时 key role 名称。
+- 只读 session 策略：token 只保存在进程内存，默认不落库；只读查询遇到登录态过期可以显式重登并用新的 request id 发起新请求；交易动作不隐式刷新 token 后继续提交。
+- 运行时配置策略：默认 dry-run、`read_only`、`trading_enabled=false`；真实只读 HTTP 必须通过 runtime config validation；官方测试环境可用于非生产联调，但不扩大本轮只读范围。
+
+仍需券商或联调确认：
+
+- 后续交易验证 profile 的启用条件、验证范围和回滚条件。
+- `X-Request-Id` 的有效期、重复请求返回语义，以及与下单 body `serialNo` 的官方关系。
+- 券商最终下发的生产/测试密钥材料命名是否继续沿用 demo README 语义；如命名不同，仍必须显式绑定到 `trade_sign_private_key` / `sensitive_encrypt_public_key` key role。
+- token `expiration` 的精确格式、时区和官方刷新接口语义；同一账户在其他客户端登录时的冲突语义。
+- 美股碎股 `/odd-entrust` 的最小金额、最小股数、数量精度、订单状态和撤单细节。
+- 订单明细 `orderStatus` 历史节点和状态流转完整枚举。
+

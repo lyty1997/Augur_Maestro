@@ -1,0 +1,181 @@
+version: 0.1.0-draft
+kind: usmart_trade_key_material_profiles
+api_family: trade_openapi
+status: draft
+owner: RobustQuant TradingGateway
+source_documents:
+  - ../../../../API_manual/uSmart/API_manual/usmart-trade-openapi.zh-cn.md
+  - ../../../../API_manual/uSmart/openapi-demo-py/common/utils.py
+  - ../../../../API_manual/uSmart/openapi-demo-py/conf/config.json
+  - usmart-trade-endpoint-profiles.yaml
+  - ../usmart-openapi-call-design.md
+  - ../usmart-openapi-api-manual.md
+policy:
+  never_store_key_material_in_git: true
+  config_stores_secret_refs_only: true
+  bind_by_semantic_key_role_not_demo_variable_name: true
+  sign_and_send_exact_same_body_string: true
+  official_demo_key_slot_names_are_demo_config_slots: true
+  local_tests_use_generated_fake_keys_only: true
+  log_key_material: forbidden
+  log_key_ref: forbidden_by_default
+  log_key_fingerprint: allowed
+  notes:
+    - Official demo README names public_key as 公钥 and private_key as 私钥.
+    - Official demo uses config public_key for rsa_encrypt sensitive-field encryption and config private_key for X-Sign signing.
+    - common/utils.py wraps those slots with unusual PEM headers; RobustQuant must validate semantic key type instead of copying the wrapper literally.
+    - RobustQuant must bind broker-issued key material to semantic roles below and validate each role before enabling real HTTP.
+profiles:
+  usmart_trade_default:
+    description: Key role contract for uSmart trade OpenAPI request signing and sensitive field encryption.
+    required_for_real_http:
+      - trade_sign_private_key
+      - sensitive_encrypt_public_key
+    optional:
+      - trade_sign_verify_public_key
+    forbidden_in_runtime:
+      - sensitive_decrypt_private_key
+      - demo_slot_public_key
+      - demo_slot_private_key
+    key_roles:
+      trade_sign_private_key:
+        purpose: Generate X-Sign for trade OpenAPI.
+        official_demo_config_slot: private_key
+        official_demo_readme_name: private_key 私钥
+        demo_observed_usage: common/utils.py sign_to_b64str(json.dumps(params)) -> md5_with_rsa
+        algorithm: MD5withRSA
+        input: final_json_body_string
+        output_encoding_default: standard_base64
+        output_encoding_alternatives:
+          - urlsafe_base64
+        pem_type_expected:
+          - PRIVATE KEY
+          - RSA PRIVATE KEY
+        env_ref_default: USMART_TRADE_SIGN_PRIVATE_KEY_REF
+        endpoint_profile_refs:
+          - common.sign_profiles.trade_body_md5_rsa_b64
+        runtime_scope: request_signer_only
+        validation:
+          - key_must_parse_as_private_key_when_pem_type_available
+          - signer_must_sign_the_same_body_string_sent_by_transport
+          - no_sensitive_field_plaintext_may_enter_signer
+      trade_sign_verify_public_key:
+        purpose: Optional offline verification of generated X-Sign in contract tests.
+        algorithm: MD5withRSA_verify
+        input: final_json_body_string_and_x_sign
+        pem_type_expected:
+          - PUBLIC KEY
+          - RSA PUBLIC KEY
+        env_ref_default: USMART_TRADE_SIGN_VERIFY_PUBLIC_KEY_REF
+        runtime_scope: offline_contract_test_or_diagnostics
+        required_for_http_request: false
+        validation:
+          - key_must_parse_as_public_key_when_configured
+          - do_not_send_to_broker
+      sensitive_encrypt_public_key:
+        purpose: Encrypt phoneNumber, login_password, captcha_phoneNumber, and trade_password body fields.
+        official_demo_config_slot: public_key
+        official_demo_readme_name: public_key 公钥
+        demo_observed_usage: common/utils.py rsa_encrypt for phoneNumber/password fields
+        algorithm: RSA_PKCS1_v1_5_encrypt
+        output_encoding: urlsafe_base64
+        pem_type_expected:
+          - PUBLIC KEY
+          - RSA PUBLIC KEY
+        env_ref_default: USMART_SENSITIVE_ENCRYPT_PUBLIC_KEY_REF
+        endpoint_profile_refs:
+          - common.encryption_profiles.sensitive_rsa_pkcs1_v1_5_urlsafe_b64
+        runtime_scope: sensitive_field_encryptor_only
+        validation:
+          - key_must_parse_as_public_key_when_pem_type_available
+          - encrypted_fields_must_not_be_logged_before_or_after_encryption
+          - private_key_must_not_be_bound_to_this_role_without_explicit_compat_override
+      sensitive_decrypt_private_key:
+        purpose: Not needed by RobustQuant application runtime.
+        status: forbidden
+        reason: The client only encrypts sensitive fields before sending requests; it must not hold a broker private decryption key unless official integration explicitly requires a separate diagnostic tool.
+      quote_sign_private_key:
+        purpose: Sign base quote OpenAPI requests.
+        status: out_of_scope_for_trading_gateway
+        reason: Quote API uses a different signing input and must be implemented in QuotationDataGateway, not TradingGateway.
+demo_compatibility_slots:
+  demo_slot_public_key:
+    source: openapi-demo-py/conf/config.json public_key
+    semantic_role: sensitive_encrypt_public_key
+    observed_usage:
+      - common/utils.py receives it as pub_key_str.
+      - common/utils.py wraps pub_key_str with BEGIN PRIVATE KEY even though README names it 公钥.
+      - common/utils.py uses the resulting key in rsa_encrypt for sensitive fields.
+    runtime_allowed: false
+    allowed_use:
+      - offline_demo_compatibility_fixture
+    pending_confirmation: Broker-issued key package should still confirm that production/test materials follow the same public_key -> sensitive_encrypt_public_key convention.
+  demo_slot_private_key:
+    source: openapi-demo-py/conf/config.json private_key
+    semantic_role: trade_sign_private_key
+    observed_usage:
+      - common/utils.py receives it as pri_key_str.
+      - common/utils.py wraps pri_key_str with BEGIN PUBLIC KEY even though README names it 私钥.
+      - common/utils.py uses the resulting key in md5_with_rsa for X-Sign.
+    runtime_allowed: false
+    allowed_use:
+      - offline_demo_compatibility_fixture
+    pending_confirmation: Broker-issued key package should still confirm that production/test materials follow the same private_key -> trade_sign_private_key convention.
+configuration_contract:
+  env_refs:
+    USMART_TRADE_SIGN_PRIVATE_KEY_REF:
+      binds_to: trade_sign_private_key
+      contains: secret_reference_or_key_file_path
+      may_enter_git: false
+    USMART_TRADE_SIGN_VERIFY_PUBLIC_KEY_REF:
+      binds_to: trade_sign_verify_public_key
+      contains: secret_reference_or_key_file_path
+      may_enter_git: false
+      required: false
+    USMART_SENSITIVE_ENCRYPT_PUBLIC_KEY_REF:
+      binds_to: sensitive_encrypt_public_key
+      contains: secret_reference_or_key_file_path
+      may_enter_git: false
+    USMART_DEMO_SLOT_PUBLIC_KEY_REF:
+      binds_to: demo_slot_public_key
+      contains: secret_reference_or_key_file_path
+      may_enter_git: false
+      runtime_allowed: false
+    USMART_DEMO_SLOT_PRIVATE_KEY_REF:
+      binds_to: demo_slot_private_key
+      contains: secret_reference_or_key_file_path
+      may_enter_git: false
+      runtime_allowed: false
+  yaml_config_example:
+    key_material_profile: usmart_trade_default
+    sign:
+      key_role: trade_sign_private_key
+      key_ref_env: USMART_TRADE_SIGN_PRIVATE_KEY_REF
+      algorithm: MD5withRSA
+      encoding_default: standard_base64
+      sign_input: final_json_body_string
+    sensitive_encrypt:
+      key_role: sensitive_encrypt_public_key
+      key_ref_env: USMART_SENSITIVE_ENCRYPT_PUBLIC_KEY_REF
+      algorithm: RSA_PKCS1_v1_5_encrypt
+      encoding: urlsafe_base64
+    demo_compatibility:
+      enabled: false
+      demo_slot_public_key_ref_env: USMART_DEMO_SLOT_PUBLIC_KEY_REF
+      demo_slot_private_key_ref_env: USMART_DEMO_SLOT_PRIVATE_KEY_REF
+validation_rules:
+  - id: no_demo_slot_runtime_binding
+    rule: Runtime configs must not bind demo_slot_public_key/demo_slot_private_key directly; official source materials must be loaded through semantic env refs after key type validation.
+  - id: no_key_material_in_repo
+    rule: Git-tracked configs and docs may contain only key role names and env ref names, never PEM contents or broker-issued key values.
+  - id: private_key_required_for_trade_signing
+    rule: trade_sign_private_key must parse as a private key when PEM type metadata is available.
+  - id: public_key_required_for_sensitive_encryption
+    rule: sensitive_encrypt_public_key must parse as a public key when PEM type metadata is available.
+  - id: body_string_identity
+    rule: X-Sign must be computed over the exact final JSON body string passed to transport.
+  - id: generated_test_keys_only
+    rule: Unit and contract fixtures must generate fake keys or load synthetic fixture keys; official demo or broker-issued keys must not be committed.
+open_questions:
+  - Broker-issued key package should confirm production/test material names follow official demo README semantics: public_key for sensitive encryption and private_key for X-Sign signing.
+  - Whether uSmart accepts both standard Base64 and URL-safe Base64 for trade X-Sign must be verified by readonly integration or official fixtures.

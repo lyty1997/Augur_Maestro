@@ -1,0 +1,325 @@
+version: 0.1.0-draft
+kind: broker_gateway_audit_event_catalog
+namespace: broker
+status: draft
+owner: RobustQuant TradingGateway
+source_documents:
+  - docs/backend/trading/broker-trading-gateway.md
+  - docs/backend/observability-audit.md
+  - docs/backend/trading/broker-gateway-raw-record-profile.yaml
+  - docs/backend/clients/usmart-openapi-call-design.md
+policy:
+  audit_events_are_not_error_codes: true
+  no_sensitive_plaintext: true
+  no_full_raw_http_response: true
+  structured_raw_record_allowed: true
+  raw_record_profile: broker-gateway-raw-record-profile.yaml
+  default_retention:
+    read_only_integration: 30_trading_days
+    dry_run: local_project_policy
+  notes:
+    - Audit events are used for replay, debugging, reconciliation, and compliance review.
+    - User-facing logs may include event names and safe summaries, but not raw broker payloads.
+    - Raw broker structures must be stored behind BrokerRawRecordRef with hash and schema version.
+audit_event_contract:
+  required_fields:
+    - event
+    - trace_id
+    - occurred_at
+    - level
+    - broker
+    - operation_kind
+  optional_fields:
+    - account_ref
+    - request_id
+    - order_id
+    - broker_order_id_masked
+    - endpoint
+    - capability
+    - gateway_error_code
+    - raw_hash
+    - raw_ref
+    - duration_ms
+    - metadata
+  forbidden_fields:
+    - token
+    - session
+    - cookie
+    - password
+    - captcha
+    - api_key
+    - secret
+    - private_key
+    - full_account_id
+    - full_phone_number
+    - raw_http_request
+    - raw_http_response
+raw_record_ref_contract:
+  required_fields:
+    - raw_ref
+    - raw_hash
+    - broker
+    - api_family
+    - endpoint
+    - trace_id
+    - request_id
+    - schema_version
+    - payload_kind
+    - sensitivity_level
+    - created_at
+  allowed_payload_kinds:
+    - request_summary
+    - response_structured
+    - error_structured
+    - mapper_input
+    - mapper_output
+  sensitivity_levels:
+    - low
+    - account_private
+    - trading_private
+    - credential_secret
+  rules:
+    - credential_secret records must never be persisted as raw records.
+    - account_private and trading_private records require audited lookup permission.
+    - raw_hash is computed from canonical structured payload after redaction of forbidden secrets.
+    - raw_ref is opaque to CLI and API callers.
+redaction_policy:
+  account_ref: keep_alias_or_mask_last4
+  broker_order_id: mask_unless_needed_for_reconciliation
+  amount: allowed_in_audit_store_for_read_only_integration
+  token: hash_fingerprint_only
+  phone: mask_except_last4
+  raw_message: hash_or_store_under_raw_ref_only
+events:
+  - event: broker.connect_started
+    level: info
+    operation_kind: login
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - request_id
+    forbidden_context:
+      - password
+      - captcha
+      - token
+    description: Broker login or connection flow started.
+
+  - event: broker.connect_completed
+    level: info
+    operation_kind: login
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - request_id
+      - duration_ms
+    forbidden_context:
+      - token
+      - password
+      - captcha
+    description: Broker login or connection flow completed successfully.
+
+  - event: broker.connect_failed
+    level: warning
+    operation_kind: login
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - request_id
+      - gateway_error_code
+    forbidden_context:
+      - token
+      - password
+      - captcha
+      - raw_message
+    description: Broker login or connection flow failed.
+
+  - event: broker.query_started
+    level: info
+    operation_kind: readonly
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - request_id
+      - endpoint
+    forbidden_context:
+      - token
+      - raw_http_request
+    description: Read-only broker query started.
+
+  - event: broker.query_completed
+    level: info
+    operation_kind: readonly
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - request_id
+      - endpoint
+      - duration_ms
+      - raw_hash
+      - raw_ref
+    forbidden_context:
+      - token
+      - raw_http_response
+    description: Read-only broker query completed and mapped to internal DTOs.
+
+  - event: broker.query_failed
+    level: warning
+    operation_kind: readonly
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - request_id
+      - endpoint
+      - gateway_error_code
+    forbidden_context:
+      - token
+      - raw_message
+      - raw_http_response
+    description: Read-only broker query failed or response could not be mapped.
+
+  - event: broker.order_submit_requested
+    level: info
+    operation_kind: trade_action
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - order_id
+      - request_id
+    forbidden_context:
+      - token
+      - password
+      - raw_http_request
+    description: OMS requested broker order submission.
+
+  - event: broker.order_submit_blocked
+    level: warning
+    operation_kind: trade_action
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - order_id
+      - request_id
+      - gateway_error_code
+      - capability
+    forbidden_context:
+      - raw_http_request
+      - raw_http_response
+    description: TradingGateway blocked broker order submission before adapter call.
+
+  - event: broker.order_submit_unknown
+    level: critical
+    operation_kind: trade_action
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - order_id
+      - request_id
+      - gateway_error_code
+    forbidden_context:
+      - raw_http_response
+    description: Broker order submission result is unknown and requires reconciliation.
+
+  - event: broker.order_status_mapped
+    level: info
+    operation_kind: reconciliation
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - order_id
+      - raw_hash
+      - raw_ref
+    forbidden_context:
+      - raw_http_response
+    description: Broker order status was mapped into OMS state.
+
+  - event: broker.cancel_requested
+    level: info
+    operation_kind: trade_action
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - order_id
+      - request_id
+      - broker_order_id_masked
+    forbidden_context:
+      - raw_http_request
+    description: OMS requested broker order cancellation.
+
+  - event: broker.cancel_blocked
+    level: warning
+    operation_kind: trade_action
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - order_id
+      - request_id
+      - gateway_error_code
+      - capability
+    forbidden_context:
+      - raw_http_request
+      - raw_http_response
+    description: TradingGateway blocked cancel request before adapter call.
+
+  - event: broker.cancel_unknown
+    level: critical
+    operation_kind: trade_action
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - order_id
+      - request_id
+      - gateway_error_code
+    forbidden_context:
+      - raw_http_response
+    description: Broker cancel result is unknown and requires reconciliation.
+
+  - event: broker.ws_connected
+    level: info
+    operation_kind: market_data
+    required_context:
+      - trace_id
+      - broker
+    forbidden_context:
+      - token
+    description: Broker market data WebSocket connected.
+
+  - event: broker.ws_disconnected
+    level: warning
+    operation_kind: market_data
+    required_context:
+      - trace_id
+      - broker
+    forbidden_context:
+      - token
+    description: Broker market data WebSocket disconnected.
+  - event: broker.raw_record_accessed
+    level: warning
+    operation_kind: reconciliation
+    required_context:
+      - trace_id
+      - broker
+      - account_ref
+      - raw_ref
+      - raw_hash
+      - metadata
+    forbidden_context:
+      - raw_http_request
+      - raw_http_response
+      - token
+      - password
+      - private_key
+    description: Account-private or trading-private raw broker structured payload was accessed through an audited lookup.
+

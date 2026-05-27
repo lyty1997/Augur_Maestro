@@ -1,0 +1,302 @@
+version: 0.1.0-draft
+kind: broker_gateway_error_catalog
+namespace: broker
+status: draft
+owner: RobustQuant TradingGateway
+source_documents:
+  - docs/backend/trading/broker-trading-gateway.md
+  - docs/backend/clients/usmart-openapi-call-design.md
+  - docs/backend/clients/usmart-openapi-api-manual.md
+related_raw_broker_catalogs:
+  - broker: usmart
+    api_family: trade_openapi
+    path: docs/backend/clients/api/usmart-trade-error-codes.draft.yaml
+policy:
+  stable_for_callers: true
+  gateway_error_is_control_flow_code: true
+  raw_broker_code_is_diagnostic_only: true
+  raw_broker_code_required_when_available: true
+  expose_raw_message_to_user: false
+  default_error: broker.unclassified
+  unknown_raw_code_error: broker.unclassified
+  generated: false
+  notes:
+    - This catalog defines RobustQuant stable broker gateway errors.
+    - Broker raw code catalogs map endpoint-local raw code/msg values to these stable errors.
+    - Audit events such as broker.connect_started are not error codes and must not be added here.
+    - TradingGateway may emit gateway-origin errors before any broker adapter or external HTTP call.
+error_response_contract:
+  required_fields:
+    - code
+    - category
+    - message
+    - retryable
+    - trace_id
+    - caller_action
+  optional_fields:
+    - broker
+    - account_ref
+    - request_id
+    - endpoint
+    - http_status
+    - raw_code
+    - raw_message_hash
+    - raw_ref
+    - occurred_at
+  raw_fields_policy:
+    raw_code: allowed_when_from_broker
+    raw_message: do_not_return_to_cli_or_api
+    raw_message_hash: allowed
+    raw_ref: allowed_for_audited_lookup
+categories:
+  success: Successful broker gateway result.
+  capability_guard: Blocked by Gateway mode, capability, transport, or caller guard.
+  auth: Authentication, session, token, captcha, or account access failure.
+  request: Invalid request, unsupported order shape, bad endpoint, or signer failure.
+  rate_limit: Broker or Gateway request throttling.
+  transport: Network, timeout, HTTP transport, or remote service availability failure.
+  broker_business: Broker business rejection after a valid request reached the broker.
+  response_mapping: Response body is missing, malformed, inconsistent, or not classifiable.
+errors:
+  - code: broker.ok
+    category: success
+    origin: broker_or_gateway
+    http_status: 200
+    retryable: false
+    severity: info
+    safe_message: Broker gateway request completed successfully.
+    caller_action: Continue normal flow.
+
+  - code: broker.disabled
+    category: capability_guard
+    origin: gateway
+    http_status: 403
+    retryable: false
+    severity: error
+    safe_message: Broker gateway is disabled.
+    caller_action: Do not retry automatically; require configuration or mode change.
+
+  - code: broker.trading_disabled
+    category: capability_guard
+    origin: gateway
+    http_status: 403
+    retryable: false
+    severity: error
+    safe_message: Trading operation is disabled by gateway mode or safety switch.
+    caller_action: Do not retry automatically; return the order flow to OMS or operator review.
+
+  - code: broker.capability_disabled
+    category: capability_guard
+    origin: gateway
+    http_status: 403
+    retryable: false
+    severity: error
+    safe_message: Requested broker capability is disabled.
+    caller_action: Do not retry automatically; require explicit capability configuration.
+
+  - code: broker.unsupported_capability
+    category: capability_guard
+    origin: gateway_or_adapter
+    http_status: 501
+    retryable: false
+    severity: error
+    safe_message: Requested broker capability is not supported by the selected broker adapter.
+    caller_action: Route through a supported capability or choose another broker adapter.
+
+  - code: broker.real_http_disabled
+    category: capability_guard
+    origin: gateway
+    http_status: 403
+    retryable: false
+    severity: error
+    safe_message: Real broker HTTP access is disabled by transport configuration.
+    caller_action: Use dry-run mode or enable transport.allow_real_http_readonly under controlled conditions.
+
+  - code: broker.caller_not_allowed
+    category: capability_guard
+    origin: gateway
+    http_status: 403
+    retryable: false
+    severity: error
+    safe_message: Caller is not allowed to invoke this broker gateway operation.
+    caller_action: Route the operation through the allowed application service boundary.
+
+  - code: broker.auth_missing
+    category: auth
+    origin: gateway
+    http_status: 401
+    retryable: false
+    severity: error
+    safe_message: Broker session or credential reference is missing.
+    caller_action: Establish a broker session or fix credential configuration before retrying.
+
+  - code: broker.auth_expired
+    category: auth
+    origin: broker_or_gateway
+    http_status: 401
+    retryable: true
+    severity: warning
+    safe_message: Broker session expired.
+    caller_action: Read-only queries may reconnect with a new request_id; trading operations must return to OMS.
+
+  - code: broker.auth_failed
+    category: auth
+    origin: broker_or_gateway
+    http_status: 401
+    retryable: false
+    severity: error
+    safe_message: Broker authentication failed.
+    caller_action: Do not retry blindly; check credentials, captcha, account status, or operator input.
+
+  - code: broker.captcha_required
+    category: auth
+    origin: broker
+    http_status: 401
+    retryable: false
+    severity: warning
+    safe_message: Broker requires captcha verification.
+    caller_action: Start an explicit captcha login flow if the capability is enabled.
+
+  - code: broker.trade_locked
+    category: auth
+    origin: broker
+    http_status: 423
+    retryable: false
+    severity: error
+    safe_message: Broker trading permission is locked or requires trade authentication.
+    caller_action: Block trading flow and require manual review; do not call trade-login automatically.
+
+  - code: broker.permission_denied
+    category: auth
+    origin: broker_or_gateway
+    http_status: 403
+    retryable: false
+    severity: error
+    safe_message: Broker permission was denied.
+    caller_action: Check account permission, API entitlement, IP whitelist, and endpoint authorization.
+
+  - code: broker.account_restricted
+    category: auth
+    origin: broker
+    http_status: 403
+    retryable: false
+    severity: error
+    safe_message: Broker account is restricted.
+    caller_action: Stop automated flow and require operator or broker support confirmation.
+
+  - code: broker.ip_not_allowed
+    category: auth
+    origin: broker_or_gateway
+    http_status: 403
+    retryable: false
+    severity: error
+    safe_message: Current IP is not allowed by broker access policy.
+    caller_action: Verify broker IP whitelist and deployment egress address.
+
+  - code: broker.sign_failed
+    category: request
+    origin: gateway
+    http_status: 500
+    retryable: false
+    severity: error
+    safe_message: Broker request signing failed locally.
+    caller_action: Check signing key configuration and request canonicalization.
+
+  - code: broker.bad_request
+    category: request
+    origin: broker_or_gateway
+    http_status: 400
+    retryable: false
+    severity: error
+    safe_message: Broker request is invalid.
+    caller_action: Fix request DTO, builder mapping, or endpoint parameters before retrying.
+
+  - code: broker.unsupported_order_type
+    category: request
+    origin: gateway
+    http_status: 400
+    retryable: false
+    severity: error
+    safe_message: Order type or market session is not supported by the gateway policy.
+    caller_action: Use a supported order shape or extend the unified DTO and capability contract first.
+
+  - code: broker.endpoint_not_found
+    category: request
+    origin: broker_or_gateway
+    http_status: 404
+    retryable: false
+    severity: error
+    safe_message: Broker endpoint was not found or is not available.
+    caller_action: Check endpoint path, API family, environment, and broker entitlement.
+
+  - code: broker.rate_limited
+    category: rate_limit
+    origin: broker_or_gateway
+    http_status: 429
+    retryable: true
+    severity: warning
+    safe_message: Broker gateway request was rate limited.
+    caller_action: Retry only according to the configured backoff policy and operation kind.
+
+  - code: broker.transport_error
+    category: transport
+    origin: gateway_transport
+    http_status: 502
+    retryable: true
+    severity: warning
+    safe_message: Broker transport request failed.
+    caller_action: Retry read-only operations according to policy; do not auto-retry trading submission.
+
+  - code: broker.timeout
+    category: transport
+    origin: gateway_transport
+    http_status: 504
+    retryable: true
+    severity: warning
+    safe_message: Broker request timed out.
+    caller_action: For trading operations, mark result unknown and reconcile before any further action.
+
+  - code: broker.service_unavailable
+    category: transport
+    origin: broker_or_gateway_transport
+    http_status: 503
+    retryable: true
+    severity: warning
+    safe_message: Broker service is unavailable.
+    caller_action: Retry read-only operations with backoff; trading operations require OMS reconciliation.
+
+  - code: broker.order_rejected
+    category: broker_business
+    origin: broker
+    http_status: 422
+    retryable: false
+    severity: error
+    safe_message: Broker rejected the order request.
+    caller_action: Preserve raw_ref for audit and map the order to a rejected or blocked OMS state.
+
+  - code: broker.response_invalid
+    category: response_mapping
+    origin: gateway_mapper
+    http_status: 502
+    retryable: false
+    severity: error
+    safe_message: Broker response could not be parsed or did not match the expected schema.
+    caller_action: Preserve raw_ref for audited inspection; do not infer missing trading state.
+
+  - code: broker.order_state_unknown
+    category: response_mapping
+    origin: gateway_mapper
+    http_status: 202
+    retryable: false
+    severity: critical
+    safe_message: Broker order state is unknown.
+    caller_action: Freeze automated follow-up actions until order, trade, and audit reconciliation completes.
+
+  - code: broker.unclassified
+    category: response_mapping
+    origin: broker_mapping
+    http_status: 502
+    retryable: false
+    severity: error
+    safe_message: Broker returned an unclassified response or error.
+    caller_action: Preserve raw_ref and classify through the endpoint-specific raw broker catalog before changing control flow.

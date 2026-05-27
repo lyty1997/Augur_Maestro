@@ -19,7 +19,6 @@ python3 -m venv .venv
 .venv/bin/python -m mypy -p rq_core
 .venv/bin/detect-secrets-hook --baseline .secrets.baseline $(git ls-files)
 .venv/bin/python -m pip_audit -r requirements-dev.lock.txt
-.venv/bin/python src/scripts/quality/trading_safety_static_check.py
 .venv/bin/python src/scripts/quality/markdown_docs_check.py
 .venv/bin/python -m pytest
 ```

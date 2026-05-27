@@ -20,6 +20,7 @@ info:
     - ../../../../API_manual/uSmart/openapi-demo-py/api/quote_push.py
     - ../../../../API_manual/uSmart/openapi-demo-py/common/ws_util.py
     - usmart-trade-error-codes.draft.yaml
+    - usmart-trade-endpoint-profiles.yaml
     - ../usmart-openapi-call-design.md
     - ../usmart-openapi-api-manual.md
     - ../../trading/broker-trading-gateway.md
@@ -595,10 +596,10 @@ components:
       description: >
         Official Python demo EncryptUtil.rsa_encrypt uses RSA PKCS1_v1_5
         encryption and URL-safe Base64 encoding for phoneNumber, login
-        password, and trade password fields. Demo variable names and PEM
-        wrapping for public_key/private_key are unusual, so RobustQuant binds
-        final broker-provided key material to explicit config slots and verifies
-        the transform in offline tests instead of inferring semantics from names.
+        password, and trade password fields. Official demo maps public_key to
+        sensitive-field encryption and private_key to X-Sign signing. The PEM
+        wrapping in common/utils.py is unusual, so RobustQuant validates semantic
+        key roles instead of copying the wrapper literally.
       x-robustquant-secret-naming:
         login_password_secret_ref: Login password secret used only for /user-server/open-api/login.
         loginPasswordEncrypted: Encrypted login password mapped to official login body field password.
@@ -618,7 +619,7 @@ components:
           description: Encrypted phone number.
           x-sensitive: true
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
-          x-pending-confirmation: Final broker key material to demo config slot mapping.
+          x-robustquant-key-role: sensitive_encrypt_public_key
         password:
           type: string
           description: Encrypted login password.
@@ -626,7 +627,7 @@ components:
           x-robustquant-source-secret: login_password_secret_ref
           x-robustquant-internal-name: loginPasswordEncrypted
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
-          x-pending-confirmation: Final broker key material to demo config slot mapping.
+          x-robustquant-key-role: sensitive_encrypt_public_key
     SendPhoneCaptchaRequest:
       type: object
       additionalProperties: false
@@ -639,7 +640,7 @@ components:
           description: Encrypted phone number.
           x-sensitive: true
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
-          x-pending-confirmation: Final broker key material to demo config slot mapping.
+          x-robustquant-key-role: sensitive_encrypt_public_key
         type:
           type: integer
           const: 106
@@ -655,7 +656,7 @@ components:
           description: Encrypted phone number.
           x-sensitive: true
           x-demo-observed: RSA PKCS1_v1_5 encryption followed by URL-safe Base64.
-          x-pending-confirmation: Final broker key material to demo config slot mapping.
+          x-robustquant-key-role: sensitive_encrypt_public_key
         captcha:
           type: string
           x-sensitive: true

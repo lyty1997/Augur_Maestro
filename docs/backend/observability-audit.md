@@ -112,6 +112,8 @@
 - `strategy.paused`。
 - `manual.action_confirmed`。
 
+Broker 交易网关进入实现时，事件名、必填字段和禁止字段以 [trading/broker-gateway-audit-events.yaml](trading/broker-gateway-audit-events.yaml) 为准；raw record 存储、retention、sensitivity 和 lookup 权限以 [trading/broker-gateway-raw-record-profile.yaml](trading/broker-gateway-raw-record-profile.yaml) 为准。该 catalog 只定义审计和原始记录规则，不定义错误码；错误码以 [trading/broker-gateway-error-codes.yaml](trading/broker-gateway-error-codes.yaml) 为准。
+
 ## 5. 审计事件和普通日志
 
 普通日志用于排查运行问题。审计事件用于复盘关键业务动作。

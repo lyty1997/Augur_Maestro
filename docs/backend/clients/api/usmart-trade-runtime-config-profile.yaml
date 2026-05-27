@@ -1,0 +1,224 @@
+version: 0.1.0-draft
+kind: usmart_trade_runtime_config_profile
+api_family: trade_openapi
+status: draft
+owner: RobustQuant TradingGateway
+source_documents:
+  - usmart-trade-endpoint-profiles.yaml
+  - usmart-trade-key-material-profiles.yaml
+  - usmart-trade-session-retry-profiles.yaml
+  - usmart-trade-readonly-acceptance-matrix.yaml
+  - ../../trading/broker-gateway-error-codes.yaml
+  - ../../trading/broker-gateway-raw-record-profile.yaml
+  - ../usmart-openapi-call-design.md
+  - ../usmart-openapi-api-manual.md
+  - ../usmart-readonly-integration-runbook.md
+  - ../../trading/broker-trading-gateway.md
+policy:
+  default_transport: dry_run
+  default_mode: read_only
+  default_trading_enabled: false
+  dto_must_not_carry_real_http_switches: true
+  env_file_may_enter_git: false
+  yaml_config_may_enter_git: true
+  yaml_config_must_not_contain_secrets: true
+  demo_slot_runtime_binding_allowed: false
+  trade_endpoint_real_http_allowed_in_readonly: false
+  official_test_environment_available: true
+  official_test_environment_is_non_production: true
+runtime_profiles:
+  usmart_readonly_integration_v1:
+    description: Runtime configuration contract for first uSmart real-login and readonly-query integration.
+    mode: read_only
+    trading_enabled: false
+    real_http_scope:
+      allowed_operation_kinds:
+        - login
+        - readonly
+      forbidden_operation_kinds:
+        - trade_action
+        - trade_sensitive_unlock
+      allowed_first_endpoint_ids:
+        - password_login
+        - open_asset_query_v1
+        - today_entrust
+        - his_entrust
+        - order_detail
+        - stock_record
+    required_git_safe_config:
+      broker: usmart
+      mode: read_only
+      trading_enabled: false
+      transport.allow_real_http_readonly: true
+      transport.connect_timeout_ms: configured_positive_int
+      transport.read_timeout_ms: configured_positive_int
+      key_material_profile: usmart_trade_default
+      session.profile: usmart_single_account_memory_session_v1
+      session.token_store: process_memory_only
+      session.token_persistence: false
+      retry.readonly_max_retries: 2
+      retry.trade_action_max_retries: 0
+      retry.relogin_on_readonly_auth_expired: explicit_once_new_request
+    required_secret_or_env_refs:
+      - USMART_API_BASE_URL
+      - USMART_CHANNEL_ID
+      - USMART_ACCOUNT_REF
+      - USMART_TRADE_SIGN_PRIVATE_KEY_REF
+      - USMART_SENSITIVE_ENCRYPT_PUBLIC_KEY_REF
+      - USMART_LOGIN_AREA_CODE
+      - USMART_LOGIN_PHONE
+      - USMART_LOGIN_PASSWORD_SECRET_REF
+    optional_secret_or_env_refs:
+      - USMART_TRADE_SIGN_VERIFY_PUBLIC_KEY_REF
+      - USMART_TRADE_PASSWORD_SECRET_REF
+      - USMART_DEMO_SLOT_PUBLIC_KEY_REF
+      - USMART_DEMO_SLOT_PRIVATE_KEY_REF
+    startup_preconditions:
+      - base_url_configured_and_allowed
+      - channel_id_configured
+      - account_ref_configured
+      - login_profile_configured
+      - key_material_configured_by_role
+      - key_material_profile_validation_passed
+      - endpoint_profiles_validation_passed
+      - session_retry_profile_validation_passed
+      - acceptance_matrix_validation_passed
+      - audit_store_available
+      - raw_record_profile_validation_passed
+      - ip_whitelist_ready
+      - user_explicitly_approved_real_readonly_http
+    startup_forbidden_conditions:
+      - trading_enabled_true
+      - mode_live_guarded
+      - any_trade_action_capability_true
+      - trade_login_capability_true
+      - transport_allow_real_http_trade_actions_true
+      - token_persistence_true
+      - demo_compatibility_enabled
+      - demo_slot_bound_to_runtime_signer_or_encryptor
+    on_precondition_failure:
+      behavior: stay_dry_run_or_fail_startup
+      gateway_error_code: broker.real_http_disabled
+      audit_event: broker.config_validation_failed
+  usmart_dry_run_application_materials_v1:
+    description: Default configuration for source screenshots and offline request-builder tests.
+    mode: read_only
+    trading_enabled: false
+    transport.allow_real_http_readonly: false
+    real_http_scope:
+      allowed_operation_kinds: []
+      forbidden_operation_kinds:
+        - login
+        - readonly
+        - trade_action
+        - trade_sensitive_unlock
+    allowed_capabilities:
+      - login
+      - account_query
+      - position_query
+      - order_query
+      - trade_query
+    startup_preconditions:
+      - no_real_http_transport_selected
+      - synthetic_or_test_key_material_only
+      - no_real_credentials_required
+    on_http_attempt:
+      gateway_error_code: broker.real_http_disabled
+      audit_event: broker.http_request_blocked
+config_contract:
+  env_file:
+    may_enter_git: false
+    required_for_readonly_integration:
+      USMART_API_BASE_URL:
+        value_kind: url
+        allowed_values:
+          - https://open-jy.yxzq.com
+          - http://open-jy-uat.yxzq.com
+          - https://open-jy-uat.yxzq.com
+        note: Official test environment URL is accepted for non-production integration; first-round profile still blocks trade actions by scope.
+      USMART_CHANNEL_ID:
+        value_kind: assigned_channel_identifier_sensitive_config
+        note: X-Channel is assigned by uSmart/盈立; treat as sensitive config even though it is not cryptographic key material.
+      USMART_ACCOUNT_REF:
+        value_kind: local_account_reference
+        raw_account_number_allowed: false
+      USMART_TRADE_SIGN_PRIVATE_KEY_REF:
+        value_kind: secret_ref
+        key_role: trade_sign_private_key
+      USMART_SENSITIVE_ENCRYPT_PUBLIC_KEY_REF:
+        value_kind: secret_ref
+        key_role: sensitive_encrypt_public_key
+      USMART_LOGIN_AREA_CODE:
+        value_kind: secret_or_sensitive_config
+      USMART_LOGIN_PHONE:
+        value_kind: secret_or_sensitive_config
+      USMART_LOGIN_PASSWORD_SECRET_REF:
+        value_kind: secret_ref
+        secret_role: login_password
+    optional:
+      USMART_TRADE_SIGN_VERIFY_PUBLIC_KEY_REF:
+        value_kind: secret_ref
+        key_role: trade_sign_verify_public_key
+      USMART_TRADE_PASSWORD_SECRET_REF:
+        value_kind: secret_ref
+        secret_role: trade_password
+        default_usage: not_read_when_trade_password_required_false
+      USMART_DEMO_SLOT_PUBLIC_KEY_REF:
+        value_kind: secret_ref
+        runtime_allowed: false
+      USMART_DEMO_SLOT_PRIVATE_KEY_REF:
+        value_kind: secret_ref
+        runtime_allowed: false
+  git_safe_yaml:
+    path_example: configs/broker/usmart.yaml
+    may_enter_git: true
+    forbidden_value_kinds:
+      - pem_key_material
+      - token_value
+      - login_password
+      - trade_password
+      - captcha
+      - full_phone_number
+      - raw_account_number
+    required_defaults:
+      broker: usmart
+      mode: read_only
+      trading_enabled: false
+      transport.allow_real_http_readonly: false
+      key_material_profile: usmart_trade_default
+      session.token_store: process_memory_only
+      session.token_persistence: false
+      retry.trade_action_max_retries: 0
+    readonly_integration_override_allowed:
+      transport.allow_real_http_readonly: true
+    forbidden_readonly_overrides:
+      trading_enabled: true
+      capabilities.trade_login: true
+      capabilities.place_order: true
+      capabilities.odd_lot_order: true
+      capabilities.modify_order: true
+      capabilities.cancel_order: true
+      capabilities.odd_lot_cancel: true
+      demo_compatibility.enabled: true
+validation_rules:
+  - id: no_dto_real_http_switch
+    rule: Broker request DTOs must not contain allow_real_http or equivalent transport bypass flags.
+  - id: readonly_real_http_requires_all_preconditions
+    rule: Real HTTP for login/readonly endpoints requires mode=read_only, transport.allow_real_http_readonly=true, endpoint capability enabled, configured base URL, channel id, key material, login profile, IP whitelist readiness, audit store, and explicit user approval.
+  - id: read_only_blocks_trade_capabilities
+    rule: In usmart_readonly_integration_v1, trade_login and all trade action capabilities must be false.
+  - id: no_secret_in_git_safe_yaml
+    rule: Git-tracked YAML may contain env ref names and profile names only; it must not contain secret values, PEM contents, tokens, full phone numbers, or raw account numbers.
+  - id: base_url_allowlist
+    rule: USMART_API_BASE_URL must be one of official trade OpenAPI URLs unless a separate explicit approval and audit record exists.
+  - id: test_env_does_not_expand_scope
+    rule: Choosing the official test environment URL does not enable trade-action endpoints in usmart_readonly_integration_v1; trade actions remain dry-run/blocked until the project moves to a dedicated trade-validation profile.
+  - id: demo_slots_not_runtime
+    rule: USMART_DEMO_SLOT_PUBLIC_KEY_REF and USMART_DEMO_SLOT_PRIVATE_KEY_REF may be used only for offline demo compatibility tests, not runtime signer/encryptor binding.
+  - id: startup_failure_blocks_transport
+    rule: If runtime config validation fails, RealHttpTransport must not be installed for uSmart trade OpenAPI.
+  - id: raw_record_profile_required_for_real_http
+    rule: Real readonly HTTP requires broker-gateway-raw-record-profile.yaml validation and an audit store capable of writing BrokerRawRecordRef records.
+open_questions:
+  - The local official manual/demo do not describe an API-level IP whitelist setup procedure, and no broker support response is currently available. If provisioning status is unknown, the first readonly smoke may be used to identify IP/auth rejection and must stop on 401/403/signature errors.
+  - No documented preflight API exists for IP whitelist readiness; readiness is an operational flag until verified by broker support or a controlled readonly smoke call.

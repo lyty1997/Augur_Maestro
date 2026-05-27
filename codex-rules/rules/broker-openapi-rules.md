@@ -20,6 +20,24 @@
 
 无法从券商文档确认的行为必须标记为待确认，不得写成确定事实。
 
+
+## 模块编码基线
+
+2026-05-27 用户确认：此前 `src/rq_core/broker_kernel`、旧 uSmart adapter/client、旧 `TradingGateway` 测试和旧交易安全静态检查脚本均属于未经设计确认的草稿，已经废弃。后续实现必须从已确认设计文档和 profile 重新开始，不得恢复旧接口形状。
+
+新的 broker 模块编码必须遵守：
+
+- 先实现统一 DTO、错误、审计、raw record 和 `BrokerTradingAdapter` 抽象，再实现任何具体 broker 后端。
+- `TradingGateway.connect` 必须接收 `BrokerLoginRequest`，不得退回 `connect(AccountRef)`。
+- Gateway 以上层只能依赖统一 Broker DTO 和统一接口；uSmart、miniQMT、Ptrade 只能作为统一 `BrokerTradingAdapter` 的派生实现。
+- uSmart HTTP builder、mapper、session、runtime config、key material 和错误映射必须以 `docs/backend/clients/api/usmart-trade-*.yaml` 与 `docs/backend/trading/broker-gateway-*.yaml` 为契约源。
+- 官方 demo `public_key` 映射为 `sensitive_encrypt_public_key`，用于手机号、登录密码和交易密码等隐私字段加密；官方 demo `private_key` 映射为 `trade_sign_private_key`，用于 `X-Sign`。运行时只能按语义 key role 取 secret ref，不得按 demo 槽位名直接绑定。
+- `X-Channel` 是盈立分配渠道号，按敏感配置处理；不进入 Git，不进入普通日志。
+- 官方“测试环境接口地址”按用户确认作为非生产联调环境；本轮只允许真实登录和只读查询，交易动作继续 dry-run 或由 Gateway 阻断。
+- IP 白名单没有官方 API 级设置说明；若状态未知，只能通过受控只读 smoke 或券商反馈确认，遇到 401/403/signature 错误必须停止。
+- 第一批真实 HTTP 只读范围只包括登录、`open-assetQuery/v1`、`today-entrust`、`his-entrust`、`order-detail` 和 `stock-record`。`trade-login`、下单、改单、撤单、碎股交易、IPO、期权、保证金、做空等不得在本轮启用。
+- 新实现必须先补离线契约测试和脱敏测试；没有测试覆盖的真实 HTTP transport 不得启用。
+
 ## 能力分级
 
 券商适配器必须显式区分能力等级：

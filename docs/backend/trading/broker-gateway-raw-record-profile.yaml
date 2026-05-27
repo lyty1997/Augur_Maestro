@@ -1,0 +1,251 @@
+version: 0.1.0-draft
+kind: broker_gateway_raw_record_profile
+namespace: broker
+status: draft
+owner: RobustQuant TradingGateway
+source_documents:
+  - broker-trading-gateway.md
+  - broker-gateway-audit-events.yaml
+  - broker-gateway-error-codes.yaml
+  - ../observability-audit.md
+  - ../clients/usmart-openapi-call-design.md
+  - ../clients/usmart-openapi-api-manual.md
+  - ../clients/api/usmart-trade-readonly-acceptance-matrix.yaml
+  - ../clients/api/usmart-trade-runtime-config-profile.yaml
+policy:
+  raw_record_ref_required_for_saved_raw_payloads: true
+  raw_ref_opaque_to_cli_and_public_api: true
+  full_raw_http_request_persistence: forbidden
+  full_raw_http_response_text_persistence: forbidden
+  structured_payload_persistence: allowed_after_redaction
+  credential_secret_persistence: forbidden
+  hash_algorithm: sha256
+  canonicalization: stable_json_after_redaction
+  default_readonly_retention: 30_trading_days
+raw_record_ref_contract:
+  required_fields:
+    - raw_ref
+    - raw_hash
+    - broker
+    - api_family
+    - endpoint
+    - trace_id
+    - request_id
+    - schema_version
+    - payload_kind
+    - sensitivity_level
+    - created_at
+  optional_fields:
+    - account_ref
+    - order_id
+    - broker_order_id_masked
+    - source_profile
+    - retention_class
+    - expires_at
+    - encryption_key_ref
+  invariants:
+    - raw_hash equals sha256 of canonical redacted structured payload.
+    - raw_ref is an opaque lookup id and must not encode endpoint, account, order id, or timestamp in plain text.
+    - raw_ref and raw_hash may be returned to internal callers; raw payload requires audited lookup permission.
+payload_kinds:
+  request_summary:
+    persistence: allowed
+    content: redacted_structured_summary_only
+    may_include:
+      - endpoint
+      - method
+      - header_names
+      - body_field_names
+      - pagination
+      - request_id
+      - serialNo_when_applicable
+    forbidden:
+      - Authorization
+      - X-Sign_value
+      - token
+      - password
+      - phoneNumber_plaintext
+      - encrypted_sensitive_field_values
+      - private_key
+      - full_http_body_with_credentials
+    default_sensitivity_level: low
+  response_structured:
+    persistence: allowed_after_redaction
+    content: parsed_structured_response_fields
+    may_include:
+      - broker_code
+      - broker_message_redacted_or_raw_under_restricted_lookup
+      - account_asset_fields
+      - position_fields
+      - order_fields
+      - trade_fields
+      - unknown_enum_raw_values
+      - original_time_strings
+    forbidden:
+      - token
+      - password
+      - captcha
+      - private_key
+      - full_raw_http_response_text
+    default_sensitivity_level: account_private
+  error_structured:
+    persistence: allowed_after_redaction
+    content: parsed_error_context
+    may_include:
+      - http_status
+      - raw_code
+      - raw_message_hash
+      - endpoint
+      - retryable
+      - caller_action
+    forbidden:
+      - raw_message_in_normal_logs
+      - token
+      - password
+      - private_key
+      - full_raw_http_response_text
+    default_sensitivity_level: account_private
+  mapper_input:
+    persistence: allowed_after_redaction
+    content: structured_payload_given_to_mapper
+    default_sensitivity_level: account_private
+  mapper_output:
+    persistence: allowed_after_redaction
+    content: broker_agnostic_dto_snapshot_or_summary
+    default_sensitivity_level: account_private
+sensitivity_levels:
+  low:
+    examples:
+      - endpoint
+      - header_names
+      - field_names
+      - duration_ms
+    lookup_permission: developer_debug
+    normal_log_allowed: true
+  account_private:
+    examples:
+      - account_assets
+      - cash
+      - positions
+      - order_history
+      - trade_history
+      - broker_raw_account_fields
+    lookup_permission: audit_account_private
+    normal_log_allowed: false
+    cli_allowed: summarized_or_tabular_only
+  trading_private:
+    examples:
+      - order_submission_payload_summary
+      - broker_order_id
+      - reconciliation_payload
+      - unknown_trade_action_response
+    lookup_permission: audit_trading_private
+    normal_log_allowed: false
+    cli_allowed: summarized_only
+  credential_secret:
+    examples:
+      - token
+      - password
+      - captcha
+      - private_key
+      - authorization_header_value
+      - x_sign_value
+    persistence: forbidden
+    lookup_permission: none
+retention_classes:
+  dry_run:
+    default_retention: local_project_policy
+    payload_kinds:
+      - request_summary
+      - mapper_output
+  readonly_integration:
+    default_retention: 30_trading_days
+    payload_kinds:
+      - request_summary
+      - response_structured
+      - error_structured
+      - mapper_input
+      - mapper_output
+  trade_action_blocked:
+    default_retention: order_audit_policy
+    payload_kinds:
+      - request_summary
+      - error_structured
+  trade_action_unknown:
+    default_retention: order_reconciliation_policy
+    payload_kinds:
+      - request_summary
+      - response_structured
+      - error_structured
+      - mapper_input
+      - mapper_output
+access_policy:
+  normal_logs:
+    may_show:
+      - event
+      - trace_id
+      - request_id
+      - endpoint
+      - duration_ms
+      - raw_hash
+      - raw_ref
+      - gateway_error_code
+    must_not_show:
+      - raw_payload
+      - raw_message
+      - full_funds
+      - full_positions
+      - full_account_number
+      - token
+      - password
+      - private_key
+  cli_and_user_api:
+    may_show:
+      - summarized_account
+      - summarized_positions_or_table
+      - summarized_orders_or_table
+      - summarized_trades_or_table
+      - raw_hash
+      - trace_id
+    must_not_show:
+      - raw_ref_payload
+      - raw_json
+      - token
+      - password
+      - private_key
+      - full_phone_number
+  audited_lookup:
+    required_context:
+      - actor
+      - reason
+      - trace_id
+      - raw_ref
+    emits_event: broker.raw_record_accessed
+    allowed_for_sensitivity:
+      - account_private
+      - trading_private
+redaction_rules:
+  token: fingerprint_only
+  Authorization: drop_value_keep_header_name
+  X-Sign: drop_value_keep_header_name
+  password: drop
+  captcha: drop
+  private_key: drop
+  phoneNumber: mask_except_last4_or_drop_before_persistence
+  account_number: mask_except_last4_or_alias
+  broker_order_id: mask_unless_audited_lookup_required
+  amount: keep_in_audit_store_for_readonly_integration_but_not_normal_logs
+  raw_message: hash_in_error_object_store_text_only_under_raw_ref_when_needed
+validation_rules:
+  - id: raw_ref_required_for_saved_structured_payload
+    rule: Any persisted structured broker payload must have BrokerRawRecordRef fields and raw_hash.
+  - id: credential_secret_never_persisted
+    rule: Payloads classified as credential_secret must not be persisted as raw records.
+  - id: no_full_http_text
+    rule: Full raw HTTP request or response text must not be persisted; only parsed structured payloads after redaction may be saved.
+  - id: raw_hash_after_redaction
+    rule: raw_hash is computed after forbidden secrets are removed or redacted.
+  - id: audit_before_real_http
+    rule: For real HTTP, request_summary audit record must be written before transport call; if this fails, transport is blocked.
+  - id: audited_lookup_event
+    rule: Reading account_private or trading_private raw payloads by raw_ref must emit broker.raw_record_accessed.

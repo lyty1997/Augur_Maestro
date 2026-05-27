@@ -1,0 +1,224 @@
+version: 0.1.0-draft
+kind: usmart_trade_session_retry_profiles
+api_family: trade_openapi
+status: draft
+owner: RobustQuant TradingGateway
+source_documents:
+  - ../../../../API_manual/uSmart/API_manual/usmart-trade-openapi.zh-cn.md
+  - ../../../../API_manual/uSmart/openapi-demo-py/api/trade.py
+  - usmart-trade-endpoint-profiles.yaml
+  - usmart-trade-error-codes.draft.yaml
+  - ../../trading/broker-gateway-error-codes.yaml
+  - ../usmart-openapi-call-design.md
+  - ../usmart-openapi-api-manual.md
+policy:
+  single_account_single_session_first_version: true
+  token_store_default: process_memory_only
+  token_persistence_default: forbidden
+  token_log_value: forbidden
+  token_log_fingerprint: allowed
+  readonly_relogin_allowed: explicit_only
+  trade_action_relogin_allowed: false
+  trade_action_auto_retry_allowed: false
+  request_id_reuse_after_failure_allowed: false
+  timeout_means_maybe_reached_broker: true
+session_profiles:
+  usmart_single_account_memory_session_v1:
+    account_scope: single_account
+    process_scope: single_process
+    storage:
+      token: memory_only
+      token_fingerprint: audit_allowed
+      session_id_masked: caller_visible
+      expires_at: memory_and_audit_allowed
+      raw_login_response: raw_ref_only
+    replacement_policy:
+      on_successful_login: replace_existing_session_for_account
+      on_login_failure: keep_existing_session_if_still_valid
+      on_response_conflict: invalidate_new_login_response
+    token_parse:
+      response_envelope: login_compatible_top_or_data
+      token_path_candidates:
+        - data.token
+        - token
+      expiration_path_candidates:
+        - data.expiration
+        - expiration
+      conflict_policy: broker.response_invalid_if_multiple_values_disagree
+      expiration_parse_policy:
+        parse_when_possible: true
+        timezone_unknown_policy: keep_raw_and_do_not_extend_lifetime
+        parse_failure_policy: treat_as_unknown_expiry
+        unknown_expiry_preflight: allow_until_broker_rejects
+    invalidation:
+      on_http_401: mark_session_stale
+      on_broker_auth_expired: mark_session_stale
+      on_broker_auth_failed: mark_session_invalid
+      on_manual_disconnect: clear_session
+      on_trade_action_auth_error: mark_stale_but_do_not_relogin_inline
+auth_profiles:
+  login_no_authorization:
+    token_required: false
+    authorization_header: forbidden
+    creates_session: true
+    allowed_operations:
+      - login
+  token_required_readonly:
+    token_required: true
+    authorization_header: required
+    stale_session_preflight: explicit_login_before_request
+    auth_error_policy: explicit_relogin_then_new_readonly_request
+    max_relogin_per_user_operation: 1
+    reuse_failed_request_id_after_relogin: false
+    allowed_operations:
+      - readonly
+  token_required_trade_action:
+    token_required: true
+    authorization_header: required
+    stale_session_preflight: fail_before_broker_request
+    auth_error_policy: fail_to_oms_without_relogin
+    allowed_operations:
+      - trade_action
+      - trade_sensitive_unlock
+retry_profiles:
+  login_single_attempt:
+    max_retries: 0
+    retry_on_http_status: []
+    retry_on_transport_error: false
+    retry_after_unknown_response: false
+    reason: Login has credential and session side effects; callers may start a new explicit login operation if needed.
+  readonly_bounded_backoff_v1:
+    max_retries: 2
+    max_total_attempts: 3
+    backoff_ms:
+      initial: 250
+      multiplier: 2.0
+      max: 2000
+      jitter: true
+    retryable_conditions:
+      - local_rate_limit_wait
+      - http_429
+      - http_502
+      - http_503
+      - http_504
+      - transport_error_when_not_sent
+    not_retryable_conditions:
+      - http_400
+      - http_401
+      - http_403
+      - http_404
+      - broker_business_error
+      - response_schema_conflict
+      - transport_error_maybe_sent
+    auth_error_handling:
+      http_401_or_broker_auth_expired: stop_attempt_and_use_auth_profile
+      relogin_counts_as_new_user_operation_step: true
+      relogin_must_use_new_request_id: true
+    per_attempt_requirements:
+      - generate_new_broker_request_id
+      - sign_new_final_body_string
+      - audit_attempt_before_transport
+      - never_reuse_failed_request_id
+  trade_action_no_retry_v1:
+    max_retries: 0
+    max_total_attempts: 1
+    retryable_conditions: []
+    timeout_policy: unknown_until_reconciled
+    connection_error_policy: unknown_if_send_status_uncertain
+    auth_error_policy: fail_without_relogin_or_resubmit
+    rate_limit_policy: fail_without_delayed_resubmit
+    caller_recovery:
+      - query_order_detail
+      - query_today_or_history_orders
+      - query_trades
+      - manual_reconciliation
+  trade_sensitive_unlock_no_auto_retry_v1:
+    max_retries: 0
+    max_total_attempts: 1
+    retryable_conditions: []
+    auto_call_allowed: false
+    caller_recovery:
+      - manual_confirmation
+      - explicit_user_operation
+idempotency_profiles:
+  readonly_new_request_each_attempt:
+    internal_broker_request_id_required: true
+    reuse_broker_request_id_on_retry: false
+    x_request_id_header: endpoint_profile
+    serial_no: none_unless_endpoint_profile_requires
+    audit_mapping_required: true
+  trade_order_serial_no_v1:
+    internal_broker_request_id_required: true
+    local_order_id_required_before_request: true
+    serial_no_required_when_endpoint_profile_requires: true
+    serial_no_source: broker_request_id_derived_19_digits
+    serial_no_user_supplied_allowed: false
+    x_request_id_header: endpoint_profile
+    audit_mapping_required:
+      - order_id
+      - broker_request_id
+      - serialNo
+      - X-Request-Id_when_sent
+      - broker_order_id_when_returned
+    retry_after_timeout: forbidden
+  trade_modify_cancel_request_id_v1:
+    internal_broker_request_id_required: true
+    local_order_id_required_before_request: true
+    x_request_id_header: required_when_endpoint_profile_requires
+    serial_no: none_unless_endpoint_profile_requires
+    audit_mapping_required:
+      - order_id
+      - broker_request_id
+      - X-Request-Id_when_sent
+      - entrustId
+    retry_after_timeout: forbidden
+  trade_unlock_request_v1:
+    internal_broker_request_id_required: true
+    local_order_id_required_before_request: false
+    x_request_id_header: endpoint_profile
+    serial_no: none
+    auto_call_allowed: false
+    audit_mapping_required:
+      - broker_request_id
+      - account_ref
+      - manual_confirmation_ref
+    retry_after_timeout: forbidden
+operation_policies:
+  login:
+    session_profile: usmart_single_account_memory_session_v1
+    auth_profile: login_no_authorization
+    retry_profile: login_single_attempt
+    idempotency_profile: readonly_new_request_each_attempt
+  readonly:
+    session_profile: usmart_single_account_memory_session_v1
+    auth_profile: token_required_readonly
+    retry_profile: readonly_bounded_backoff_v1
+    idempotency_profile: readonly_new_request_each_attempt
+  trade_action:
+    session_profile: usmart_single_account_memory_session_v1
+    auth_profile: token_required_trade_action
+    retry_profile: trade_action_no_retry_v1
+    idempotency_profile: endpoint_specific
+    allowed_idempotency_profiles:
+      - trade_order_serial_no_v1
+      - trade_modify_cancel_request_id_v1
+  trade_sensitive_unlock:
+    session_profile: usmart_single_account_memory_session_v1
+    auth_profile: token_required_trade_action
+    retry_profile: trade_sensitive_unlock_no_auto_retry_v1
+    idempotency_profile: trade_unlock_request_v1
+validation_rules:
+  - id: login_endpoints_forbid_authorization
+    rule: Endpoints with operation_kind=login must use auth_profile=login_no_authorization and must not send Authorization.
+  - id: readonly_auth_relogin_is_new_request
+    rule: A readonly 401/auth-expired path may perform at most one explicit relogin, then must create a new broker_request_id and re-sign a new request.
+  - id: trade_actions_do_not_relogin_or_retry
+    rule: Endpoints with operation_kind=trade_action must use retry_profile=trade_action_no_retry_v1 and auth_profile=token_required_trade_action.
+  - id: no_failed_request_id_reuse
+    rule: Failed, timed-out, or auth-expired request ids must not be reused for any subsequent HTTP attempt.
+  - id: timeout_not_safe_to_compensate
+    rule: Timeout or uncertain send status must be treated as maybe reached broker; trade actions enter unknown/reconciliation flow.
+open_questions:
+  - Exact expiration format, timezone, and whether expiration is absolute or relative will be confirmed by controlled readonly integration debugging.
+  - Whether uSmart invalidates prior tokens after another client logs in will be confirmed by controlled readonly integration debugging.
+  - X-Request-Id duplicate window and duplicate-response semantics remain broker-confirmation items.

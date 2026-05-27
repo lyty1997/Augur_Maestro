@@ -392,7 +392,7 @@ flowchart TB
   - 核心业务规则有测试。
   - 外部 SDK 可通过 fake 或 fixture 隔离。
 - 当前进展：
-  - 已有 `TradingGateway` 交易能力锁的安全测试，覆盖 read-only 模式下下单、改单、撤单在触达适配器前被阻断。
+  - 旧 `TradingGateway` 交易能力锁测试属于未经确认草稿，已随旧 `broker_kernel` 删除；后续必须按已确认 profile 重新补离线契约测试和脱敏测试。
   - 已建立 CI 基线，后续每个模块落地时继续补对应测试。
 
 ### M1.E.03 文档收口
@@ -417,7 +417,7 @@ flowchart TB
   - `requirements-dev.lock.txt`。
   - `.pre-commit-config.yaml`。
   - `.secrets.baseline`。
-  - `src/scripts/quality/trading_safety_static_check.py`。
+  - 旧 `src/scripts/quality/trading_safety_static_check.py` 已删除；后续按新 broker 模块结构重建安全静态检查。
   - `src/scripts/quality/markdown_docs_check.py`。
   - `.github/pull_request_template.md`。
   - `.github/CODEOWNERS`。
@@ -428,7 +428,7 @@ flowchart TB
   - CI 运行 `python -m mypy -p rq_core`。
   - CI 运行 `detect-secrets-hook --baseline .secrets.baseline $(git ls-files)`。
   - CI 运行 `python -m pip_audit -r requirements-dev.lock.txt`。
-  - CI 运行 `python src/scripts/quality/trading_safety_static_check.py`。
+  - CI 暂不运行旧交易安全静态检查；新 broker 模块落地后再接入新版安全静态检查。
   - CI 运行 `python src/scripts/quality/markdown_docs_check.py`。
   - CI 运行 `python -m pytest`。
   - 测试覆盖率第一版阈值不低于 60%。
@@ -471,7 +471,7 @@ flowchart TB
 - DoD：
   - 明确认证方式、endpoint、签名、下单、改单、撤单参数。
   - 明确账号资金、持仓、订单状态、行情查询和实时变动推送的接口范围。
-  - 网页手册已给出 UAT 测试地址；用户已确认不自动把 UAT 当作可交易 sandbox。UAT 是否等同 sandbox / paper trading、是否保证交易动作不产生真实委托，仍需券商确认。
+  - 网页手册已给出官方测试环境接口地址；用户已确认其可用于非生产联调。本轮只读 profile 仍不运行真实下单、改单、撤单。
   - 官方网页手册未说明的改单语义、订单状态或错误码，标记为 `unknown_by_official_doc`。
   - 不输出申请截图源码，不运行真实交易接口。
   - 文档摘录和待确认项同步更新到 [yingli-openapi-reference.md](../backend/clients/yingli-openapi-reference.md)。
