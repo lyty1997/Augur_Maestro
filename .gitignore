@@ -36,7 +36,9 @@ outputs/
 Thumbs.db
 .idea/
 .vscode/
+# Office/WPS 临时锁文件（~$ 前缀）
+~$*
 
-# Broker docs
-./API_manual/uSmart/申请资料
+# Broker docs（申请材料可能含真实账号/身份信息，禁止进入版本控制）
+API_manual/uSmart/申请资料/
 API_manual/uSmart/openapi-demo-py/
