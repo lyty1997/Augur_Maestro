@@ -55,6 +55,8 @@ L0 CLI / FastAPI / 本地任务
   -> L9 uSmart OpenAPI Server
 ```
 
+> 本节是申请材料视角的聚合调用栈。分层层号与职责的唯一真相源是 [usmart-openapi-call-design.md](usmart-openapi-call-design.md) §1.1（L0–L10）。层号映射：本节 L1（BrokerApplicationService）合并设计的 L1（FastAPI Router / CLI command）与 L2（Application Service）；本节 L2 = 设计 L3（OMS/Risk）；本节 L3 起依次对应设计 L4 及之后；本节 L7 合并设计 L8（signer）与 encryptor、RequestIdPolicy。实现时层号以设计文档为准。
+
 | 层 | 允许知道的字段 | 输入 | 输出 | 禁止事项 |
 |---|---|---|---|---|
 | L0 入口 | 本地参数、账户引用 | CLI args / HTTP body | 用户可见 DTO | 不出现券商私钥、token、完整密码 |
@@ -751,7 +753,7 @@ class uSmartTradeOpenApiClient:
 
 处理步骤：
 
-1. 校验 endpoint 在白名单中，并校验交易标的命中量化研究 Agent 候选经人工发布的当前有效白名单。
+1. 校验 endpoint 在白名单常量中。交易标的的人工发布白名单校验属于 OMS/Risk 与 `TradingGateway` 的职责（命中失败在进入网关前返回 `risk.symbol_not_whitelisted`），不在 client 层重复执行；client 不含 OMS/风控逻辑。
 2. 稳定序列化 body。
 3. 对交易开放 API 敏感 body 字段调用 encryptor。
 4. 调用交易开放 API signer 生成 header。

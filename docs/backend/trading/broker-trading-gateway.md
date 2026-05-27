@@ -91,8 +91,8 @@ src/
         rate_limit.py           uSmart 限流策略
       miniqmt/
         adapter.py              MiniQMTTradingAdapter，占位派生，当前不实现具体连接
-    ptrade/
-      adapter.py              PtradeTradingAdapter，占位派生，后续按同一基类实现
+      ptrade/
+        adapter.py              PtradeTradingAdapter，占位派生，后续按同一基类实现
     quotation_kernel/
       gateway.py              QuotationDataGateway 门面
       adapter_base.py         QuotationDataAdapter 统一行情接口基类
@@ -607,7 +607,7 @@ class BrokerAuditEvent:
     occurred_at: datetime
     level: Literal["info", "warning", "error", "critical"]
     broker: BrokerName
-    operation_kind: Literal["login", "readonly", "trade_action", "reconciliation", "market_data"]
+    operation_kind: Literal["login", "readonly", "trade_action", "reconciliation", "market_data", "gateway_lifecycle"]
     account_ref: AccountRef | None = None
     request_id: str | None = None
     order_id: str | None = None

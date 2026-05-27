@@ -55,34 +55,15 @@ audit_event_contract:
     - raw_http_request
     - raw_http_response
 raw_record_ref_contract:
-  required_fields:
-    - raw_ref
-    - raw_hash
-    - broker
-    - api_family
-    - endpoint
-    - trace_id
-    - request_id
-    - schema_version
-    - payload_kind
-    - sensitivity_level
-    - created_at
-  allowed_payload_kinds:
-    - request_summary
-    - response_structured
-    - error_structured
-    - mapper_input
-    - mapper_output
-  sensitivity_levels:
-    - low
-    - account_private
-    - trading_private
-    - credential_secret
-  rules:
-    - credential_secret records must never be persisted as raw records.
-    - account_private and trading_private records require audited lookup permission.
-    - raw_hash is computed from canonical structured payload after redaction of forbidden secrets.
-    - raw_ref is opaque to CLI and API callers.
+  # 原始结构化记录的字段、payload kind、sensitivity 级别和落盘/查询规则统一以
+  # broker-gateway-raw-record-profile.yaml 为权威源，此处不再重复定义，避免双源漂移。
+  authoritative_source: broker-gateway-raw-record-profile.yaml
+  defined_in_authoritative_source:
+    - raw_record_ref_contract
+    - payload_kinds
+    - sensitivity_levels
+    - redaction_rules
+    - access_policy
 redaction_policy:
   account_ref: keep_alias_or_mask_last4
   broker_order_id: mask_unless_needed_for_reconciliation
@@ -322,4 +303,34 @@ events:
       - password
       - private_key
     description: Account-private or trading-private raw broker structured payload was accessed through an audited lookup.
+
+  - event: broker.config_validation_failed
+    level: error
+    operation_kind: gateway_lifecycle
+    required_context:
+      - trace_id
+      - broker
+      - gateway_error_code
+    forbidden_context:
+      - token
+      - password
+      - private_key
+      - raw_http_request
+      - raw_http_response
+    description: Runtime config validation failed before any real HTTP transport was installed; gateway stays dry-run or fails startup.
+
+  - event: broker.http_request_blocked
+    level: warning
+    operation_kind: gateway_lifecycle
+    required_context:
+      - trace_id
+      - broker
+      - gateway_error_code
+    forbidden_context:
+      - token
+      - password
+      - private_key
+      - raw_http_request
+      - raw_http_response
+    description: A real HTTP attempt was blocked because transport is disabled (dry-run, or read-only without allow_real_http_readonly).
 
