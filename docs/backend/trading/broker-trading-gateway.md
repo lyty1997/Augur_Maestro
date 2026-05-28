@@ -565,8 +565,13 @@ accepted
 partial_filled
 filled
 cancel_requested
+cancel_pending
 cancelled
 cancel_rejected
+modify_requested
+modify_pending
+modify_rejected
+partial_cancelled
 broker_rejected
 blocked_by_broker_trade_lock
 failed
@@ -577,7 +582,7 @@ unknown
 
 - 官方网页文档已明确状态码时，写入 `uSmartOrderStatusMapper`。
 - 今日订单、历史订单和订单详情中的 `status` / `orderStatus` 必须进入 OMS mapper；`finalStateFlag` 也必须进入 mapper 作为终态标识。
-- `finalStateFlag=1` 且状态码映射为已成交、已撤、废单、失败等终态时，OMS 可标记本地订单终态；`finalStateFlag=0` 时不得标记终态。
+- `finalStateFlag=1` 且状态码映射为已成交、已撤、部成撤单、废单、失败等终态时，OMS 可标记本地订单终态；`finalStateFlag=0` 时不得标记终态。
 - `finalStateFlag` 与 `status` / `orderStatus` 冲突、缺失或出现未知值时，`BrokerOrderMappingStatus` 进入 `raw_status_conflict`、`raw_status_missing` 或 `raw_status_unknown`，OMS 订单进入 `unknown`。
 - 官方网页文档未明确的状态码不得猜测，`BrokerOrderMappingStatus` 进入 `unknown_by_official_doc`，OMS 订单进入 `unknown`。
 - 无法判断是否已到达券商的请求，必须进入 `unknown`。

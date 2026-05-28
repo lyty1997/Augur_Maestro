@@ -170,8 +170,13 @@ created
   -> partial_filled
   -> filled
   -> cancel_requested
+  -> cancel_pending
   -> cancelled
   -> cancel_rejected
+  -> modify_requested
+  -> modify_pending
+  -> modify_rejected
+  -> partial_cancelled
   -> broker_rejected
   -> blocked_by_broker_trade_lock
   -> failed
@@ -183,8 +188,10 @@ created
 - `created` 只是本地订单，尚未触达券商。
 - `submitting` 表示正在调用券商接口。
 - 调用超时、网络异常或券商返回无法判断时，进入 `unknown`。
-- `unknown` 不能自动重试。
+- `unknown` 不能自动重试下单、改单或撤单。
 - `failed` 也不能自动补偿重试。
+- `submitted`、`accepted`、`partial_filled` 可以被券商查询或对账直接推进到终态，不要求补写不存在的中间状态。
+- `partial_cancelled` 是终态，但必须保留已成交数量并进入成交、持仓和资金对账。
 - 只有通过订单查询、成交查询、账户对账或人工确认后，才能从 `unknown` 转出。
 
 ## 7. 下单失败处理
@@ -217,12 +224,15 @@ created
 
 ```text
 cancel_requested
+  -> cancel_pending
   -> cancelled
+  -> partial_cancelled
   -> cancel_rejected
+  -> filled
   -> unknown
 ```
 
-撤单超时或未知时，也不能自动重复撤单。应进入 `unknown`，查询券商状态后再处理。
+撤单超时或未知时，也不能自动重复撤单。应进入 `unknown`，查询券商状态后再处理。若撤单期间原订单继续成交，OMS 必须按查询事实进入 `partial_filled`、`filled` 或 `partial_cancelled`，不能假设撤单一定成功。
 
 ## 9. 交易时间
 
