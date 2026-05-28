@@ -446,11 +446,11 @@ DTO 规则：
 | Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
 |---|---|---|---|
 | `broker.disabled` | `guard_blocked` | 保持当前状态 | `mode=disabled` |
-| `broker.trading_disabled` | `guard_blocked` | 订单保持 `created` 或进入 `manual_review_required` | `mode != live_guarded` 或 `trading_enabled=false` |
-| `broker.capability_disabled` | `guard_blocked` | 同上 | capability 为 false |
-| `broker.unsupported_capability` | `guard_blocked` | 同上 | broker 适配器声明不支持 |
-| `broker.real_http_disabled` | `guard_blocked` | 同上 | transport 出网开关未开 |
-| `broker.caller_not_allowed` | `guard_blocked` | 同上 | 调用方不是允许的应用服务/OMS |
+| `broker.trading_disabled` | `guard_blocked` | Gateway 不直接改 OMS；OMS 可基于阻断结果显式进入 `manual_review_required` | `mode != live_guarded` 或 `trading_enabled=false` |
+| `broker.capability_disabled` | `guard_blocked` | Gateway 不直接改 OMS；OMS 可显式进入 `manual_review_required` | capability 为 false |
+| `broker.unsupported_capability` | `guard_blocked` | Gateway 不直接改 OMS；OMS 可显式进入 `manual_review_required` | broker 适配器声明不支持 |
+| `broker.real_http_disabled` | `guard_blocked` | Gateway 不直接改 OMS；OMS 可显式进入 `manual_review_required` | transport 出网开关未开 |
+| `broker.caller_not_allowed` | `guard_blocked` | Gateway 不直接改 OMS；OMS 可显式进入 `manual_review_required` 或安全失败状态 | 调用方不是允许的应用服务/OMS |
 
 ### 11.3 auth
 
@@ -505,6 +505,6 @@ DTO 规则：
 ### 11.9 跨层一致性约束
 
 - 所有 `OmsOrderStatus = unknown` 路径必须同时关联 `GatewayRequestStatus = unknown` 或带 `unknown_reason` 元数据。
-- 所有 `GatewayRequestStatus = guard_blocked` 的请求一定未触达 broker；OMS 订单状态不变更。
+- 所有 `GatewayRequestStatus = guard_blocked` 的请求一定未触达 broker；Gateway 层不得直接变更 OMS。若需要把订单转入 `manual_review_required` 或其他安全状态，必须由 OMS 在接收 guard 结果后显式执行本地状态流转，并记录独立审计事件。
 - 交易动作的错误码即使 retryable=true，也必须由 OMS 显式发起新请求（带新 `order_id` 或新 `broker_request_id`），不由 client/transport 自动补偿。
 - raw code 到 gateway 错误码的映射由 [usmart-trade-error-codes.draft.yaml](../clients/api/usmart-trade-error-codes.draft.yaml) 维护；其 `endpoint_scoping_invariants` 段列出已激活的按 endpoint 差异化规则（当前仅 HTTP 401 区分写动作 endpoint，写动作 401 映射到 `broker.order_state_unknown`）。

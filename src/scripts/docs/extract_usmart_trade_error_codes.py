@@ -136,6 +136,65 @@ def gateway_error_for(code: str, message: str, endpoint: str | None) -> str:
     return "broker.unclassified"
 
 
+_CLASSIFICATION_INVARIANTS: tuple[tuple[str, str, str, str | None, str], ...] = (
+    (
+        "write_action_401_is_order_state_unknown",
+        "401",
+        "Unauthorized",
+        "/stock-order-server/open-api/entrust-order",
+        "broker.order_state_unknown",
+    ),
+    (
+        "readonly_401_is_auth_expired",
+        "401",
+        "Unauthorized",
+        "/stock-order-server/open-api/today-entrust",
+        "broker.auth_expired",
+    ),
+    (
+        "verify_too_many_is_account_restricted",
+        "300304",
+        "验证次数过多，请稍后重试",
+        None,
+        "broker.account_restricted",
+    ),
+    (
+        "verify_attempts_reached_is_account_restricted",
+        "300304",
+        "验证次数已达上限，请稍后重试",
+        None,
+        "broker.account_restricted",
+    ),
+    (
+        "generic_rate_limit_stays_rate_limited",
+        "429",
+        "请求频率过高，请稍后重试",
+        None,
+        "broker.rate_limited",
+    ),
+)
+
+
+def validate_classification_invariants() -> None:
+    """校验高风险 raw code/message 分类规则没有被关键词顺序改坏。"""
+    violations: list[str] = []
+    if not ENDPOINTS_WITHOUT_BUSINESS_CODES <= WRITE_ACTION_ENDPOINTS:
+        unknown_endpoints = sorted(ENDPOINTS_WITHOUT_BUSINESS_CODES - WRITE_ACTION_ENDPOINTS)
+        violations.append(
+            "ENDPOINTS_WITHOUT_BUSINESS_CODES must be write actions: "
+            + ", ".join(unknown_endpoints)
+        )
+
+    for name, code, message, endpoint, expected in _CLASSIFICATION_INVARIANTS:
+        actual = gateway_error_for(code, message, endpoint)
+        if actual != expected:
+            violations.append(f"{name}: expected {expected}, got {actual}")
+
+    if violations:
+        message = "uSmart gateway error classification invariants failed: "
+        raise RuntimeError(message + "; ".join(violations))
+
+
 def yaml_quote(value: str | None) -> str:
     if value is None:
         return "null"
@@ -271,6 +330,7 @@ def render_yaml(rows: list[ErrorCodeRow]) -> str:
 
 
 def main() -> None:
+    validate_classification_invariants()
     rows = parse_rows(SOURCE.read_text(encoding="utf-8").splitlines())
     OUTPUT.write_text(render_yaml(rows), encoding="utf-8")
     endpoint_count = len({(row.endpoint, row.section_id, row.source_section) for row in rows})
