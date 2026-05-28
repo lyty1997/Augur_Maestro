@@ -2,7 +2,7 @@
 
 版本：v0.1  
 状态：设计草案，待用户确认  
-最后更新：2026-05-19
+最后更新：2026-05-28
 
 ## 0. 文档定位
 
@@ -15,6 +15,8 @@ uSmart / 盈立交易开放 API 的真实 HTTP 调用、签名认证、登录、
 面向盈立 OpenAPI 申请材料的登录、下单、改单、撤单完整调用栈 API 手册见 [usmart-openapi-api-manual.md](../clients/usmart-openapi-api-manual.md)。
 
 本设计只进入文档阶段，不代表可以开始真实下单、改单、撤单或连接真实账户。任何会改变券商侧订单状态的接口，都必须等 OMS、风控、交易时间检查、账户/标的白名单、策略授权、对账和告警设计确认后才能实现和启用；运行期基础交易不要求逐笔人工确认，自动化程序可以执行通过风控门禁的正股买入和卖出，包括策略模块生成的建仓、加仓、减仓、平仓、止盈和止损意图。
+
+交易模块状态控制枚举、归属层级、终态和流转约束见 [trading-status-control.md](trading-status-control.md)。该文档只定义状态，不定义 broker 官方错误码，也不定义 Gateway 错误码。
 
 ## 1. 设计目标
 
@@ -534,6 +536,8 @@ broker_request_id -> serialNo -> broker_order_id
 
 ## 9. 错误处理与状态映射
 
+交易状态控制枚举以 [trading-status-control.md](trading-status-control.md) 为准。本节只说明错误与券商响应如何影响状态映射；错误码不能替代状态字段。
+
 ### 9.1 统一错误分类
 
 | 类别 | 说明 | 交易动作处理 |
@@ -552,6 +556,8 @@ broker_request_id -> serialNo -> broker_order_id
 
 ```text
 created
+risk_rejected
+manual_review_required
 ready_to_submit
 submitting
 submitted
@@ -560,7 +566,9 @@ partial_filled
 filled
 cancel_requested
 cancelled
+cancel_rejected
 broker_rejected
+blocked_by_broker_trade_lock
 failed
 unknown
 ```
@@ -570,8 +578,8 @@ unknown
 - 官方网页文档已明确状态码时，写入 `uSmartOrderStatusMapper`。
 - 今日订单、历史订单和订单详情中的 `status` / `orderStatus` 必须进入 OMS mapper；`finalStateFlag` 也必须进入 mapper 作为终态标识。
 - `finalStateFlag=1` 且状态码映射为已成交、已撤、废单、失败等终态时，OMS 可标记本地订单终态；`finalStateFlag=0` 时不得标记终态。
-- `finalStateFlag` 与 `status` / `orderStatus` 冲突、缺失或出现未知值时，订单进入 `unknown_by_official_doc`。
-- 官方网页文档未明确的状态码不得猜测，只能映射为 `unknown_by_official_doc`。
+- `finalStateFlag` 与 `status` / `orderStatus` 冲突、缺失或出现未知值时，`BrokerOrderMappingStatus` 进入 `raw_status_conflict`、`raw_status_missing` 或 `raw_status_unknown`，OMS 订单进入 `unknown`。
+- 官方网页文档未明确的状态码不得猜测，`BrokerOrderMappingStatus` 进入 `unknown_by_official_doc`，OMS 订单进入 `unknown`。
 - 无法判断是否已到达券商的请求，必须进入 `unknown`。
 - `unknown` 只能通过订单查询、成交查询、对账或人工确认转出。
 
