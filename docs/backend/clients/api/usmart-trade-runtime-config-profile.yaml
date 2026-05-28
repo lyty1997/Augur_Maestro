@@ -38,6 +38,9 @@ runtime_profiles:
       forbidden_operation_kinds:
         - trade_action
         - trade_sensitive_unlock
+      # 本列表必须等于 usmart-trade-endpoint-profiles.yaml 中
+      # enabled_in_first_readonly_integration=true 的 endpoint 集合；
+      # endpoint-profiles 是该启用状态的权威源，此处仅为运行态 real_http_scope 校验副本。
       allowed_first_endpoint_ids:
         - password_login
         - open_asset_query_v1
@@ -219,6 +222,8 @@ validation_rules:
     rule: If runtime config validation fails, RealHttpTransport must not be installed for uSmart trade OpenAPI.
   - id: raw_record_profile_required_for_real_http
     rule: Real readonly HTTP requires broker-gateway-raw-record-profile.yaml validation and an audit store capable of writing BrokerRawRecordRef records.
+  - id: allowed_first_endpoint_ids_matches_endpoint_profiles
+    rule: allowed_first_endpoint_ids must equal the set of endpoints whose enabled_in_first_readonly_integration is true in usmart-trade-endpoint-profiles.yaml; endpoint-profiles is the authoritative source and startup validation must cross-check the two to prevent drift.
 open_questions:
   - The local official manual/demo do not describe an API-level IP whitelist setup procedure, and no broker support response is currently available. If provisioning status is unknown, the first readonly smoke may be used to identify IP/auth rejection and must stop on 401/403/signature errors.
   - No documented preflight API exists for IP whitelist readiness; readiness is an operational flag until verified by broker support or a controlled readonly smoke call.

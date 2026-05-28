@@ -2,7 +2,7 @@
 
 版本：v0.1  
 状态：长期草案，M1 不实现真实交易  
-最后更新：2026-05-15
+最后更新：2026-05-28
 
 ## 0. 文档定位
 
@@ -13,6 +13,7 @@
 - M1 不实现真实下单、真实撤单或真实条件单。
 - M1 不建立真实账户、真实订单、真实成交、真实持仓和真实资金表。
 - 本文档中的实盘相关状态机是后续设计基线，不是 M1 实现许可。
+- 交易模块状态控制枚举、终态和流转约束以 [trading-status-control.md](../backend/trading/trading-status-control.md) 为专项契约；本文只保留安全原则摘要。
 
 任何交易链路、风控规则、OMS 状态、券商适配器行为、账户模型或对账模型变更，都必须先更新本文档，并经用户确认后再编码。
 
@@ -156,11 +157,12 @@ paused
 
 ## 6. OMS 状态机
 
-建议订单状态：
+建议订单状态摘要如下。完整枚举、终态和允许流转见 [trading-status-control.md](../backend/trading/trading-status-control.md)。
 
 ```text
 created
   -> risk_rejected
+  -> manual_review_required
   -> ready_to_submit
   -> submitting
   -> submitted
@@ -169,7 +171,9 @@ created
   -> filled
   -> cancel_requested
   -> cancelled
+  -> cancel_rejected
   -> broker_rejected
+  -> blocked_by_broker_trade_lock
   -> failed
   -> unknown
 ```

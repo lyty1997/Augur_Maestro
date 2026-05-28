@@ -102,6 +102,8 @@ sequenceDiagram
 
 ### 1.1 全链路分层总览
 
+> 本表是 Augur_Maestro 交易调用分层的唯一真相源（L0–L10）。其它文档（如 [usmart-openapi-api-manual.md](usmart-openapi-api-manual.md) §2）的调用栈视图层号必须以本表为准，不得自定义另一套独立层号。
+
 | 层级 | 模块 | 作用 | 是否接触 uSmart 协议字段 | 是否允许真实交易决策 |
 |---|---|---|---|---|
 | L0 | CLI / Web / 定时任务 | 用户或任务入口，发起登录、查询、订单动作 | 否 | 否 |
@@ -468,7 +470,7 @@ class uSmartTradeOpenApiClient:
 
 内部流程：
 
-1. 校验 endpoint 是否在白名单常量中，并校验交易标的命中量化研究 Agent 候选经人工发布的当前有效白名单。
+1. 校验 endpoint 是否在白名单常量中。交易标的的人工发布白名单校验属于 OMS/Risk 与 `TradingGateway` 的职责（命中失败在进入网关前返回 `risk.symbol_not_whitelisted`），不在 client 层重复执行；client 不含 OMS/风控逻辑。
 2. 生成稳定 body JSON。
 3. 调用 `uSmartTradeAuthSigner.build_headers(...)`。
 4. 通过 `uSmartHttpTransport.post_json(...)` 发起 HTTPS 请求。
@@ -831,6 +833,8 @@ POST /stock-order-server/open-api/modify-order
 | `BrokerTradeSnapshot` | `broker_trade_id`、`broker_order_id`、`market`、`symbol`、`side`、`quantity`、`price`、`amount`、`business_status`、`business_time` | 成交快照 |
 
 官方网页字段映射：
+
+> 持仓与资产字段以新事实源 `open-assetQuery/v1`（`data.assetSingleInfoRespVOS[].holdInfos[]`）为准，权威字段表见 [usmart-openapi-api-manual.md](usmart-openapi-api-manual.md) §11。下表中 `currentAmount`/`enableAmount`/`frozenAmount`/`oddAmount`/`enableBalance` 等是旧 `stock-asset`/`stock-holding` 接口字段名，仅作历史参考，不作为本轮只读联调实现依据；`open-assetQuery/v1` 的 `holdInfos` 当前未提供的字段（如 `available_quantity`、`odd_quantity`）映射时置 None。
 
 | uSmart 字段 | 内部字段 | 来源 |
 |---|---|---|

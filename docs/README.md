@@ -33,7 +33,8 @@ docs/
 │   │   ├── service-specs.md
 │   │   └── research-agent.md
 │   └── trading/
-│       └── broker-trading-gateway.md
+│       ├── broker-trading-gateway.md
+│       └── trading-status-control.md
 └── project-progress/                   项目范围、路线图和实施进度
     ├── m1-scope.md
     ├── implementation-plan.md
@@ -61,6 +62,7 @@ docs/
 - [data-source-roadmap.md](backend/data/data-source-roadmap.md)：A 股历史数据源专项路线，定义 AKShare 启动源、第二数据源交叉验证、数据网关、标准表和未来切换券商数据源的路径。
 - [kernel-interfaces.md](backend/kernel/kernel-interfaces.md)：M1 Kernel 接口类设计，定义 DTO、Protocol、服务接口和 CLI/API 调用边界。
 - [broker-trading-gateway.md](backend/trading/broker-trading-gateway.md)：TradingGateway 统一券商交易网关模块设计，定义统一交易门面、适配器基类、uSmart/miniQMT/Ptrade 派生、能力模式、幂等、错误映射、日志脱敏和测试策略。
+- [trading-status-control.md](backend/trading/trading-status-control.md)：交易模块状态控制枚举，定义交易意图、风控、OMS、Gateway 请求、Broker 会话、交易解锁、订单映射和对账状态，不包含 broker 官方错误码或 Gateway 错误码。
 - [observability-audit.md](backend/observability-audit.md)：审计、日志、可观测性和隐私规范，定义 trace、日志、敏感信息红线和数据血缘。
 
 ### 服务
