@@ -12,6 +12,26 @@ policy:
     - Keep broker raw code/msg for diagnostics and audit.
     - Use gateway_error for OMS, risk, CLI, and API control flow.
     - Response statuses are grouped by endpoint; do not treat codes as globally valid.
+endpoint_scoping_invariants:
+  # 当前实际差异化清单：endpoint scoping 已激活的映射规则；其余 raw code 在所有
+  # endpoint 上一致映射，scoping 作为未来按 endpoint 细化的预留能力。
+  http_401:
+    write_action_endpoints_map_to: broker.order_state_unknown
+    other_endpoints_map_to: broker.auth_expired
+    write_action_endpoints:
+      - /ams-center/open-api/ma-order-cancel/v1
+      - /ams-center/open-api/ma-order-submit/v1
+      - /option-order-server/open-api/option-cancel-order/v1
+      - /option-order-server/open-api/option-replace-order/v1
+      - /option-order-server/open-api/option-trade/v1
+      - /stock-order-server/open-api/apply-ipo
+      - /stock-order-server/open-api/entrust-order
+      - /stock-order-server/open-api/ipo-comfirm-qyt/v1
+      - /stock-order-server/open-api/modify-ipo
+      - /stock-order-server/open-api/modify-order
+      - /stock-order-server/open-api/odd-entrust
+      - /stock-order-server/open-api/odd-modify
+  other_raw_codes: globally_consistent_mapping_no_endpoint_divergence_yet
 summary:
   endpoint_count: 50
   response_status_row_count: 332
@@ -317,7 +337,7 @@ endpoints:
       - code: "300304"
         code_type: "business"
         message: "验证次数过多，请稍后重试"
-        gateway_error: "broker.rate_limited"
+        gateway_error: "broker.account_restricted"
         source_line: 870
       - code: "300305"
         code_type: "business"
@@ -383,7 +403,7 @@ endpoints:
       - code: "300304"
         code_type: "business"
         message: "验证次数过多，请稍后重试"
-        gateway_error: "broker.rate_limited"
+        gateway_error: "broker.account_restricted"
         source_line: 963
       - code: "300305"
         code_type: "business"
@@ -449,7 +469,7 @@ endpoints:
       - code: "300304"
         code_type: "business"
         message: "验证次数过多，请稍后重试"
-        gateway_error: "broker.rate_limited"
+        gateway_error: "broker.account_restricted"
         source_line: 1056
       - code: "300305"
         code_type: "business"
@@ -710,7 +730,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 1730
       - code: "403"
         code_type: "http_status"
@@ -756,7 +776,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 1847
       - code: "403"
         code_type: "http_status"
@@ -833,7 +853,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 2053
       - code: "403"
         code_type: "http_status"
@@ -863,7 +883,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 2143
       - code: "403"
         code_type: "http_status"
@@ -1249,7 +1269,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 4587
       - code: "403"
         code_type: "http_status"
@@ -1280,7 +1300,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 4702
       - code: "403"
         code_type: "http_status"
@@ -1372,7 +1392,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 5193
       - code: "403"
         code_type: "http_status"
@@ -1510,6 +1530,7 @@ endpoints:
     source_section: "7.1下单"
     section_id: "7.1"
     response_status_count: 6
+    business_codes_unknown: true
     response_statuses:
       - code: "0"
         code_type: "success"
@@ -1530,7 +1551,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 5953
       - code: "403"
         code_type: "http_status"
@@ -1546,6 +1567,7 @@ endpoints:
     source_section: "7.2撤单"
     section_id: "7.2"
     response_status_count: 6
+    business_codes_unknown: true
     response_statuses:
       - code: "0"
         code_type: "success"
@@ -1565,7 +1587,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 6052
       - code: "403"
         code_type: "http_status"
@@ -1686,6 +1708,7 @@ endpoints:
     source_section: "8.1 期权-下单"
     section_id: "8.1"
     response_status_count: 6
+    business_codes_unknown: true
     response_statuses:
       - code: "0"
         code_type: "success"
@@ -1706,7 +1729,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 6492
       - code: "403"
         code_type: "http_status"
@@ -1722,6 +1745,7 @@ endpoints:
     source_section: "8.2 期权-改单"
     section_id: "8.2"
     response_status_count: 6
+    business_codes_unknown: true
     response_statuses:
       - code: "0"
         code_type: "success"
@@ -1742,7 +1766,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 6597
       - code: "403"
         code_type: "http_status"
@@ -1758,6 +1782,7 @@ endpoints:
     source_section: "8.3 期权-撤单"
     section_id: "8.3"
     response_status_count: 6
+    business_codes_unknown: true
     response_statuses:
       - code: "0"
         code_type: "success"
@@ -1778,7 +1803,7 @@ endpoints:
       - code: "401"
         code_type: "http_status"
         message: "Unauthorized"
-        gateway_error: "broker.auth_expired"
+        gateway_error: "broker.order_state_unknown"
         source_line: 6693
       - code: "403"
         code_type: "http_status"

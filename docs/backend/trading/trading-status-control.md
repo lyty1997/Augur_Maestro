@@ -108,12 +108,25 @@ src/
 | `partial_filled` | 部分成交 | 否 |
 | `filled` | 全部成交 | 是 |
 | `cancel_requested` | 撤单请求已发起 | 否 |
+| `cancel_pending` | 券商已收到或订单查询显示正在等待撤单 | 否 |
 | `cancelled` | 券商确认撤单 | 是 |
 | `cancel_rejected` | 券商拒绝撤单，原订单仍需继续跟踪 | 否 |
+| `modify_requested` | 改单请求已发起 | 否 |
+| `modify_pending` | 券商已收到或订单查询显示正在等待改单 | 否 |
+| `modify_rejected` | 券商拒绝改单，原订单仍需继续跟踪 | 否 |
+| `partial_cancelled` | 部分成交后剩余数量已撤销 | 是 |
 | `broker_rejected` | 券商明确拒绝委托 | 是 |
 | `blocked_by_broker_trade_lock` | 券商要求交易解锁或账户交易锁定 | 否 |
 | `failed` | 本地系统或提交前检查失败，确认未形成有效券商委托 | 是 |
 | `unknown` | 状态未知，需要查询、对账或人工确认 | 否 |
+
+流转原则：
+
+- 本地请求驱动流转：由 OMS、风控或 Gateway 调用前置检查推动，例如 `ready_to_submit -> submitting`、`accepted -> cancel_requested`。
+- 券商事实驱动流转：由订单查询、成交查询、对账或人工确认推动。券商事实可以跳过中间态，例如本地 `submitted` 后直接查到 `filled`。
+- 权威券商事实优先于本地预期，但未知、缺失或冲突的券商状态不能猜测，必须进入 `unknown`。
+- `cancel_pending` 和 `modify_pending` 表示券商侧异步处理中的订单，不表示撤单或改单已经成功。
+- `partial_cancelled` 表示订单生命周期结束，但已经发生部分成交；后续持仓、资金和成交记录必须按已成交部分入账。
 
 允许流转：
 
@@ -122,24 +135,23 @@ created
   -> risk_rejected
   -> manual_review_required
   -> ready_to_submit
+
+manual_review_required
+  -> ready_to_submit
+  -> risk_rejected
+  -> failed
+
+ready_to_submit
   -> submitting
+  -> manual_review_required
+  -> blocked_by_broker_trade_lock
+  -> failed
+
+submitting
   -> submitted
   -> accepted
   -> partial_filled
   -> filled
-
-accepted
-  -> cancel_requested
-  -> cancelled
-  -> cancel_rejected
-
-partial_filled
-  -> cancel_requested
-  -> cancelled
-  -> filled
-
-submitting
-  -> submitted
   -> broker_rejected
   -> blocked_by_broker_trade_lock
   -> failed
@@ -147,7 +159,80 @@ submitting
 
 submitted
   -> accepted
+  -> partial_filled
+  -> filled
+  -> cancelled
+  -> partial_cancelled
   -> broker_rejected
+  -> unknown
+
+accepted
+  -> partial_filled
+  -> filled
+  -> cancel_requested
+  -> modify_requested
+  -> broker_rejected
+  -> unknown
+
+partial_filled
+  -> cancel_requested
+  -> modify_requested
+  -> filled
+  -> partial_cancelled
+  -> unknown
+
+cancel_requested
+  -> cancel_pending
+  -> cancelled
+  -> partial_cancelled
+  -> cancel_rejected
+  -> partial_filled
+  -> filled
+  -> unknown
+
+cancel_pending
+  -> cancelled
+  -> partial_cancelled
+  -> cancel_rejected
+  -> partial_filled
+  -> filled
+  -> unknown
+
+cancel_rejected
+  -> accepted
+  -> partial_filled
+  -> filled
+  -> cancel_requested
+  -> modify_requested
+  -> unknown
+
+modify_requested
+  -> modify_pending
+  -> accepted
+  -> partial_filled
+  -> filled
+  -> modify_rejected
+  -> unknown
+
+modify_pending
+  -> accepted
+  -> partial_filled
+  -> filled
+  -> partial_cancelled
+  -> modify_rejected
+  -> unknown
+
+modify_rejected
+  -> accepted
+  -> partial_filled
+  -> filled
+  -> cancel_requested
+  -> modify_requested
+  -> unknown
+
+blocked_by_broker_trade_lock
+  -> manual_review_required
+  -> failed
   -> unknown
 
 unknown
@@ -155,17 +240,46 @@ unknown
   -> accepted
   -> partial_filled
   -> filled
+  -> cancel_pending
   -> cancelled
+  -> cancel_rejected
+  -> modify_pending
+  -> modify_rejected
+  -> partial_cancelled
   -> broker_rejected
+  -> blocked_by_broker_trade_lock
   -> failed
 ```
 
 禁止流转：
 
-- `filled`、`cancelled`、`broker_rejected`、`risk_rejected`、`failed` 作为终态，不能自动回到可提交状态。
-- `unknown` 不能自动重试下单或撤单；只能通过订单查询、成交查询、对账或人工确认转出。
-- `cancel_rejected` 不是终态；订单仍可能继续成交或再次进入人工处理。
+- `filled`、`cancelled`、`partial_cancelled`、`broker_rejected`、`risk_rejected`、`failed` 作为终态，不能自动回到可提交状态。
+- `unknown` 不能自动重试下单、改单或撤单；只能通过订单查询、成交查询、对账或人工确认转出。
+- `cancel_rejected` 和 `modify_rejected` 不是终态；原订单仍可能继续成交或再次进入人工处理。
+- `cancel_pending` 不能再次自动发起撤单；必须等待查询、对账或人工确认。
+- `modify_pending` 不能再次自动发起改单；必须等待查询、对账或人工确认。
 - `blocked_by_broker_trade_lock` 不能自动调用 `trade-login` 解除；必须进入人工确认或重新授权流程。
+
+动作约束：
+
+| 当前状态 | 允许自动提交下单 | 允许发起撤单 | 允许发起改单 | 处理要求 |
+|---|---|---|---|---|
+| `created`、`manual_review_required`、`ready_to_submit` | 仅 `ready_to_submit` 可提交 | 否 | 否 | 提交前重新检查风控、交易时间、白名单和对账 |
+| `submitting`、`submitted`、`unknown` | 否 | 否 | 否 | 等待 Gateway 结果、查询、对账或人工确认 |
+| `accepted`、`partial_filled` | 否 | 条件允许 | 条件允许 | 撤单或改单前重新检查交易时间、券商状态和权限 |
+| `cancel_requested`、`cancel_pending` | 否 | 否 | 否 | 等待撤单结果；不能重复撤单 |
+| `cancel_rejected` | 否 | 条件允许 | 条件允许 | 原订单继续跟踪；再次操作必须重新检查 |
+| `modify_requested`、`modify_pending` | 否 | 否 | 否 | 等待改单结果；不能重复改单 |
+| `modify_rejected` | 否 | 条件允许 | 条件允许 | 原订单继续跟踪；再次操作必须重新检查 |
+| `blocked_by_broker_trade_lock` | 否 | 否 | 否 | 人工确认或重新授权后才能重新进入提交前状态 |
+| 终态 | 否 | 否 | 否 | 只能用于查询、对账、复盘和审计 |
+
+改单规则：
+
+- 第一版默认按保守的 cancel + replace 风险模型理解改单：改单失败时原订单继续有效，不能假设原订单已经撤销。
+- 若某个 broker 官方确认支持原生改单，OMS 仍必须保留原委托 ID、改单申请 request_id、改单前后价格和数量。
+- 若改单成功后 broker 返回新的委托 ID，必须创建或关联新的本地订单记录，原订单进入对应终态或关联状态；在该行为被官方确认前，相关状态进入 `unknown` 或 `modify_pending`，不得猜测。
+- 部分成交订单改单时，风控必须按剩余未成交数量计算，不得按原始委托数量重复计算。
 
 ## 5. Gateway 请求生命周期状态
 
@@ -288,8 +402,13 @@ class OmsOrderStatus(str, Enum):
     PARTIAL_FILLED = "partial_filled"
     FILLED = "filled"
     CANCEL_REQUESTED = "cancel_requested"
+    CANCEL_PENDING = "cancel_pending"
     CANCELLED = "cancelled"
     CANCEL_REJECTED = "cancel_rejected"
+    MODIFY_REQUESTED = "modify_requested"
+    MODIFY_PENDING = "modify_pending"
+    MODIFY_REJECTED = "modify_rejected"
+    PARTIAL_CANCELLED = "partial_cancelled"
     BROKER_REJECTED = "broker_rejected"
     BLOCKED_BY_BROKER_TRADE_LOCK = "blocked_by_broker_trade_lock"
     FAILED = "failed"
@@ -306,19 +425,80 @@ DTO 规则：
 
 ## 11. 和错误码的关系
 
-状态和错误码的关系示例：
+错误码可以解释状态变化原因，但不能替代状态字段。状态字段用于控制下一步动作；错误码用于排查、展示和调用方处理建议。broker 官方 raw code 只能进入 raw catalog 或映射上下文，不能直接作为内部状态控制枚举。
 
-| 场景 | 状态控制 | 错误码 |
-|---|---|---|
-| `read_only` 模式调用真实下单 | `GatewayRequestStatus.guard_blocked`，订单保持 `created` 或进入 `manual_review_required` | `broker.trading_disabled` |
-| capability 关闭 | `GatewayRequestStatus.guard_blocked` | `broker.capability_disabled` |
-| 下单请求超时，无法判断是否到达券商 | `GatewayRequestStatus.unknown`，`OmsOrderStatus.unknown` | `broker.timeout` |
-| 券商明确废单或拒绝 | `OmsOrderStatus.broker_rejected` | `broker.order_rejected` |
-| 券商状态字段缺失 | `BrokerOrderMappingStatus.raw_status_missing`，`OmsOrderStatus.unknown` | `broker.response_invalid` 或 `broker.order_state_unknown` |
-| 需要交易解锁 | `BrokerTradeUnlockStatus.requires_trade_login`，`OmsOrderStatus.blocked_by_broker_trade_lock` | `broker.trade_locked` |
+下表按 [broker-gateway-error-codes.yaml](broker-gateway-error-codes.yaml) 的 category 列出全部 24 个稳定 gateway 错误码到状态控制枚举的映射。`OmsOrderStatus` 列只适用于"该错误码对应的请求正在驱动一个 OMS 订单"的场景；只读查询、登录、对账等非订单请求只更新 `GatewayRequestStatus`，不变更订单状态。
 
-规则：
+### 11.1 success
 
-- 错误码可以解释状态变化原因，但不能替代状态字段。
-- 状态字段用于控制下一步动作；错误码用于排查、展示和调用方处理建议。
-- broker 官方 raw code 只能进入 raw catalog 或映射上下文，不能直接作为内部状态控制枚举。
+| Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
+|---|---|---|---|
+| `broker.ok` | `succeeded` | 按 broker 返回推进到 `submitted` / `accepted` / `partial_filled` / `filled` / `cancelled` 等；下单 HTTP 成功 ≠ 订单终态 | 正常成功 |
+
+### 11.2 capability_guard（请求未触达适配器或 broker）
+
+| Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
+|---|---|---|---|
+| `broker.disabled` | `guard_blocked` | 保持当前状态 | `mode=disabled` |
+| `broker.trading_disabled` | `guard_blocked` | 订单保持 `created` 或进入 `manual_review_required` | `mode != live_guarded` 或 `trading_enabled=false` |
+| `broker.capability_disabled` | `guard_blocked` | 同上 | capability 为 false |
+| `broker.unsupported_capability` | `guard_blocked` | 同上 | broker 适配器声明不支持 |
+| `broker.real_http_disabled` | `guard_blocked` | 同上 | transport 出网开关未开 |
+| `broker.caller_not_allowed` | `guard_blocked` | 同上 | 调用方不是允许的应用服务/OMS |
+
+### 11.3 auth
+
+| Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
+|---|---|---|---|
+| `broker.auth_missing` | `failed` | 交易动作 `failed`（请求未触达 broker） | 会话或凭证引用缺失 |
+| `broker.auth_expired` | 只读：`failed` 后允许显式重登一次再发新请求；交易：`failed` | 只读查询不变更订单 | 401 + 只读 endpoint；下单类 endpoint 的 401 见 `broker.order_state_unknown` |
+| `broker.auth_failed` | `failed` | 交易动作 `failed`（请求未触达） | 凭证错 |
+| `broker.captcha_required` | `failed` | 订单进入 `manual_review_required`，等人工启动验证码流程 | 需短信验证码 |
+| `broker.trade_locked` | `failed` | `blocked_by_broker_trade_lock`，同时 `BrokerTradeUnlockStatus.requires_trade_login` | 券商要求交易解锁；不自动调 `trade-login` |
+| `broker.permission_denied` | `failed` | 交易动作 `failed`（请求被 broker 拒、未形成委托） | 权限不足 |
+| `broker.account_restricted` | `failed` | 交易动作 `failed`；OMS/Risk 阻断该账户后续自动交易 | 账户受限或被锁；含验证码次数超限的账号级锁 |
+| `broker.ip_not_allowed` | `failed` | 交易动作 `failed`（请求被 broker 拒） | IP 白名单 |
+
+### 11.4 request（本地构造错误，请求未触达 broker）
+
+| Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
+|---|---|---|---|
+| `broker.sign_failed` | `failed` | 交易动作 `failed` | 密钥配置或签名规则错 |
+| `broker.bad_request` | `failed` | 交易动作 `failed` | DTO/字段映射/参数错 |
+| `broker.unsupported_order_type` | `failed` | 交易动作 `failed`（Gateway 阻断） | 订单类型超出 capability 允许范围 |
+| `broker.endpoint_not_found` | `failed` | 交易动作 `failed` | endpoint 拼错或环境错 |
+
+### 11.5 rate_limit
+
+| Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
+|---|---|---|---|
+| `broker.rate_limited` | 只读：`failed` 后按 retry profile 退避重试；交易：`failed`（绝不自动重试） | 不变（交易动作此码意味着未真正发出或被 gateway 拦截） | 请求级频控；账号级锁定走 `broker.account_restricted` |
+
+### 11.6 transport（无法判断请求是否抵达 broker，必须保守）
+
+| Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
+|---|---|---|---|
+| `broker.transport_error` | `unknown` | 交易动作进 `unknown`，必须对账 | DNS/连接/TLS 错 |
+| `broker.timeout` | `unknown` | 交易动作进 `unknown`，必须对账 | 超时 |
+| `broker.service_unavailable` | 只读：`failed`；交易：`unknown` | 交易动作进 `unknown` | broker 服务不可用 |
+
+### 11.7 broker_business
+
+| Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
+|---|---|---|---|
+| `broker.order_rejected` | `failed`（已 mapped） | `broker_rejected` | broker 明确拒单，已形成响应 |
+
+### 11.8 response_mapping
+
+| Gateway 错误码 | GatewayRequestStatus | OmsOrderStatus | 说明 |
+|---|---|---|---|
+| `broker.response_invalid` | `failed`（mapper 无法解析） | `unknown`，关联 `BrokerOrderMappingStatus.raw_status_missing` 或 `raw_status_conflict` | 响应缺字段/结构错，订单实际状态不可知 |
+| `broker.order_state_unknown` | `unknown` | `unknown` | 下单类 endpoint 的 401 / 终态字段冲突 / 状态无法判定 |
+| `broker.unclassified` | `failed`（兜底） | `unknown`（保守） | 未映射的 raw 响应；保留 `raw_ref` 供后续审计补映射 |
+
+### 11.9 跨层一致性约束
+
+- 所有 `OmsOrderStatus = unknown` 路径必须同时关联 `GatewayRequestStatus = unknown` 或带 `unknown_reason` 元数据。
+- 所有 `GatewayRequestStatus = guard_blocked` 的请求一定未触达 broker；OMS 订单状态不变更。
+- 交易动作的错误码即使 retryable=true，也必须由 OMS 显式发起新请求（带新 `order_id` 或新 `broker_request_id`），不由 client/transport 自动补偿。
+- raw code 到 gateway 错误码的映射由 [usmart-trade-error-codes.draft.yaml](../clients/api/usmart-trade-error-codes.draft.yaml) 维护；其 `endpoint_scoping_invariants` 段列出已激活的按 endpoint 差异化规则（当前仅 HTTP 401 区分写动作 endpoint，写动作 401 映射到 `broker.order_state_unknown`）。
