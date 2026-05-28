@@ -27,6 +27,17 @@
 - `broker.*` Gateway 错误码 catalog。
 - 行情基础报价 API 和报价推送 API 的订阅状态；它们后续由 `QuotationDataGateway` 单独定义。
 
+## 0.1 实现阶段标签
+
+本文档定义的所有状态枚举默认在 M2 模拟盘启用时全部进入实现范围（OMS、Gateway、风控、对账等模块的接口、DTO 和单元测试同步覆盖）。仅以下枚举值在第一版接口/DTO 中可以预留为 long-tail，等具体 broker 能力启用时再补实现与测试：
+
+| 枚举 | 推迟项 | 推迟原因与启用条件 |
+|---|---|---|
+| `OmsOrderStatus` | `modify_requested` / `modify_pending` / `modify_rejected` | broker-trading-gateway.md §4 第一版默认禁用改单 capability，风险模型采用 cancel + replace；待 M3 改单 capability 启用、且对应 broker 改单语义官方确认后再实现 |
+| `BrokerTradeUnlockStatus` | `requires_trade_login` 分支的自动处理逻辑 | 第一版不自动调用 `trade-login`，订单进入 `blocked_by_broker_trade_lock` 等人工；状态值本身保留，但状态机自动转出逻辑推迟 |
+
+其它所有状态值都按 core 处理，自 M2 模拟盘第一版起接口和测试必须覆盖。
+
 ## 1. 分层原则
 
 交易状态按对象归属分层，不能用一个大枚举混用所有状态。
@@ -61,7 +72,6 @@ src/
 |---|---|---|
 | `created` | 意图已创建，尚未进入风控 | 否 |
 | `pending_review` | 等待人工审核或等待交易窗口重新检查 | 否 |
-| `risk_checking` | 正在执行风控检查 | 否 |
 | `risk_rejected` | 被风控拒绝 | 是 |
 | `approved` | 风控通过，允许进入 OMS 创建订单 | 否 |
 | `converted_to_order` | 已生成本地 OMS 订单 | 是 |
@@ -283,20 +293,15 @@ unknown
 
 ## 5. Gateway 请求生命周期状态
 
-`GatewayRequestStatus` 表示单次 Gateway 调用或单次 broker HTTP / SDK 请求的生命周期。它不等同于订单状态。
+`GatewayRequestStatus` 表示单次 Gateway 调用或单次 broker HTTP / SDK 请求的生命周期。它不等同于订单状态。**只保留调用方、审计和 UI 需要 switch 的可观察状态**；client 内部 pipeline 的签名、序列化、HTTP 发送、响应解析、mapper 映射等处理阶段不作为顶层枚举，统一通过审计事件 metadata（trace span 时间戳 + `phase` 标签）观察。
 
 | 状态 | 含义 | 是否终态 |
 |---|---|---|
 | `created` | Gateway 请求对象已创建 | 否 |
-| `guard_blocked` | 被 mode、capability、transport 或 caller guard 阻断 | 是 |
-| `signing` | 正在签名或构造请求 | 否 |
-| `ready_to_send` | 请求已构造完成，准备发送 | 否 |
-| `sending` | 正在发送到 broker transport | 否 |
-| `sent` | 请求已发出，等待响应 | 否 |
-| `response_received` | 收到 broker 或 transport 响应 | 否 |
-| `mapped` | 响应已映射成内部 DTO 或错误 | 否 |
-| `succeeded` | 请求成功完成 | 是 |
-| `failed` | 请求明确失败 | 是 |
+| `guard_blocked` | 被 mode、capability、transport 或 caller guard 阻断，请求未触达适配器/broker | 是 |
+| `sending` | 已通过 guard，正在调用适配器/transport，等待响应 | 否 |
+| `succeeded` | 请求成功完成并已映射 | 是 |
+| `failed` | 请求明确失败（含本地构造错、broker 业务拒绝、响应不可解析等） | 是 |
 | `unknown` | 是否到达 broker 或业务状态无法判断 | 是 |
 
 规则：
@@ -304,6 +309,7 @@ unknown
 - 交易动作的 `unknown` 必须推动对应 OMS 订单进入 `unknown`。
 - 只读查询的 `failed` 或 `unknown` 不能改变本地订单终态，只能记录审计和告警。
 - `guard_blocked` 表示请求未触达适配器或 broker。
+- 签名、序列化、HTTP 发送、响应解析、mapper 映射等内部 phase 不进入本枚举；它们作为审计事件的 `metadata.phase` 标签和 trace span 时间戳记录，便于排查但不参与业务流转判断。
 
 ## 6. Broker 会话状态
 
