@@ -413,7 +413,7 @@
 - 用户确认未来交易范围以美股为主；第一批真实交易只做美股盘中交易和美股碎股；港股新股暗盘仅保留设计，港股碎股不做；IPO 申购和 IPO 改单排除。
 - 用户确认第一版美股盘中普通单只允许限价单：`exchangeType=5`，`entrustType` 买入 `0`、卖出 `1`，`entrustProp` 只开放网页手册明确支持的美股限价枚举 `0`，`sessionType` 使用正常盘中默认值 `0` 或不传；字段不确定时阻断真实交易。
 - 用户确认第一版启用美股碎股买入和卖出；内部按委托金额建模，发送给 `/odd-entrust` 的 `entrustAmount` 由委托金额除以限价换算为小数股数。金额、价格和换算数量内部使用 `Decimal`，只在 HTTP JSON 边界序列化为券商接受的 number。
-- 用户确认 `orderStatus` 肯定要给 OMS 判断订单状态，`finalStateFlag` 也要让 OMS 知道；项目策略为 `status` / `orderStatus` 和 `finalStateFlag` 共同进入 OMS mapper，冲突或未知状态进入 `unknown_by_official_doc`。
+- 用户确认 `orderStatus` 肯定要给 OMS 判断订单状态，`finalStateFlag` 也要让 OMS 知道；项目策略为 `status` / `orderStatus` 和 `finalStateFlag` 共同进入 OMS mapper，冲突或未知状态的映射原因进入 `unknown_by_official_doc` 等 `BrokerOrderMappingStatus`，OMS 对外状态进入 `unknown`。
 - 用户确认分页规则按官方手册：`pageNum` 当前页从 1 开始，默认 1；`pageSize` 每页结果数默认 10，最大 20。
 - 用户确认错误处理必须包含所有券商错误码，同时 Augur_Maestro gateway 要有自己的错误码层。
 - 用户确认配置和设计变量名必须区分登录密码和交易密码：登录密码使用 `login_password_secret_ref` / `loginPasswordEncrypted`，交易密码使用 `trade_password_secret_ref` / `tradePasswordEncrypted`；只有最终映射到盈立官方 request body 时才使用官方字段名 `password`。
@@ -432,7 +432,7 @@
 - 基础报价 API 和报价推送 API 另行设计，不作为交易 signer 的实现依据。
 - `X-Type` 已从手册请求示例核对：`1` 为大陆版、`2` 为港版；本项目默认大陆版。
 - 登录手机号、登录密码、交易密码使用官方 Python demo 的 `rsa_encrypt` transform：RSA `PKCS1_v1_5` 加密后 URL-safe Base64。
-- 订单明细 `orderStatus` 必须进入 OMS mapper；`status` / `orderStatus` 和 `finalStateFlag` 冲突或未知时进入 `unknown_by_official_doc`。
+- 订单明细 `orderStatus` 必须进入 OMS mapper；`status` / `orderStatus` 和 `finalStateFlag` 冲突或未知时，映射原因进入 `unknown_by_official_doc` 等 `BrokerOrderMappingStatus`，OMS 对外状态进入 `unknown`。
 - 券商错误码必须保留完整 raw code catalog，并映射到 Augur_Maestro gateway 错误码层。
 
 仍需券商或联调确认：
